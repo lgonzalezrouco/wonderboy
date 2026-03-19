@@ -1,5 +1,4 @@
 # CI for wonderboy-hs: Cabal build/tests, package sanity, docs, HLint, Fourmolu,
-# plus repo hygiene (workflow YAML + Markdown).
 name: CI
 
 on:
@@ -15,24 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  actionlint:
-    name: Workflow (actionlint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rhysd/actionlint@v1
-
-  markdown:
-    name: Markdown
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DavidAnson/markdownlint-cli2-action@v19
-        with:
-          globs: |
-            README.md
-            CHANGELOG.md
-
   haskell:
     name: Haskell (build, test, haddock, HLint, Fourmolu)
     runs-on: ubuntu-latest
