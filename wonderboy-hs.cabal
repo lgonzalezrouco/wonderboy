@@ -22,14 +22,17 @@ name:               wonderboy-hs
 --                  | | | +--- code changes with no API change
 version:            0.1.0.0
 
--- A short (one-line) description of the package.
--- synopsis:
+synopsis:           Modular 2D platformer engine with entity DSL (Wonder Boy-style course project).
 
--- A longer description of the package.
--- description:
+description:
+    Course final project: a modular 2D platform game engine with a small DSL for entity behaviour,
+    using pure functional design, monads, and composable game logic.
+
+category:           Game
 
 -- The license under which the package is released.
-license:            NONE
+license:            MIT
+license-file:       LICENSE
 
 -- The package author(s).
 author:             Lucas Gonzalez Rouco
@@ -46,6 +49,10 @@ extra-doc-files:    CHANGELOG.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
+
+source-repository head
+    type:     git
+    location: https://github.com/lgonzalezrouco/wonderboy.git
 
 common warnings
     ghc-options: -Wall
