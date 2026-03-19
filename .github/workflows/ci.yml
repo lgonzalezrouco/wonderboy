@@ -1,0 +1,87 @@
+# CI for wonderboy-hs: Cabal build/tests, package sanity, docs, HLint, Fourmolu,
+# plus repo hygiene (workflow YAML + Markdown).
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: Workflow (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/actionlint@v1
+
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            README.md
+            CHANGELOG.md
+
+  haskell:
+    name: Haskell (build, test, haddock, HLint, Fourmolu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: haskell-actions/setup@v2
+        id: setup-haskell
+        with:
+          ghc-version: "9.6"
+          cabal-version: "3.12"
+
+      - name: Cache Cabal store and build dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-${{ hashFiles('**/*.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-
+
+      - name: Cabal update
+        run: cabal update
+
+      - name: Configure and build (with tests)
+        run: cabal build all --enable-tests
+
+      - name: Run test suite
+        run: cabal test all --test-show-details=direct
+
+      - name: Validate .cabal package description
+        run: cabal check
+
+      - name: Build Haddock (catch broken docs early)
+        run: cabal haddock all --enable-documentation --haddock-html --haddock-quickjump
+
+      - name: Install HLint and Fourmolu
+        run: |
+          cabal install \
+            hlint-3.10 \
+            fourmolu-0.16.2.0 \
+            --overwrite-policy=always \
+            --installdir="$HOME/.local/bin" \
+            --install-method=copy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: HLint
+        run: hlint src app test
+
+      - name: Fourmolu (check only)
+        run: fourmolu --mode check src app test
