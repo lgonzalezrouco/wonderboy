@@ -44,6 +44,13 @@ maintainer:         lgonzalezrouco@itba.edu.ar
 -- copyright:
 build-type:         Simple
 
+-- GHC versions used in CI / local verification (update when bumping CI’s ghc-version).
+tested-with:        GHC ==9.6.7
+
+homepage:           https://github.com/lgonzalezrouco/wonderboy
+
+bug-reports:        https://github.com/lgonzalezrouco/wonderboy/issues
+
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 extra-doc-files:    CHANGELOG.md
 
@@ -55,11 +62,19 @@ source-repository head
     location: https://github.com/lgonzalezrouco/wonderboy.git
 
 common warnings
-    ghc-options: -Wall
+    ghc-options:
+        -Wall
+        -Wcompat
+        -Widentities
+        -Wmissing-deriving-strategies
+        -Wpartial-fields
+
+-- Shared dependency bounds: PVP-friendly range for GHC 9.6.x (base 4.18.*); widen when CI supports newer GHC.
+common deps
+    build-depends: base >=4.18 && <4.19
 
 library
-    -- Import common warning flags.
-    import:           warnings
+    import:           warnings, deps
 
     -- Modules exported by the library.
     exposed-modules:  MyLib
@@ -70,18 +85,14 @@ library
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
-    -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0
-
     -- Directories containing source files.
     hs-source-dirs:   src
 
-    -- Base language which the package is written in.
-    default-language: Haskell2010
+    -- GHC2021: stable language set aligned with modern GHC (see GHC User’s Guide).
+    default-language: GHC2021
 
 executable wonderboy-hs
-    -- Import common warning flags.
-    import:           warnings
+    import:           warnings, deps
 
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
@@ -92,23 +103,17 @@ executable wonderboy-hs
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
-    -- Other library packages from which modules are imported.
-    build-depends:
-        base ^>=4.18.3.0,
-        wonderboy-hs
+    build-depends:    wonderboy-hs
 
     -- Directories containing source files.
     hs-source-dirs:   app
 
-    -- Base language which the package is written in.
-    default-language: Haskell2010
+    default-language: GHC2021
 
 test-suite wonderboy-hs-test
-    -- Import common warning flags.
-    import:           warnings
+    import:           warnings, deps
 
-    -- Base language which the package is written in.
-    default-language: Haskell2010
+    default-language: GHC2021
 
     -- Modules included in this executable, other than Main.
     -- other-modules:
@@ -125,7 +130,4 @@ test-suite wonderboy-hs-test
     -- The entrypoint to the test suite.
     main-is:          Main.hs
 
-    -- Test dependencies.
-    build-depends:
-        base ^>=4.18.3.0,
-        wonderboy-hs
+    build-depends:    wonderboy-hs

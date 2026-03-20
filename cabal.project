@@ -1,0 +1,8 @@
+-- Project-local Cabal settings (see https://cabal.readthedocs.io/en/stable/cabal-project.html)
+packages: .
+
+-- Match AGENTS.md / CI: readable test output without passing flags every time
+test-show-details: direct
+
+-- Avoid dropping `.ghc.environment.*` files into the repo root; use `cabal v2-` style isolation
+write-ghc-environment-files: never

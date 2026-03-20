@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "haskell-pro": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "7306261dadd6b6696ada6726d202259d9c535345d94f613d552571c2e69585d5"
+    }
+  }
+}
