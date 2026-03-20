@@ -5,7 +5,7 @@ Propuesta de trabajo final para la materia de Programación Funcional.
 ## Integrantes
 
 - Lucas Gonzalez Rouco
-- [Nombre de tu compañero]
+- Emilio Pablo Neme
 
 ## Descripción general
 
