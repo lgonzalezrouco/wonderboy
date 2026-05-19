@@ -1,86 +1,73 @@
 # Wonder Boy (Haskell) — Trabajo Final
 
-Propuesta de trabajo final para la materia de Programación Funcional.
+Propuesta de trabajo final para la materia de **Programación Funcional** (ITBA).
 
 ## Integrantes
 
 - Lucas Gonzalez Rouco
 - Emilio Pablo Neme
 
-## Descripción general
+## Objetivo
 
-Se propone desarrollar un **videojuego de plataformas 2D** (estilo _Wonder Boy_). El foco no está solo en el juego en sí, sino en:
+Desarrollar un **videojuego de plataformas 2D** inspirado en _Wonder Boy_, implementado como un **motor de juego modular** en Haskell. El jugador interactúa con un entorno dinámico: plataformas (incluidas móviles), recolección de ítems y combate básico.
 
-1. El diseño de un **motor modular**.
-2. La definición de un **pequeño DSL** (Domain Specific Language) para modelar el comportamiento de las entidades y su interacción con el entorno.
+Además del juego:
 
-## Desafíos en programación funcional
+1. Un **motor modular** con capas claras (Domain, UseCases, Adapters, Frameworks).
+2. Un **DSL** para modelar comportamiento de entidades y su interacción con el entorno.
 
-- Modelar un **sistema interactivo** (juego en tiempo real) de manera funcional y pura.
-- Manejar **estado mutable** (mundo del juego) sin perder pureza, utilizando **abstracciones monádicas**.
-- **Separar** la definición de comportamientos (lógica declarativa) de su ejecución (motor).
-- Diseñar un **DSL composable** para expresar reglas del juego.
+## Desafíos de programación funcional
+
+- **Estado global e interacción en tiempo real**: colisiones, entrada y actualización por cuadro sin perder el modelo denotacional en el núcleo.
+- **Física reactiva** modelada con transformaciones puras en `Domain/`, orquestadas por una **pila monádica** en `UseCases/`.
+- **Separación** entre descripción de comportamientos (DSL / Free monad) y ejecución (motor + Gloss).
+- **Diseño denotacional**: lógica del juego como funciones puras en `Domain/`, sin perder
+  transparencia referencial por efectos ocultos.
 
 ## Características de PF a utilizar
 
-- **Mónadas** (`StateT`, `ReaderT`, `ExceptT`) para modelar estado, entorno y errores.
-- **Free monads** para definir la lógica de entidades de forma abstracta.
-- **Composición funcional** para construir el motor de juego de forma modular.
-- **Inmutabilidad** y separación entre lógica pura y efectos.
+| Tema                                         | Aplicación en el proyecto                                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Inmutabilidad y funciones puras**          | Física, colisiones AABB y modelos en `Domain/` como transformaciones puras de datos.                  |
+| **Composición y ADTs**                       | Estados de enemigos, eventos y AST del DSL de entidades.                                              |
+| **Abstracción**                              | Funciones de orden superior en diseño de niveles y comportamientos.                                   |
+| **Mónadas** (`StateT`, `ReaderT`, `ExceptT`) | Estado del juego, configuración y errores recuperables en `UseCases/` desde el inicio del desarrollo. |
+| **Free monads**                              | IA y comportamientos de entidades: separar _descripción_ de acciones de su _interpretación_.          |
 
-## Arquitectura (puntos clave)
+## Arquitectura
 
-| Área                | Enfoque                                                           |
-| ------------------- | ----------------------------------------------------------------- |
-| Física y colisiones | Motor basado en **AABB**, desacoplado de la representación visual |
-| Entidades           | Comportamientos definidos mediante **DSL**                        |
-| IA                  | **Máquinas de estado** simples                                    |
-| Contenido           | Carga de **niveles y configuraciones** desde archivos externos    |
+| Área                | Enfoque                                                 |
+| ------------------- | ------------------------------------------------------- |
+| Física y colisiones | Motor **AABB**, desacoplado de la representación visual |
+| Entidades           | Comportamientos vía **DSL** (Free monad + intérpretes)  |
+| IA                  | **Máquinas de estado** simples sobre el DSL             |
+| Contenido           | Carga de **niveles y configuración** desde JSON (Aeson) |
+| Efectos             | `IO` solo en **Adapters** y **Frameworks** (Gloss)      |
 
-## Estructura del proyecto
+Firma orientativa del motor (denotación pura del paso de simulación):
 
-Organización prevista del repositorio (capas **Domain** pura, **UseCases**, **Adapters** y **Frameworks**):
+```haskell
+step :: DeltaTime -> Input -> World -> World
+```
+
+La actualización en tiempo real se expresa en `UseCases` con una pila monádica que interpreta `step`, entrada y estado global.
+
+### Estructura del repositorio
 
 ```text
 wonderboy-hs/
 ├── app/
 │   └── Main.hs
-│
 ├── src/
-│   ├── Domain/                 # 100% PURO
+│   ├── Domain/                 # 100% puro (sin IO)
 │   │   ├── Model/
-│   │   │   ├── Player.hs
-│   │   │   ├── Enemy.hs
-│   │   │   └── World.hs
-│   │   │
 │   │   ├── ValueObjects/
-│   │   │   ├── Position.hs
-│   │   │   └── Velocity.hs
-│   │   │
 │   │   └── Logic/
-│   │       ├── Physics.hs
-│   │       └── Collision.hs
-│   │
-│   ├── UseCases/               # aplicación (usa mónadas abstractas)
-│   │   ├── GameMonad.hs        # definición abstracta (typeclass o newtype)
-│   │   ├── UpdateGame.hs
-│   │   └── Ports/              # interfaces (MUY importante)
-│   │       ├── InputPort.hs
-│   │       ├── RenderPort.hs
-│   │       └── TimePort.hs
-│   │
-│   ├── Adapters/               # implementación de ports
-│   │   ├── Input/
-│   │   │   └── GlossInput.hs
-│   │   ├── Rendering/
-│   │   │   └── GlossRenderer.hs
-│   │   └── Time/
-│   │       └── SystemClock.hs
-│   │
-│   └── Frameworks/             # detalles externos
+│   ├── UseCases/               # GameMonad, UpdateGame, mónadas abstractas
+│   │   └── Ports/
+│   ├── Adapters/               # Gloss (input, render, tiempo)
+│   └── Frameworks/
 │       └── Gloss/
-│           └── GameLoop.hs
-│
 ├── test/
 │   ├── Domain/
 │   └── UseCases/
@@ -89,57 +76,59 @@ wonderboy-hs/
 └── cabal.project
 ```
 
-## Bibliotecas previstas
+## Stack tecnológico
 
-| Biblioteca     | Uso                                             |
-| -------------- | ----------------------------------------------- |
-| **Gloss**      | Interfaz gráfica                                |
-| **Aeson**      | Carga de niveles desde JSON                     |
-| **Lens**       | Manipulación de estructuras de estado complejas |
-| **MTL / Free** | Arquitectura monádica                           |
+| Biblioteca                               | Rol                                                                                    |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Gloss**                                | Gráficos y game loop (Input / Update / Draw)                                           |
+| **mtl** (`StateT`, `ReaderT`, `ExceptT`) | Estado, entorno y errores en `UseCases/`                                               |
+| **free**                                 | DSL de entidades e IA                                                                  |
+| **Aeson**                                | Niveles y parámetros en JSON                                                           |
+| **tasty** + **tasty-hunit**              | Tests unitarios                                                                        |
+| **lens** (opcional)                      | Actualizaciones profundas de estado en capas con efectos, si la anidación lo justifica |
 
-## Cómo ejecutar el proyecto
+## Funcionalidades del juego
 
-Requisitos: **GHC** y **Cabal** (por ejemplo instalados con [GHCup](https://www.haskell.org/ghcup/)).
+- [ ] Movimiento y física del jugador (gravedad, plataformas, AABB)
+- [ ] Plataformas móviles
+- [ ] Recolección de ítems
+- [ ] Combate básico
+- [ ] IA de enemigos (Free monad)
+- [ ] Carga de niveles desde JSON
 
-Desde la raíz del repositorio:
+## Entregables del curso
+
+- [ ] Código del motor y **juego jugable** (`cabal run wonderboy-hs`)
+- [ ] Arquitectura por capas con núcleo puro en `Domain/` y mónadas en `UseCases/`
+- [ ] Tests de lógica donde aporten valor (`Domain`, `UseCases`) — opcionales pero recomendados
+- [ ] Informe del trabajo final (según consigna del curso; sin exigencia de demostraciones formales en el repo)
+
+## División de trabajo
+
+| Responsable  | Ámbito                                |
+| ------------ | ------------------------------------- |
+| Integrante A | Motor, física y colisiones            |
+| Integrante B | DSL de entidades, IA y carga de datos |
+| Ambos        | Integración, pruebas e informe        |
+
+## Cómo ejecutar
+
+Requisitos: **GHC** y **Cabal** ([GHCup](https://www.haskell.org/ghcup/)).
 
 ```bash
-cabal build
+cabal build all --enable-tests
 cabal run wonderboy-hs
-```
-
-El ejecutable se llama `wonderboy-hs` (definido en `wonderboy-hs.cabal`). Para correr la suite de tests:
-
-```bash
-cabal test
+cabal test all
+fourmolu --mode check src app test
+hlint src app test
 ```
 
 ## Editor y HLint
 
-La extensión **Haskell** (Haskell Language Server) integra **HLint**, pero necesitás el ejecutable en el `PATH` del entorno desde el que arranca el editor (o que `hlint` esté en el directorio por defecto de Cabal, p. ej. `~/.cabal/bin`).
-
-Instalación (una vez):
+La extensión **Haskell** (HLS) usa HLint si el ejecutable está en el `PATH` (p. ej. `~/.cabal/bin`):
 
 ```bash
 cabal install hlint
 ```
 
-- **Subrayado / color en el código** (advertencias o infos, según la regla).
-- Panel **Problems** (⌘⇧M en macOS, Ctrl+Shift+M en Windows/Linux): listado por archivo y mensaje; podés filtrar por “Haskell” o buscar el texto del hint.
-- **Code actions** (💡 o menú contextual / ⌘.**): en algunos hints ofrece “Apply HLint hint” o similar para aplicar el cambio automáticamente.
-
-Si no aparece nada, comprobá en terminal que `hlint --version` funcione y que el archivo esté guardado; HLint se integra vía HLS cuando el proyecto compila para el servidor.
-
-## División de tareas
-
-El trabajo se reparte de forma equitativa:
-
-- **Un integrante:** núcleo del motor y sistema de física/colisiones.
-- **El otro:** DSL, IA y carga de datos.
-
-Ambos participan en la **integración final** y el **informe**.
-
-## Alcance
-
-El alcance puede ajustarse según comentarios del docente; este documento refleja la propuesta enviada inicialmente.
+Si no aparecen hints, verificá `hlint --version` y que el proyecto compile para HLS.

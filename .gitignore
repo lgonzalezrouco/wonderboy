@@ -4,3 +4,6 @@ dist-newstyle/
 *.hie
 *.o
 *.dyn_o
+
+# Docs
+docs/

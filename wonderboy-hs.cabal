@@ -73,23 +73,7 @@ common warnings
 common deps
     build-depends: base >=4.18 && <4.19
 
-library
-    import:           warnings, deps
 
-    -- Modules exported by the library.
-    exposed-modules:  MyLib
-
-    -- Modules included in this library but not exported.
-    -- other-modules:
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-
-    -- Directories containing source files.
-    hs-source-dirs:   src
-
-    -- GHC2021: stable language set aligned with modern GHC (see GHC User’s Guide).
-    default-language: GHC2021
 
 executable wonderboy-hs
     import:           warnings, deps
@@ -102,8 +86,6 @@ executable wonderboy-hs
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-
-    build-depends:    wonderboy-hs
 
     -- Directories containing source files.
     hs-source-dirs:   app
@@ -130,4 +112,4 @@ test-suite wonderboy-hs-test
     -- The entrypoint to the test suite.
     main-is:          Main.hs
 
-    build-depends:    wonderboy-hs
+    build-depends:    base >=4.18 && <4.19

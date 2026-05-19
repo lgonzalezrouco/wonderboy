@@ -1,12 +1,6 @@
-# Explicit cradle paths help haskell-language-server pick the right Cabal component
-# (library vs executable vs test) when editing files under src/, app/, or test/.
+# Cradle paths for haskell-language-server.
 cradle:
   multi:
-    - path: "./src"
-      config:
-        cradle:
-          cabal:
-            component: "lib:wonderboy-hs"
     - path: "./app"
       config:
         cradle:
