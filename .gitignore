@@ -2,6 +2,7 @@ dist-newstyle/
 .ghc.environment.*
 *.hi
 *.hie
+*.md
 *.o
 *.dyn_o
 
