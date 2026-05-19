@@ -17,14 +17,31 @@ jobs:
   haskell:
     name: Haskell (build, test, haddock, HLint, Fourmolu)
     runs-on: ubuntu-latest
+    env:
+      GHC_VERSION: "9.6.7"
+
     steps:
       - uses: actions/checkout@v4
+      - name: Fix ghcup directory permissions (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo mkdir -p /usr/local/.ghcup
+          sudo chown -R "$USER:$USER" /usr/local/.ghcup
+
+      - name: Cache GHC (ghcup)
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/.ghcup
+          key: ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}
+          restore-keys: |
+            ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-
 
       - uses: haskell-actions/setup@v2
         id: setup-haskell
         with:
-          ghc-version: "9.6"
+          ghc-version: ${{ env.GHC_VERSION }}
           cabal-version: "3.12"
+          cabal-update: false
 
       - name: Cache Cabal store and build dir
         uses: actions/cache@v4
