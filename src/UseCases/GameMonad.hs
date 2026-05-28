@@ -4,16 +4,24 @@
 Combina tres efectos apilados sobre una base pura:
 
   * 'MonadReader' 'GameConfig' — acceso de solo lectura a la configuración global.
-  * 'MonadState'  'GameState'  — estado mutable del juego (el 'World' en M2+).
+  * 'MonadState'  'GameState'  — estado mutable del juego ('World').
   * 'MonadError'  'GameError'  — manejo de errores recuperables sin lanzar excepciones.
 
 Nada en este módulo es 'IO'. Toda la impureza vive en @Adapters/@ y @Frameworks/@.
 Ver @docs\/gamemonad.md@ para la justificación de cada capa y su orden.
 -}
 module UseCases.GameMonad (
+  -- * Configuración
   GameConfig (..),
+  defaultConfig,
+
+  -- * Errores
   GameError (..),
+
+  -- * Estado
   GameState,
+
+  -- * La mónada
   GameM (..),
   runGameM,
 )
@@ -30,42 +38,67 @@ import Control.Monad.Except (ExceptT, MonadError, runExceptT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.State (MonadState, StateT, runStateT)
 
+-- Grupo 3 — proyecto
+-- Importamos sólo el tipo `World`; el valor `initialWorld` vive en su módulo de origen.
+import Domain.Model.World (World)
+
 -- ---------------------------------------------------------------------------
 -- Tipos de la pila
 -- ---------------------------------------------------------------------------
 
 {- | Configuración global del juego, inmutable durante una partida.
 
-Por ahora es un constructor vacío (nullary): no tiene campos.
-En Milestone 2 agregaremos, por ejemplo, la constante de gravedad y
-los límites del mundo. Usamos `data` (no `newtype`) porque no hay nada
-que envolver — `newtype` requiere exactamente un campo.
+Todos los parámetros que no cambian frame a frame viven aquí:
+el 'ReaderT' los pone a disposición de cualquier acción en 'GameM' vía 'ask'\/'asks'.
+
+__Por qué `data` y no `newtype`?__ — El `newtype` requiere exactamente un campo.
+'GameConfig' tiene varios campos, así que `data` es la opción correcta.
 -}
 data GameConfig = GameConfig
+  { gcGravity :: Float
+  -- ^ Aceleración gravitatoria en px\/s² (hacia abajo).
+  --   Se aplica sobre la componente vy del jugador en cada frame (M3).
+  --   Valor típico para un plataformas de píxeles: 800–1200 px\/s².
+  , gcMoveSpeed :: Float
+  -- ^ Velocidad horizontal del jugador al recibir input (px\/s).
+  --   @UseCases.UpdateGame@ la lee con @asks gcMoveSpeed@ para fijar @playerVel.vx@.
+  }
   deriving (Eq, Show, Generic)
+
+{- | Configuración por defecto para pruebas y el demo de @app\/Main.hs@.
+
+En Milestone 8 se cargará desde JSON (Aeson) según el nivel.
+-}
+defaultConfig :: GameConfig
+defaultConfig =
+  GameConfig
+    { gcGravity = 980.0 -- aprox. 1g a escala de píxeles (px/s²)
+    , gcMoveSpeed = 200.0 -- 200 px/s de movimiento horizontal
+    }
 
 {- | Errores recuperables del motor.
 
-`newtype` sobre 'String' para tener un tipo distinto a nivel de compilación.
-Así el compilador rechaza pasar un `String` genérico donde se espera un `GameError`.
-En Milestone 3+ crecerá a un tipo suma con constructores específicos
-(ej. @OutOfBounds@, @InvalidInput@), lo que permitirá hacer pattern-matching
-sobre el tipo de error en los manejadores.
+__Por qué seguimos con `newtype String` y no un tipo suma?__
+
+En Milestone 2 ninguna operación puede fallar: los modelos son records simples
+sin invariantes complejos. Introducir un tipo suma (@OutOfBounds@, @InvalidInput@, …)
+ahora sería especulativo — no sabemos exactamente qué errores reales surgirán hasta
+tener física y colisiones (M3). El tipo suma vendrá en M3 cuando aparezca el primer
+error real y podamos diseñarlo con los casos concretos necesarios.
 -}
 newtype GameError = GameError String
   deriving (Eq, Show, Generic)
 
-{- | Estado mutable del juego, compartido a lo largo de una ejecución.
+{- | Estado mutable del juego: el 'World' completo.
 
-Actualmente es un alias de @()@ (la tupla vacía, el único valor del tipo Unit).
-@()@ es el tipo de "no hay información" en Haskell: existe el slot en la pila,
-pero no carga datos todavía.
-En Milestone 2 este alias apuntará a @Domain.Model.World@.
+Cambio respecto a Milestone 1: antes era @()@ (unit, sin datos).
+Ahora contiene el estado real de la simulación que @UpdateGame@ lee y modifica.
 
-Usamos `type` (alias) en lugar de `newtype` porque no necesitamos un tipo
-distinto — en M2 simplemente cambiaremos el lado derecho del alias.
+Usamos `type` (alias de tipo) en lugar de `newtype` porque no necesitamos un
+tipo nominativo distinto — el alias es suficiente para renombrar 'World' a
+'GameState' en la firma de 'runGameM' sin overhead extra.
 -}
-type GameState = () -- → World en M2
+type GameState = World
 
 -- ---------------------------------------------------------------------------
 -- La mónada GameM
@@ -122,7 +155,7 @@ newtype GameM a = GameM
 
 {- | Ejecuta una acción en 'GameM' y devuelve el resultado o un error.
 
-Cada @run*@ desenvuelve (peela) una capa del transformer stack,
+Cada @run*@ desenvuelve (pela) una capa del transformer stack,
 suministrando los valores necesarios para eliminar ese efecto:
 
 @
@@ -135,7 +168,7 @@ suministrando los valores necesarios para eliminar ese efecto:
 
   flip runStateT st
     :: ExceptT GameError Identity (a, GameState)
-       (suministramos el estado inicial; el State pasa a devolver (resultado, estado_final))
+       (suministramos el estado inicial; el State devuelve (resultado, estado_final))
 
   runExceptT
     :: Identity (Either GameError (a, GameState))
@@ -148,8 +181,14 @@ suministrando los valores necesarios para eliminar ese efecto:
 
 Usamos `flip` porque `runReaderT :: ReaderT r m a -> r -> m a` toma
 primero el transformer y luego el entorno. `flip runReaderT cfg` invierte
-el orden, dejando el transformer como último argumento para poder componer
-con `.` (composición de funciones).
+el orden, dejando el transformer como último argumento para componer con `.`.
+
+Ejemplo de uso (ver también @app\/Main.hs@):
+
+@
+runGameM defaultConfig initialWorld someAction
+  -- :: Either GameError (a, World)
+@
 -}
 runGameM ::
   GameConfig ->
