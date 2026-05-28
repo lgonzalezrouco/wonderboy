@@ -1,6 +1,11 @@
 # Cradle paths for haskell-language-server.
 cradle:
   multi:
+    - path: "./src"
+      config:
+        cradle:
+          cabal:
+            component: "lib:wonderboy-hs"
     - path: "./app"
       config:
         cradle:
