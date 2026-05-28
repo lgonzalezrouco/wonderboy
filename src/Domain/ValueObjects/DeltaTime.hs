@@ -6,14 +6,16 @@ aquí sí hay un __invariante__: el tiempo no puede ser negativo.
 Por eso el constructor de datos está oculto y sólo se exporta el
 smart constructor 'deltaTime', que garantiza el invariante.
 -}
-module Domain.ValueObjects.DeltaTime
-  ( -- * Tipo
-    DeltaTime
-  , -- * Construcción
-    deltaTime
-  , -- * Acceso
-    seconds
-  )
+module Domain.ValueObjects.DeltaTime (
+  -- * Tipo
+  DeltaTime,
+
+  -- * Construcción
+  deltaTime,
+
+  -- * Acceso
+  seconds,
+)
 where
 
 import GHC.Generics (Generic)

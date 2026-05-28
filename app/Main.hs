@@ -1,8 +1,9 @@
--- | Punto de entrada del ejecutable. Demo de Milestone 2.
---
--- Corre 3 ticks de `updateGame` con input de movimiento hacia la derecha
--- y muestra el estado del mundo en cada step.
--- Verifica que el stack monádico funciona de punta a punta sin Gloss.
+{- | Punto de entrada del ejecutable. Demo de Milestone 2.
+
+Corre 3 ticks de `updateGame` con input de movimiento hacia la derecha
+y muestra el estado del mundo en cada step.
+Verifica que el stack monádico funciona de punta a punta sin Gloss.
+-}
 module Main where
 
 import Domain.Model.World (World (..), initialWorld)
@@ -11,10 +12,11 @@ import Domain.ValueObjects.Input (Input (..), noInput)
 import UseCases.GameMonad (GameError, defaultConfig, runGameM)
 import UseCases.UpdateGame (updateGame)
 
--- | Ejecuta un tick de `updateGame` a partir de un 'World' dado.
---
--- Usa 'runGameM' 'defaultConfig' para correr la pila monádica.
--- En M2 el 'Left' nunca ocurre; se incluye para completitud de tipos.
+{- | Ejecuta un tick de `updateGame` a partir de un 'World' dado.
+
+Usa 'runGameM' 'defaultConfig' para correr la pila monádica.
+En M2 el 'Left' nunca ocurre; se incluye para completitud de tipos.
+-}
 stepWorld :: DeltaTime -> Input -> World -> World
 stepWorld dt input w =
   case runGameM defaultConfig w (updateGame dt input) of
@@ -34,8 +36,8 @@ main = do
 
   let dt = deltaTime 0.016 -- 16 ms ≈ 60 FPS
       moveRight = noInput{inputRight = True}
-      -- `noInput { inputRight = True }` usa actualización de record:
-      -- copia `noInput` con `inputRight = True`; el resto queda False.
+  -- `noInput { inputRight = True }` usa actualización de record:
+  -- copia `noInput` con `inputRight = True`; el resto queda False.
 
   -- Corremos 3 ticks con el jugador moviéndose a la derecha.
   let w0 = initialWorld

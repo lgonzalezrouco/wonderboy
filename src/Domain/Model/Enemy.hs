@@ -4,12 +4,13 @@ Un enemigo es una __entidad__: tiene identidad propia (puede haber varios enemig
 en la misma posición y el motor necesita distinguirlos). Su comportamiento se describe
 mediante el DSL de entidades (Free monad, Milestone 6); aquí sólo modelamos el estado.
 -}
-module Domain.Model.Enemy
-  ( -- * Tipo
-    Enemy (..)
-  , -- * Construcción
-    mkEnemy
-  )
+module Domain.Model.Enemy (
+  -- * Tipo
+  Enemy (..),
+
+  -- * Construcción
+  mkEnemy,
+)
 where
 
 import GHC.Generics (Generic)

@@ -6,12 +6,13 @@ tiene identidad a lo largo del tiempo. Su estado cambia frame a frame
 
 Ver 'Domain.Model.Enemy' para comparar con la entidad enemigo.
 -}
-module Domain.Model.Player
-  ( -- * Tipo
-    Player (..)
-  , -- * Construcción
-    spawnPlayer
-  )
+module Domain.Model.Player (
+  -- * Tipo
+  Player (..),
+
+  -- * Construcción
+  spawnPlayer,
+)
 where
 
 import GHC.Generics (Generic)

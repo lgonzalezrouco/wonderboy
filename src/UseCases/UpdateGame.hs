@@ -7,10 +7,10 @@ y no lanza errores (nada puede fallar con los modelos de M2).
 Esta firma es __casi-final__: en Milestone 3 el body de 'updateGame' llamará a
 @Domain.Logic.step@ (con gravedad y colisiones) sin necesidad de cambiar la firma.
 -}
-module UseCases.UpdateGame
-  ( -- * Ciclo de update
-    updateGame
-  )
+module UseCases.UpdateGame (
+  -- * Ciclo de update
+  updateGame,
+)
 where
 
 -- Grupo 2 — terceros (mtl)
@@ -73,14 +73,14 @@ consolidarse en @Domain.Logic.Physics@.
 applyInput :: Float -> Input -> Player -> Player
 applyInput speed input p =
   p{playerVel = velocity vx' vy'}
-  where
-    -- Conservamos la componente vy actual; en M2 la gravedad no existe todavía.
-    vy' = velY (playerVel p)
-    -- `velY :: Velocity -> Float` extrae la componente vertical.
-    vx' = case (inputLeft input, inputRight input) of
-      (True, False) -> -speed -- ← izquierda
-      (False, True) -> speed -- → derecha
-      _ -> 0 -- quieto: ninguna tecla o ambas a la vez
+ where
+  -- Conservamos la componente vy actual; en M2 la gravedad no existe todavía.
+  vy' = velY (playerVel p)
+  -- `velY :: Velocity -> Float` extrae la componente vertical.
+  vx' = case (inputLeft input, inputRight input) of
+    (True, False) -> -speed -- ← izquierda
+    (False, True) -> speed -- → derecha
+    _ -> 0 -- quieto: ninguna tecla o ambas a la vez
 
 -- `case (a, b) of` hace pattern matching exhaustivo sobre el par de booleanos.
 -- `_` captura (False, False) y (True, True): en ambos casos el jugador se detiene.

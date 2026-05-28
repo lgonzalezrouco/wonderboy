@@ -7,16 +7,19 @@ calcular el siguiente frame.
 En Milestone 3 se agrega la geometría del nivel (plataformas, AABB) y la
 función 'step' en @Domain.Logic.Physics@ reemplaza el placeholder 'advance'.
 -}
-module Domain.Model.World
-  ( -- * Tipo
-    World (..)
-  , -- * Construcción
-    initialWorld
-  , -- * Transformaciones
-    mapPlayer
-  , -- * Integración cinemática (placeholder M2 → M3)
-    advance
-  )
+module Domain.Model.World (
+  -- * Tipo
+  World (..),
+
+  -- * Construcción
+  initialWorld,
+
+  -- * Transformaciones
+  mapPlayer,
+
+  -- * Integración cinemática (placeholder M2 → M3)
+  advance,
+)
 where
 
 import GHC.Generics (Generic)

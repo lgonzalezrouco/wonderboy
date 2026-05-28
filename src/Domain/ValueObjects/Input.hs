@@ -6,12 +6,13 @@ no "el jugador pulsó X ahora". Esa distinción la gestiona el adaptador de entr
 
 Ver 'noInput' para el valor neutro (ninguna acción activa).
 -}
-module Domain.ValueObjects.Input
-  ( -- * Tipo
-    Input (..)
-  , -- * Valor neutro
-    noInput
-  )
+module Domain.ValueObjects.Input (
+  -- * Tipo
+  Input (..),
+
+  -- * Valor neutro
+  noInput,
+)
 where
 
 import GHC.Generics (Generic)

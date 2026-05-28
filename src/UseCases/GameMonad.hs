@@ -10,18 +10,21 @@ Combina tres efectos apilados sobre una base pura:
 Nada en este módulo es 'IO'. Toda la impureza vive en @Adapters/@ y @Frameworks/@.
 Ver @docs\/gamemonad.md@ para la justificación de cada capa y su orden.
 -}
-module UseCases.GameMonad
-  ( -- * Configuración
-    GameConfig (..)
-  , defaultConfig
-  , -- * Errores
-    GameError (..)
-  , -- * Estado
-    GameState
-  , -- * La mónada
-    GameM (..)
-  , runGameM
-  )
+module UseCases.GameMonad (
+  -- * Configuración
+  GameConfig (..),
+  defaultConfig,
+
+  -- * Errores
+  GameError (..),
+
+  -- * Estado
+  GameState,
+
+  -- * La mónada
+  GameM (..),
+  runGameM,
+)
 where
 
 -- Grupo 1 — stdlib / base
