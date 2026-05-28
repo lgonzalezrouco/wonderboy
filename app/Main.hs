@@ -31,7 +31,7 @@ stepWorld dt input w =
 
 main :: IO ()
 main = do
-  putStrLn "=== Wonder Boy — Demo Milestone 2 ==="
+  putStrLn "=== Wonder Boy - Demo Milestone 2 ==="
   putStrLn ""
 
   let dt = deltaTime 0.016 -- 16 ms ≈ 60 FPS
@@ -49,15 +49,15 @@ main = do
   print (worldPlayer w0)
   putStrLn ""
 
-  putStrLn "Tick 1 (→ derecha, 16 ms):"
+  putStrLn "Tick 1 (-> derecha, 16 ms):"
   print (worldPlayer w1)
   putStrLn ""
 
-  putStrLn "Tick 2 (→ derecha, 16 ms):"
+  putStrLn "Tick 2 (-> derecha, 16 ms):"
   print (worldPlayer w2)
   putStrLn ""
 
-  putStrLn "Tick 3 (→ derecha, 16 ms):"
+  putStrLn "Tick 3 (-> derecha, 16 ms):"
   print (worldPlayer w3)
   putStrLn ""
 
@@ -68,7 +68,7 @@ main = do
   print (worldPlayer wIdle)
   putStrLn ""
   putStrLn $
-    "¿dt=0 + noInput es identidad en posición? "
+    "?dt=0 + noInput es identidad en posicion? "
       ++ show (worldPlayer wIdle == worldPlayer w0)
 
 -- `let` en `do` introduce ligaduras locales. Cada línea puede usar las
