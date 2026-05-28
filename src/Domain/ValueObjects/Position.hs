@@ -1,11 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
--- GHC2021 habilita `GeneralisedNewtypeDeriving` pero NO la extensión
--- `DerivingStrategies`, que es la que permite escribir `deriving stock`
--- y `deriving newtype` explícitamente. La necesitamos porque la opción
--- `-Wmissing-deriving-strategies` (activada en el `warnings` del .cabal)
--- emite un warning si no especificás la estrategia en cada `deriving`.
-
 {- | Coordenada 2D en el espacio del juego.
 
 Representa un punto (x, y) en píxeles lógicos.
@@ -42,7 +34,7 @@ Para `Eq`, `Show` y `Generic` en un `newtype`, `stock` y `newtype` producen
 el mismo resultado, pero especificarlo evita ambigüedad y silencia el warning.
 -}
 newtype Position = Position (Float, Float)
-  deriving stock (Eq, Show, Generic)
+  deriving (Eq, Show, Generic)
 
 -- `Eq`      → permite comparar posiciones con `==` y `/=`.
 -- `Show`    → permite imprimir posiciones en GHCi o en tests.

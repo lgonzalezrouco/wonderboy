@@ -1,10 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
--- `DerivingStrategies` permite usar `deriving stock` y `deriving newtype`
--- explícitamente (requerido por `-Wmissing-deriving-strategies`).
--- GHC2021 ya trae `GeneralisedNewtypeDeriving` (que hace posible `deriving newtype`)
--- pero no la sintaxis de estrategias.
-
 {- | Pila monádica central del motor.
 
 'GameM' es el contexto en el que corre toda la lógica de 'UseCases/'.
@@ -49,7 +42,7 @@ los límites del mundo. Usamos `data` (no `newtype`) porque no hay nada
 que envolver — `newtype` requiere exactamente un campo.
 -}
 data GameConfig = GameConfig
-  deriving stock (Eq, Show, Generic)
+  deriving (Eq, Show, Generic)
 
 {- | Errores recuperables del motor.
 
@@ -60,7 +53,7 @@ En Milestone 3+ crecerá a un tipo suma con constructores específicos
 sobre el tipo de error en los manejadores.
 -}
 newtype GameError = GameError String
-  deriving stock (Eq, Show, Generic)
+  deriving (Eq, Show, Generic)
 
 {- | Estado mutable del juego, compartido a lo largo de una ejecución.
 
@@ -101,18 +94,11 @@ Por qué `newtype` y no un alias de tipo:
     agregar instancias propias en el futuro si hiciera falta.
 -}
 newtype GameM a = GameM
-  { -- `unGameM` es el accessor del campo del newtype.
-    -- Nos permite "desempaquetar" el newtype cuando necesitamos operar
-    -- directamente sobre la pila interna (por ejemplo, en `runGameM`).
+  { -- `unGameM` desempaqueta el newtype para operar sobre la pila interna (por ejemplo, en `runGameM`).
     unGameM ::
       ReaderT GameConfig (StateT GameState (ExceptT GameError Identity)) a
   }
-  deriving newtype
-    -- `deriving newtype` coerciona las instancias del tipo interno al `newtype`.
-    -- Es seguro porque `newtype` y su tipo interno tienen la misma representación.
-    -- Sin esta derivación, tendríamos que escribir a mano instancias como:
-    --   instance Functor GameM where fmap f (GameM m) = GameM (fmap f m)
-    -- que son completamente mecánicas.
+  deriving
     ( -- | Permite aplicar una función al resultado: `fmap (+1) :: GameM Int -> GameM Int`.
       Functor
     , -- | Permite `pure :: a -> GameM a` (envuelve un valor puro) y `<*>` (aplicación en contexto).

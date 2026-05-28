@@ -1,9 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
--- Misma razón que en Position.hs: necesitamos `deriving stock` explícito
--- para satisfacer `-Wmissing-deriving-strategies`. GHC2021 no activa
--- la sintaxis de estrategias por sí solo.
-
 {- | Velocidad 2D de una entidad del juego.
 
 Representa el desplazamiento (vx, vy) en píxeles por segundo.
@@ -34,7 +28,7 @@ Convención de signos (se establece aquí para consistencia en `Domain.Logic`):
   * La gravedad restará de vy en cada tick de física.
 -}
 newtype Velocity = Velocity (Float, Float)
-  deriving stock (Eq, Show, Generic)
+  deriving (Eq, Show, Generic)
 
 -- | Construye una 'Velocity' a partir de sus componentes vx y vy.
 velocity :: Float -> Float -> Velocity

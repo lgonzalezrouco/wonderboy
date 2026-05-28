@@ -66,7 +66,6 @@ common warnings
         -Wall
         -Wcompat
         -Widentities
-        -Wmissing-deriving-strategies
         -Wpartial-fields
 
 -- Shared dependency bounds: PVP-friendly range for GHC 9.6.x (base 4.18.*); widen when CI supports newer GHC.
