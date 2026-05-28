@@ -77,9 +77,15 @@ library
     hs-source-dirs:   src
     default-language: GHC2021
     exposed-modules:
-        Domain.ValueObjects.Position
+        Domain.ValueObjects.DeltaTime
+      , Domain.ValueObjects.Input
+      , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
+      , Domain.Model.Enemy
+      , Domain.Model.Player
+      , Domain.Model.World
       , UseCases.GameMonad
+      , UseCases.UpdateGame
     build-depends:
       , mtl >=2.3 && <2.4
 
@@ -99,6 +105,10 @@ executable wonderboy-hs
     hs-source-dirs:   app
 
     default-language: GHC2021
+
+    -- La librería `wonderboy-hs` expone todos los módulos del motor.
+    -- El ejecutable la usa sólo para el demo; en M8 Gloss también entra aquí.
+    build-depends:    wonderboy-hs
 
 test-suite wonderboy-hs-test
     import:           warnings, deps
