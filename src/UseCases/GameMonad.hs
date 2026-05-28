@@ -113,21 +113,21 @@ newtype GameM a = GameM
     -- Sin esta derivación, tendríamos que escribir a mano instancias como:
     --   instance Functor GameM where fmap f (GameM m) = GameM (fmap f m)
     -- que son completamente mecánicas.
-    ( Functor
-    -- ^ Permite aplicar una función al resultado: `fmap (+1) :: GameM Int -> GameM Int`.
-    , Applicative
-    -- ^ Permite `pure :: a -> GameM a` (envuelve un valor puro) y `<*>` (aplicación en contexto).
-    , Monad
-    -- ^ Permite `>>=` (bind) para secuenciar acciones: `accionA >>= \resultado -> accionB resultado`.
-    , MonadReader GameConfig
-    -- ^ Habilita `ask :: GameM GameConfig` (leer la config completa) y
-    --   `asks f :: GameM b` (leer un campo: `asks gcGravity`).
-    , MonadState GameState
-    -- ^ Habilita `get :: GameM GameState`, `put :: GameState -> GameM ()`,
-    --   y `modify :: (GameState -> GameState) -> GameM ()`.
-    , MonadError GameError
-    -- ^ Habilita `throwError :: GameError -> GameM a` y
-    --   `catchError :: GameM a -> (GameError -> GameM a) -> GameM a`.
+    ( -- | Permite aplicar una función al resultado: `fmap (+1) :: GameM Int -> GameM Int`.
+      Functor
+    , -- | Permite `pure :: a -> GameM a` (envuelve un valor puro) y `<*>` (aplicación en contexto).
+      Applicative
+    , -- | Permite `>>=` (bind) para secuenciar acciones: `accionA >>= \resultado -> accionB resultado`.
+      Monad
+    , -- | Habilita `ask :: GameM GameConfig` (leer la config completa) y
+      --   `asks f :: GameM b` (leer un campo: `asks gcGravity`).
+      MonadReader GameConfig
+    , -- | Habilita `get :: GameM GameState`, `put :: GameState -> GameM ()`,
+      --   y `modify :: (GameState -> GameState) -> GameM ()`.
+      MonadState GameState
+    , -- | Habilita `throwError :: GameError -> GameM a` y
+      --   `catchError :: GameM a -> (GameError -> GameM a) -> GameM a`.
+      MonadError GameError
     )
 
 -- ---------------------------------------------------------------------------
@@ -165,10 +165,10 @@ primero el transformer y luego el entorno. `flip runReaderT cfg` invierte
 el orden, dejando el transformer como último argumento para poder componer
 con `.` (composición de funciones).
 -}
-runGameM
-  :: GameConfig
-  -> GameState
-  -> GameM a
-  -> Either GameError (a, GameState)
+runGameM ::
+  GameConfig ->
+  GameState ->
+  GameM a ->
+  Either GameError (a, GameState)
 runGameM cfg st =
   runIdentity . runExceptT . flip runStateT st . flip runReaderT cfg . unGameM
