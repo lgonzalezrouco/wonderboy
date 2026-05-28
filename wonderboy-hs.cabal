@@ -66,14 +66,22 @@ common warnings
         -Wall
         -Wcompat
         -Widentities
-        -Wmissing-deriving-strategies
         -Wpartial-fields
 
 -- Shared dependency bounds: PVP-friendly range for GHC 9.6.x (base 4.18.*); widen when CI supports newer GHC.
 common deps
     build-depends: base >=4.18 && <4.19
 
-
+library
+    import:           warnings, deps
+    hs-source-dirs:   src
+    default-language: GHC2021
+    exposed-modules:
+        Domain.ValueObjects.Position
+      , Domain.ValueObjects.Velocity
+      , UseCases.GameMonad
+    build-depends:
+      , mtl >=2.3 && <2.4
 
 executable wonderboy-hs
     import:           warnings, deps
