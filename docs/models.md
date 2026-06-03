@@ -10,14 +10,14 @@ Es un complemento a los comentarios inline de cada módulo.
 
 El proyecto distingue dos categorías de tipos en `Domain/`:
 
-| Categoría | Ejemplos | Igualdad | ¿Identidad propia? |
-|-----------|----------|----------|--------------------|
-| **Value Object** | `Position`, `Velocity`, `DeltaTime`, `Input` | Por valor (mismas coordenadas = misma posición) | No |
-| **Entity** | `Player`, `Enemy` | Por identidad (dos enemigos en la misma posición son distintos) | Sí |
+| Categoría        | Ejemplos                                     | Igualdad                                                        | ¿Identidad propia? |
+| ---------------- | -------------------------------------------- | --------------------------------------------------------------- | ------------------ |
+| **Value Object** | `Position`, `Velocity`, `DeltaTime`, `Input` | Por valor (mismas coordenadas = misma posición)                 | No                 |
+| **Entity**       | `Player`, `Enemy`                            | Por identidad (dos enemigos en la misma posición son distintos) | Sí                 |
 
 En Haskell ambas se implementan como valores inmutables — no hay mutación en `Domain/`.
 La diferencia es conceptual: una entidad "persiste" a través del tiempo; un frame nuevo
-tiene un `Player` actualizado que *representa* al mismo jugador, aunque sea un valor nuevo.
+tiene un `Player` actualizado que _representa_ al mismo jugador, aunque sea un valor nuevo.
 
 ---
 
@@ -37,6 +37,7 @@ data Player = Player
 ```
 
 Con records:
+
 - GHC genera selectores automáticos (`playerPos :: Player -> Position`).
 - Las actualizaciones son expresivas: `p { playerHealth = playerHealth p - 1 }`.
 - Si se agrega un campo, el compilador advierte en todos los sitios de construcción
@@ -46,7 +47,7 @@ Con records:
 
 ## Identidad de enemigos: por qué `enemyId`
 
-Two value objects con los mismos datos son indistinguibles:
+Dos value objects con los mismos datos son indistinguibles:
 
 ```haskell
 position 5 5 == position 5 5   -- True: misma posición, mismo punto
@@ -111,7 +112,7 @@ El ADT tiene la ventaja de que `Set.fromList [MoveLeft, MoveLeft]` no duplica la
 
 ## `World` en Milestone 2 vs Milestones siguientes
 
-```
+```text
 M2: World = Player + [Enemy]          (este milestone)
 M3: World = Player + [Enemy] + [Platform]   (geometría del nivel)
 M8: World + carga desde JSON (Aeson)
@@ -145,7 +146,7 @@ La separación actual entre `applyInput` (ajusta velocidades según input) y `ad
 
 ## Relación entre capas para el update de un frame
 
-```
+```text
 Input del usuario (teclado/gamepad)
         ↓  [Adapters/Input — M7]
 Domain.ValueObjects.Input

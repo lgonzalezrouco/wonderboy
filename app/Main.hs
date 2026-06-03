@@ -9,21 +9,23 @@ module Main where
 import Domain.Model.World (World (..), initialWorld)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
-import UseCases.GameMonad (GameError, defaultConfig, runGameM)
+import System.Exit (exitFailure)
+import System.IO (hPutStrLn, stderr)
+import UseCases.GameMonad (defaultConfig, runGameM)
 import UseCases.UpdateGame (updateGame)
 
 {- | Ejecuta un tick de `updateGame` a partir de un 'World' dado.
 
 Usa 'runGameM' 'defaultConfig' para correr la pila monádica.
-En M2 el 'Left' nunca ocurre; se incluye para completitud de tipos.
+En caso de error imprime en stderr y termina con código distinto de cero.
 -}
-stepWorld :: DeltaTime -> Input -> World -> World
+stepWorld :: DeltaTime -> Input -> World -> IO World
 stepWorld dt input w =
   case runGameM defaultConfig w (updateGame dt input) of
-    Left (err :: GameError) ->
-      -- En M2 esto nunca ocurre; se deja por completitud.
-      error ("Error inesperado: " ++ show err)
-    Right ((), w') -> w'
+    Left err -> do
+      hPutStrLn stderr ("Error: " ++ show err)
+      exitFailure
+    Right ((), w') -> pure w'
 
 -- `runGameM :: GameConfig -> GameState -> GameM a -> Either GameError (a, GameState)`
 -- Pasamos `defaultConfig` (GameConfig), `w` (World = GameState), y la acción.
@@ -41,9 +43,9 @@ main = do
 
   -- Corremos 3 ticks con el jugador moviéndose a la derecha.
   let w0 = initialWorld
-      w1 = stepWorld dt moveRight w0
-      w2 = stepWorld dt moveRight w1
-      w3 = stepWorld dt moveRight w2
+  w1 <- stepWorld dt moveRight w0
+  w2 <- stepWorld dt moveRight w1
+  w3 <- stepWorld dt moveRight w2
 
   putStrLn "Tick 0 (inicial):"
   print (worldPlayer w0)
@@ -63,7 +65,7 @@ main = do
 
   -- Verificamos la propiedad precursora del test de M5:
   -- dt=0 con noInput no debe desplazar al jugador.
-  let wIdle = stepWorld (deltaTime 0) noInput w0
+  wIdle <- stepWorld (deltaTime 0) noInput w0
   putStrLn "Tick con dt=0 y noInput (player debe quedar en origen):"
   print (worldPlayer wIdle)
   putStrLn ""

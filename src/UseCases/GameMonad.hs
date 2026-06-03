@@ -58,7 +58,7 @@ data GameConfig = GameConfig
   { gcGravity :: Float
   -- ^ Aceleración gravitatoria en px\/s² (hacia abajo).
   --   Se aplica sobre la componente vy del jugador en cada frame (M3).
-  --   Valor típico para un plataformas de píxeles: 800–1200 px\/s².
+  --   Valor típico para un juego de plataformas en píxeles: 800–1200 px\/s².
   , gcMoveSpeed :: Float
   -- ^ Velocidad horizontal del jugador al recibir input (px\/s).
   --   @UseCases.UpdateGame@ la lee con @asks gcMoveSpeed@ para fijar @playerVel.vx@.

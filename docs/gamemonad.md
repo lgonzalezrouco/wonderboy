@@ -1,6 +1,6 @@
 # GameMonad — Diseño y decisiones técnicas
 
-Este documento explica *por qué* `UseCases.GameMonad` tiene la forma que tiene.
+Este documento explica _por qué_ `UseCases.GameMonad` tiene la forma que tiene.
 Está pensado como complemento a los comentarios inline del módulo.
 
 ---
@@ -11,11 +11,11 @@ En Haskell, una función pura no puede leer configuración, modificar estado ni
 lanzar errores: sólo transforma entrada en salida. En el motor necesitamos las
 tres cosas durante el ciclo de actualización (`UpdateGame`):
 
-| Necesidad | Solución funcional |
-|-----------|-------------------|
-| Leer la gravedad, los límites del mundo | `MonadReader GameConfig` |
-| Actualizar el estado del juego por frame | `MonadState GameState` |
-| Abortar si algo falla (nivel corrupto, etc.) | `MonadError GameError` |
+| Necesidad                                    | Solución funcional       |
+| -------------------------------------------- | ------------------------ |
+| Leer la gravedad, los límites del mundo      | `MonadReader GameConfig` |
+| Actualizar el estado del juego por frame     | `MonadState GameState`   |
+| Abortar si algo falla (nivel corrupto, etc.) | `MonadError GameError`   |
 
 La solución es un **transformer stack**: apilamos transformadores de mónadas,
 cada uno sumando un efecto, sobre una base puramente funcional (`Identity`).
@@ -24,7 +24,7 @@ cada uno sumando un efecto, sobre una base puramente funcional (`Identity`).
 
 ## El orden de las capas y por qué importa
 
-```
+```haskell
 ReaderT GameConfig
   (StateT GameState
     (ExceptT GameError
@@ -37,7 +37,7 @@ El orden afecta el tipo de retorno de `runGameM`:
 Either GameError (a, GameState)
 ```
 
-Con `ExceptT` *debajo* de `StateT`, si ocurre un error el estado del momento
+Con `ExceptT` _debajo_ de `StateT`, si ocurre un error el estado del momento
 del error **se pierde** (sólo devolvemos `Left err`). Si lo invirtiéramos
 (`StateT` dentro de `ExceptT`), el tipo sería `(Either GameError a, GameState)`
 y recuperaríamos el estado incluso ante un error.
@@ -62,7 +62,7 @@ newtype GameM a = GameM { unGameM :: ReaderT ... a }
 ```
 
 Con el `newtype`, los errores del compilador dicen `GameM Int` en lugar de
-`ReaderT GameConfig (StateT () (ExceptT GameError Identity)) Int`.
+`ReaderT GameConfig (StateT World (ExceptT GameError Identity)) Int`.
 
 ---
 
@@ -76,8 +76,11 @@ La ventaja es que el código de negocio puede escribirse contra las typeclasses:
 
 ```haskell
 -- No sabe que la mónada concreta es GameM; funciona con cualquier pila que tenga MonadState
-decrementLife :: MonadState GameState m => m ()
-decrementLife = modify (over playerLives (subtract 1))
+damagePlayer :: MonadState GameState m => Int -> m ()
+damagePlayer amount =
+  modify $ \world ->
+    let p = worldPlayer world
+     in world {worldPlayer = p {playerHealth = playerHealth p - amount}}
 ```
 
 Esto facilita el testing (se puede correr en un stack de tests distinto) y
@@ -87,11 +90,11 @@ hace explícitas las dependencias de cada función.
 
 ## Estado por Milestone
 
-| Campo | M1 | M2 (actual) | M3+ |
-|-------|----|-----------|----|
-| `GameState` | `()` — vacío | `World` con `Player` y `[Enemy]` ✓ | `+ [Platform]` |
-| `GameConfig` | Constructor vacío | `gcGravity`, `gcMoveSpeed` + `defaultConfig` ✓ | Carga desde JSON |
-| `GameError` | `newtype String` | `newtype String` (sin errores reales todavía) | Tipo suma: `OutOfBounds`, `InvalidInput`, … |
+| Campo        | M1                | M2 (actual)                                    | M3+                                         |
+| ------------ | ----------------- | ---------------------------------------------- | ------------------------------------------- |
+| `GameState`  | `()` — vacío      | `World` con `Player` y `[Enemy]` ✓             | `+ [Platform]`                              |
+| `GameConfig` | Constructor vacío | `gcGravity`, `gcMoveSpeed` + `defaultConfig` ✓ | Carga desde JSON                            |
+| `GameError`  | `newtype String`  | `newtype String` (sin errores reales todavía)  | Tipo suma: `OutOfBounds`, `InvalidInput`, … |
 
 El stack compila, `UpdateGame` corre en `GameMonad`, y `runGameM` devuelve
 `Right ((), world')` con el `World` real. Ver `docs/models.md` para las
