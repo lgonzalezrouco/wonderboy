@@ -70,8 +70,9 @@ runSubsteps n dtSub plats vyBefore p =
       p' = resolvePlayerPlatforms plats vyBefore pInt
    in p' `seq` runSubsteps (n - 1) dtSub plats vyBefore p'
 
--- | Tope de sub-pasos por frame: cota dura del trabajo aun con sólidos
---   extremadamente finos o velocidades muy altas (evita @n@ patológico).
+{- | Tope de sub-pasos por frame: cota dura del trabajo aun con sólidos
+  extremadamente finos o velocidades muy altas (evita @n@ patológico).
+-}
 maxSubsteps :: Int
 maxSubsteps = 16
 
