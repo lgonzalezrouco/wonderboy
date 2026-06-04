@@ -1,8 +1,8 @@
 {- | AST del DSL de comportamiento de enemigos (Free monad).
 
 Instrucciones cinemáticas puras: 'setVelocity' y 'waitFrames'. Un behaviour step
-por frame vive en @Domain.Logic.RunBehaviour@; el wrapper monádico en
-@UseCases.InterpretBehaviour@.
+por frame vive en @Domain.Logic.RunBehaviour@; @Domain.Logic.Step.advanceFrame@ lo
+compone con la física y @UseCases.UpdateGame.updateGame@ lo eleva a 'GameM'.
 -}
 module Domain.Model.EntityBehaviour (
   -- * AST

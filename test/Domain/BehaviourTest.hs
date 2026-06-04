@@ -1,10 +1,14 @@
+{- | Semántica pura del DSL de comportamiento (M6): pasos de behaviour y su
+composición con la física en el dominio. La orquestación en 'GameM' vive en
+'UseCases.UpdateGameTest'.
+-}
 module Domain.BehaviourTest where
 
 import Domain.Fixtures (dtFrame, testParams)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep, stepEnemyBehaviour)
 import Domain.Logic.Step (step)
-import Domain.Model.Enemy (Enemy (..), enemyPos, enemyProgram, enemyVel, mkEnemy)
+import Domain.Model.Enemy (enemyPos, enemyProgram, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (
   idleProgram,
   setVelocity,
@@ -13,14 +17,11 @@ import Domain.Model.EntityBehaviour (
   waitThen,
  )
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..), demoWorld)
-import Domain.ValueObjects.DeltaTime (deltaTime)
+import Domain.Model.World (World (..))
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
 import Domain.ValueObjects.Velocity (velX, velocity)
-import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
-import UseCases.GameMonad (defaultConfig, runGameM)
-import UseCases.UpdateGame (updateGame)
+import Test.Tasty.HUnit (Assertion, (@?=))
 
 unit_waitFramesDecrements :: Assertion
 unit_waitFramesDecrements =
@@ -73,39 +74,8 @@ unit_behaviourThenStepMovesEnemy =
       x1 = posX (enemyPos (head (worldEnemies w2)))
    in (x1 < 0) @?= True
 
-unit_updateGameDtZeroSkipsBehaviour :: Assertion
-unit_updateGameDtZeroSkipsBehaviour =
-  case runGameM defaultConfig worldWithWait (updateGame (deltaTime 0) noInput) of
-    Left err -> assertFailure (show err)
-    Right ((), w') -> w' @?= worldWithWait
- where
-  worldWithWait =
-    World
-      { worldPlayer = spawnPlayer (position 0 0)
-      , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
-      , worldPlatforms = []
-      }
-
-unit_updateGamePatrolReversesVelocity :: Assertion
-unit_updateGamePatrolReversesVelocity =
-  let patrol = patrolHorizontal 40 2
-      w0 =
-        World
-          { worldPlayer = spawnPlayer (position 0 0)
-          , worldEnemies = [mkEnemy 1 (position 50 8) patrol]
-          , worldPlatforms = []
-          }
-      wLeft = runTicks 1 w0
-      vxLeft = velX (enemyVel (head (worldEnemies wLeft)))
-      -- Tras setVel izquierda: 2 frames de wait + 1 frame que arma setVel derecha + 1 que la ejecuta
-      wRight = runTicks 4 wLeft
-      vxRight = velX (enemyVel (head (worldEnemies wRight)))
-   in do
-        assertBool "patrol starts moving left" (vxLeft < 0)
-        assertBool "patrol reverses to move right" (vxRight > 0)
-
-unit_stepWithoutInterpreterLeavesEnemyStill :: Assertion
-unit_stepWithoutInterpreterLeavesEnemyStill =
+unit_stepDoesNotRunBehaviour :: Assertion
+unit_stepDoesNotRunBehaviour =
   let e = mkEnemy 1 (position 50 8) (patrolHorizontal 40 90)
       w0 =
         World
@@ -115,17 +85,3 @@ unit_stepWithoutInterpreterLeavesEnemyStill =
           }
       w1 = step testParams dtFrame noInput w0
    in posX (enemyPos (head (worldEnemies w1))) @?= 50
-
-unit_updateGameAdvancesPatrolPosition :: Assertion
-unit_updateGameAdvancesPatrolPosition =
-  case runGameM defaultConfig demoWorld (updateGame dtFrame noInput) of
-    Left err -> assertFailure (show err)
-    Right ((), w') ->
-      posX (enemyPos (head (worldEnemies w'))) < 50 @?= True
-
-runTicks :: Int -> World -> World
-runTicks 0 w = w
-runTicks n w =
-  case runGameM defaultConfig w (updateGame dtFrame noInput) of
-    Left err -> error (show err)
-    Right ((), w') -> runTicks (n - 1) w'

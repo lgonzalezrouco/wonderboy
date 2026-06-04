@@ -12,14 +12,12 @@ module Domain.Model.World (
 
   -- * Construcción
   initialWorld,
-  demoWorld,
 )
 where
 
 import GHC.Generics (Generic)
 
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
-import Domain.Model.Enemy (Enemy (..), mkEnemy)
+import Domain.Model.Enemy (Enemy)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
 import Domain.ValueObjects.Position (position)
@@ -47,15 +45,4 @@ initialWorld =
     { worldPlayer = spawnPlayer (position 0 80)
     , worldEnemies = []
     , worldPlatforms = [testFloor]
-    }
-
-{- | Mundo de demo M6: mismo layout que 'initialWorld' más un enemigo de patrulla.
-
-Usado por @app/Main.hs@ y tests de comportamiento integrado.
--}
-demoWorld :: World
-demoWorld =
-  initialWorld
-    { worldEnemies =
-        [mkEnemy 1 (position 50 8) (patrolHorizontal 40 90)]
     }

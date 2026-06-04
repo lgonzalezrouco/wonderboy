@@ -1,9 +1,10 @@
 -- | Punto de entrada del ejecutable. Demo de física (M3) y patrulla enemiga (M6).
 module Main where
 
+import Domain.DemoLevels (demoWorld)
 import Domain.Model.Enemy (enemyPos, enemyVel)
 import Domain.Model.Player (playerOnGround, playerPos, playerVel)
-import Domain.Model.World (World (..), demoWorld)
+import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
@@ -11,16 +12,19 @@ import Domain.ValueObjects.Position (posX)
 import Domain.ValueObjects.Velocity (velY)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import UseCases.GameMonad (defaultConfig, physicsParamsFromConfig, runGameM)
-import UseCases.UpdateGame (updateGame)
+import UseCases.GameMonad (GameError, defaultConfig, physicsParamsFromConfig)
+import UseCases.UpdateGame (runFrames)
+
+-- | Aborta el demo si un frame falla; en éxito devuelve el mundo resultante.
+orDie :: Either GameError World -> IO World
+orDie (Left err) = do
+  hPutStrLn stderr ("Error: " ++ show err)
+  exitFailure
+orDie (Right w) = pure w
 
 stepWorld :: Float -> Input -> World -> IO World
 stepWorld dtSec input w =
-  case runGameM defaultConfig w (updateGame (deltaTime dtSec) input) of
-    Left err -> do
-      hPutStrLn stderr ("Error: " ++ show err)
-      exitFailure
-    Right ((), w') -> pure w'
+  orDie (runFrames defaultConfig 1 (deltaTime dtSec) input w)
 
 printPlayer :: String -> World -> IO ()
 printPlayer label w = do
@@ -86,10 +90,8 @@ main = do
       ++ show (wIdle == w0)
 
 runPatrolTicks :: Int -> Float -> World -> IO World
-runPatrolTicks 0 _ w = pure w
-runPatrolTicks n dtSec w = do
-  w' <- stepWorld dtSec noInput w
-  runPatrolTicks (n - 1) dtSec w'
+runPatrolTicks n dtSec w =
+  orDie (runFrames defaultConfig n (deltaTime dtSec) noInput w)
 
 fallUntilGround :: Float -> World -> Int -> IO (World, Int)
 fallUntilGround dtSec w0 maxTicks = loop w0 0

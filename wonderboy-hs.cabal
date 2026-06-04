@@ -52,7 +52,7 @@ homepage:           https://github.com/lgonzalezrouco/wonderboy
 bug-reports:        https://github.com/lgonzalezrouco/wonderboy/issues
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
--- extra-doc-files:    CHANGELOG.md
+extra-doc-files:    README.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
@@ -93,8 +93,8 @@ library
       , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
+      , Domain.DemoLevels
       , UseCases.GameMonad
-      , UseCases.InterpretBehaviour
       , UseCases.UpdateGame
     build-depends:
       , free >=5.2 && <5.3
@@ -131,6 +131,7 @@ test-suite wonderboy-hs-test
       , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.StepTest
+      , UseCases.UpdateGameTest
 
     type:             exitcode-stdio-1.0
 
