@@ -62,7 +62,7 @@ data Input = Input
 Útil como valor inicial y en tests:
 
 @
-step dt noInput world === world   -- propiedad que se verifica en M5
+step params (deltaTime 0) noInput world === world   -- ver @test/Domain/StepTest.hs@
 @
 
 También es el input por defecto cuando el adaptador de entrada (M7)

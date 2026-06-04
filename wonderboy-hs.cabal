@@ -77,11 +77,17 @@ library
     hs-source-dirs:   src
     default-language: GHC2021
     exposed-modules:
-        Domain.ValueObjects.DeltaTime
+        Domain.ValueObjects.Aabb
+      , Domain.ValueObjects.DeltaTime
       , Domain.ValueObjects.Input
+      , Domain.ValueObjects.PhysicsParams
       , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
+      , Domain.Logic.Collision
+      , Domain.Logic.Physics
+      , Domain.Logic.Step
       , Domain.Model.Enemy
+      , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
       , UseCases.GameMonad
@@ -115,19 +121,17 @@ test-suite wonderboy-hs-test
 
     default-language: GHC2021
 
-    -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules:
+        Domain.AabbTest
+      , Domain.StepTest
 
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-
-    -- The interface type and version of the test suite.
     type:             exitcode-stdio-1.0
 
-    -- Directories containing source files.
     hs-source-dirs:   test
 
-    -- The entrypoint to the test suite.
     main-is:          Main.hs
 
-    build-depends:    base >=4.18 && <4.19
+    build-depends:
+        wonderboy-hs
+      , tasty >=1.5 && <1.6
+      , tasty-hunit >=0.10 && <0.11

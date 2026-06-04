@@ -14,6 +14,7 @@ module UseCases.GameMonad (
   -- * Configuración
   GameConfig (..),
   defaultConfig,
+  physicsParamsFromConfig,
 
   -- * Errores
   GameError (..),
@@ -39,8 +40,8 @@ import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.State (MonadState, StateT, runStateT)
 
 -- Grupo 3 — proyecto
--- Importamos sólo el tipo `World`; el valor `initialWorld` vive en su módulo de origen.
 import Domain.Model.World (World)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la pila
@@ -61,7 +62,9 @@ data GameConfig = GameConfig
   --   Valor típico para un juego de plataformas en píxeles: 800–1200 px\/s².
   , gcMoveSpeed :: Float
   -- ^ Velocidad horizontal del jugador al recibir input (px\/s).
-  --   @UseCases.UpdateGame@ la lee con @asks gcMoveSpeed@ para fijar @playerVel.vx@.
+  --   @Domain.Logic.Step@ la recibe vía 'PhysicsParams'.
+  , gcJumpSpeed :: Float
+  -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
   }
   deriving (Eq, Show, Generic)
 
@@ -74,7 +77,16 @@ defaultConfig =
   GameConfig
     { gcGravity = 980.0 -- aprox. 1g a escala de píxeles (px/s²)
     , gcMoveSpeed = 200.0 -- 200 px/s de movimiento horizontal
+    , gcJumpSpeed = 400.0 -- impulso de salto (px/s)
     }
+
+-- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
+physicsParamsFromConfig :: GameConfig -> PhysicsParams
+physicsParamsFromConfig cfg =
+  physicsParams
+    (gcGravity cfg)
+    (gcMoveSpeed cfg)
+    (gcJumpSpeed cfg)
 
 {- | Errores recuperables del motor.
 

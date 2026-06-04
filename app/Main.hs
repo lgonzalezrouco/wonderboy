@@ -1,78 +1,80 @@
-{- | Punto de entrada del ejecutable. Demo de Milestone 2.
+{- | Punto de entrada del ejecutable. Demo de Milestone 3.
 
-Corre 3 ticks de `updateGame` con input de movimiento hacia la derecha
-y muestra el estado del mundo en cada step.
-Verifica que el stack monádico funciona de punta a punta sin Gloss.
+Simula caída con gravedad, aterrizaje en plataforma, salto y propiedad @dt=0@.
 -}
 module Main where
 
+import Domain.Model.Player (playerOnGround, playerPos, playerVel)
 import Domain.Model.World (World (..), initialWorld)
-import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
+import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
+import Domain.ValueObjects.Velocity (velY)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import UseCases.GameMonad (defaultConfig, runGameM)
+import UseCases.GameMonad (defaultConfig, physicsParamsFromConfig, runGameM)
 import UseCases.UpdateGame (updateGame)
 
-{- | Ejecuta un tick de `updateGame` a partir de un 'World' dado.
-
-Usa 'runGameM' 'defaultConfig' para correr la pila monádica.
-En caso de error imprime en stderr y termina con código distinto de cero.
--}
-stepWorld :: DeltaTime -> Input -> World -> IO World
-stepWorld dt input w =
-  case runGameM defaultConfig w (updateGame dt input) of
+stepWorld :: Float -> Input -> World -> IO World
+stepWorld dtSec input w =
+  case runGameM defaultConfig w (updateGame (deltaTime dtSec) input) of
     Left err -> do
       hPutStrLn stderr ("Error: " ++ show err)
       exitFailure
     Right ((), w') -> pure w'
 
--- `runGameM :: GameConfig -> GameState -> GameM a -> Either GameError (a, GameState)`
--- Pasamos `defaultConfig` (GameConfig), `w` (World = GameState), y la acción.
--- El resultado es `Right ((), w')` donde `w'` es el mundo actualizado.
+printPlayer :: String -> World -> IO ()
+printPlayer label w = do
+  let p = worldPlayer w
+  putStrLn label
+  putStrLn ("  pos:       " ++ show (playerPos p))
+  putStrLn ("  vel:       " ++ show (playerVel p))
+  putStrLn ("  onGround:  " ++ show (playerOnGround p))
 
 main :: IO ()
 main = do
-  putStrLn "=== Wonder Boy - Demo Milestone 2 ==="
+  putStrLn "=== Wonder Boy - Demo Milestone 3 ==="
   putStrLn ""
 
-  let dt = deltaTime 0.016 -- 16 ms ≈ 60 FPS
-      moveRight = noInput{inputRight = True}
-  -- `noInput { inputRight = True }` usa actualización de record:
-  -- copia `noInput` con `inputRight = True`; el resto queda False.
+  let dt = 0.016
+      w0 = initialWorld
+      pp = physicsParamsFromConfig defaultConfig
 
-  -- Corremos 3 ticks con el jugador moviéndose a la derecha.
-  let w0 = initialWorld
-  w1 <- stepWorld dt moveRight w0
-  w2 <- stepWorld dt moveRight w1
-  w3 <- stepWorld dt moveRight w2
-
-  putStrLn "Tick 0 (inicial):"
-  print (worldPlayer w0)
+  putStrLn "Tick 0 (spawn above ground):"
+  printPlayer "" w0
   putStrLn ""
 
-  putStrLn "Tick 1 (-> derecha, 16 ms):"
-  print (worldPlayer w1)
+  -- Caída libre hasta estar en el suelo (máx. 120 ticks ≈ 2 s).
+  (wFall, n) <- fallUntilGround dt w0 120
+  putStrLn ("After " ++ show n ++ " fall tick(s):")
+  printPlayer "" wFall
   putStrLn ""
 
-  putStrLn "Tick 2 (-> derecha, 16 ms):"
-  print (worldPlayer w2)
+  let jumpInput = noInput{inputJump = True}
+  wJump <- stepWorld dt jumpInput wFall
+  putStrLn "One tick with jump (while grounded):"
+  printPlayer "" wJump
+  putStrLn $
+    "  vy after jump (expect "
+      ++ show (ppJumpSpeed pp)
+      ++ "): "
+      ++ show (velY (playerVel (worldPlayer wJump)))
   putStrLn ""
 
-  putStrLn "Tick 3 (-> derecha, 16 ms):"
-  print (worldPlayer w3)
-  putStrLn ""
-
-  -- Verificamos la propiedad precursora del test de M5:
-  -- dt=0 con noInput no debe desplazar al jugador.
-  wIdle <- stepWorld (deltaTime 0) noInput w0
-  putStrLn "Tick con dt=0 y noInput (player debe quedar en origen):"
-  print (worldPlayer wIdle)
+  wIdle <- stepWorld 0 noInput w0
+  putStrLn "Tick with dt=0 and noInput (from spawn):"
+  printPlayer "" wIdle
   putStrLn ""
   putStrLn $
-    "?dt=0 + noInput es identidad en posicion? "
-      ++ show (worldPlayer wIdle == worldPlayer w0)
+    "dt=0 + noInput leaves world unchanged? "
+      ++ show (wIdle == w0)
 
--- `let` en `do` introduce ligaduras locales. Cada línea puede usar las
--- definidas antes en el mismo bloque (evaluación lazy: sólo se calculan
--- cuando se usan).
+fallUntilGround :: Float -> World -> Int -> IO (World, Int)
+fallUntilGround dtSec w0 maxTicks = loop w0 0
+ where
+  loop w n
+    | playerOnGround (worldPlayer w) = pure (w, n)
+    | n >= maxTicks = pure (w, n)
+    | otherwise = do
+        w' <- stepWorld dtSec noInput w
+        loop w' (n + 1)
