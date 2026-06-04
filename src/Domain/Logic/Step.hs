@@ -52,22 +52,46 @@ integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
       dtSub = deltaTimeSub dt n
-   in ( iterate
-          ( \pAcc ->
-              let pInt = integratePlayer dtSub pAcc
-               in resolvePlayerPlatforms plats vyBefore pInt
-          )
-          p
-          !! n
-        )
+   in runSubsteps n dtSub plats vyBefore p
+
+{- | Aplica integración + colisión @n@ veces de forma /estricta/.
+
+POR QUÉ recursión explícita con @seq@ y no @iterate f p !! n@ o @foldl@ sobre
+@[1..n]@: ambas alternativas construyen una lista intermedia y dejan @p@ como una
+cadena de thunks anidados (@f (f (f … p))@) que sólo se fuerza al final. Con @n@
+grande (sólidos finos / velocidad alta) eso aloca de más y arriesga acumular
+thunks. @seq@ fuerza cada @Player@ a WHNF antes de la siguiente iteración, así el
+estado se reduce paso a paso sin lista ni cadena de thunks.
+-}
+runSubsteps :: Int -> DeltaTime -> [Platform] -> Float -> Player -> Player
+runSubsteps n _ _ _ p | n <= 0 = p
+runSubsteps n dtSub plats vyBefore p =
+  let pInt = integratePlayer dtSub p
+      p' = resolvePlayerPlatforms plats vyBefore pInt
+   in p' `seq` runSubsteps (n - 1) dtSub plats vyBefore p'
+
+-- | Tope de sub-pasos por frame: cota dura del trabajo aun con sólidos
+--   extremadamente finos o velocidades muy altas (evita @n@ patológico).
+maxSubsteps :: Int
+maxSubsteps = 16
+
+{- | Tamaño mínimo de sub-paso (px): evita @maxStep == 0@ en 'substeps'.
+
+Si una plataforma tuviera @platformHeight <= 0@ (sólido degenerado), @minH * 0.5@
+sería @0@ y @dy / 0@ daría @Infinity@/@NaN@, corrompiendo @ceiling@. Este piso
+positivo garantiza una división bien definida.
+-}
+minSubstep :: Float
+minSubstep = 1e-3
 
 substeps :: DeltaTime -> Player -> [Platform] -> Int
 substeps dt p plats =
   let t = seconds dt
       dy = abs (velY (playerVel p)) * t
       minH = minimumPlatformHeight plats
-      maxStep = minH * 0.5
-   in max 1 (ceiling (dy / maxStep) :: Int)
+      maxStep = max minSubstep (minH * 0.5) -- nunca 0: evita ceiling de Infinity/NaN
+      raw = ceiling (dy / maxStep) :: Int
+   in max 1 (min maxSubsteps raw) -- acota a [1, maxSubsteps]
 
 deltaTimeSub :: DeltaTime -> Int -> DeltaTime
 deltaTimeSub dt n =

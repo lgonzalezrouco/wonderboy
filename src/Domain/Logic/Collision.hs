@@ -47,9 +47,13 @@ resolvePasses :: Int -> Float -> [Platform] -> Player -> Player
 resolvePasses 0 _ _ p = p
 resolvePasses n vyBefore plats p =
   let p' = foldl (resolveAgainst vyBefore) (p{playerOnGround = False}) plats
-   in if playerOverlapsAnyPlatform plats p' && n > 1
-        then resolvePasses (n - 1) vyBefore plats p'
-        else p'
+   in -- Cortar en cuanto la pasada alcanza un punto fijo (@p' == p@): con
+      -- 'aabbOverlaps' inclusivo, un jugador apoyado exacto sobre el borde
+      -- sigue "solapando", así que sin esta guarda recursaríamos hasta
+      -- @maxResolvePasses@ cada frame en reposo sin mover nada.
+      if p' == p || n <= 1 || not (playerOverlapsAnyPlatform plats p')
+        then p'
+        else resolvePasses (n - 1) vyBefore plats p'
 
 -- | 'True' si el jugador solapa alguna plataforma de la lista.
 playerOverlapsAnyPlatform :: [Platform] -> Player -> Bool

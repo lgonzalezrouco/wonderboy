@@ -137,12 +137,16 @@ step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 `UseCases` con `physicsParamsFromConfig` desde `GameConfig`, sin importar la pila
 monádica desde `Domain/`.
 
-Pipeline dentro de `step` (orden 6a):
+Pipeline dentro de `step` (el orden importa):
 
-1. Input → velocidad horizontal y salto si `playerOnGround`
-2. Gravedad sobre `vy`
-3. Integración de posición del jugador
-4. Colisión AABB Y-then-X contra `worldPlatforms`
+1. Input horizontal → `vx` (`applyHorizontalInput`)
+2. Gravedad sobre `vy` (`applyGravity`)
+3. Salto (`applyJump`): si el jugador estaba en el suelo al inicio del frame,
+   **sobrescribe** `vy` con `ppJumpSpeed`. Se aplica *después* de la gravedad,
+   por eso un salto desde el suelo deja `vy` exactamente en `ppJumpSpeed`
+   (es lo que verifica `Domain.StepTest`).
+4. Integración de posición del jugador + colisión AABB Y-then-X contra
+   `worldPlatforms`, en sub-pasos (`integrateAndCollide`)
 5. Cinemática M2 de enemigos (`pos += vel * dt`, sin gravedad ni colisión)
 
 Convenciones de hitbox: `playerPos` = centro inferior (pies); plataformas = esquina
