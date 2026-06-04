@@ -84,9 +84,11 @@ library
       , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
       , Domain.Logic.Collision
-      , Domain.Logic.EntityBehaviour
+      , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
+      , Domain.Logic.RunBehaviour
       , Domain.Logic.Step
+      , Domain.Model.EntityBehaviour
       , Domain.Model.Enemy
       , Domain.Model.Platform
       , Domain.Model.Player

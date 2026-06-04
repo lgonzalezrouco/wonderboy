@@ -1,19 +1,20 @@
 {- | AST del DSL de comportamiento de enemigos (Free monad).
 
-Instrucciones cinemáticas puras: 'setVelocity' y 'waitFrames'. La ejecución
-(un behaviour step por frame) vive en @UseCases.InterpretBehaviour@.
+Instrucciones cinemáticas puras: 'setVelocity' y 'waitFrames'. Un behaviour step
+por frame vive en @Domain.Logic.RunBehaviour@; el wrapper monádico en
+@UseCases.InterpretBehaviour@.
 -}
-module Domain.Logic.EntityBehaviour (
+module Domain.Model.EntityBehaviour (
   -- * AST
   EntityAction (..),
-  BehaviourProgram (..),
+  BehaviourProgram (BehaviourProgram),
 
   -- * Constructores
   setVelocity,
   waitFrames,
   waitThen,
-  patrolHorizontal,
   idleProgram,
+  (>>>),
 
   -- * Observación (tests / depuración)
   waitFramesRemaining,
@@ -21,10 +22,9 @@ module Domain.Logic.EntityBehaviour (
 where
 
 import Control.Monad.Free (Free (..))
-import Data.Function (fix)
 import GHC.Generics (Generic)
 
-import Domain.ValueObjects.Velocity (Velocity, velocity)
+import Domain.ValueObjects.Velocity (Velocity)
 
 -- | Instrucciones del DSL (functor para 'Free').
 data EntityAction next
@@ -56,6 +56,12 @@ instance Show BehaviourProgram where
     Free (SetVelocity _ _) -> "BehaviourProgram <setVelocity …>"
     Free (WaitFrames n _) -> "BehaviourProgram <waitFrames " ++ show n ++ ">"
 
+-- | Encadena dos programas (monad @Free EntityAction@ con resultado @()@).
+infixl 1 >>>
+
+(>>>) :: BehaviourProgram -> BehaviourProgram -> BehaviourProgram
+BehaviourProgram m >>> BehaviourProgram n = BehaviourProgram (m >> n)
+
 -- | Programa vacío: no modifica velocidad en behaviour steps.
 idleProgram :: BehaviourProgram
 idleProgram = BehaviourProgram (Pure ())
@@ -74,7 +80,7 @@ waitFrames n
 -- | Ejecuta @prog@ tras esperar @n@ frames (@n > 0@).
 waitThen :: Int -> BehaviourProgram -> BehaviourProgram
 waitThen n prog
-  | n > 0 = BehaviourProgram (Free (WaitFrames n (unBehaviourProgram prog)))
+  | n > 0 = waitFrames n >>> prog
   | otherwise = prog
 
 -- | Contador de espera en la instrucción activa, si aplica.
@@ -82,21 +88,3 @@ waitFramesRemaining :: BehaviourProgram -> Maybe Int
 waitFramesRemaining (BehaviourProgram prog) = case prog of
   Free (WaitFrames n _) -> Just n
   _ -> Nothing
-
-{- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames@ frames
-  por tramo (sobre suelo plano, cinemática M6). Requiere @speed > 0@ y @frames > 0@.
--}
-patrolHorizontal :: Float -> Int -> BehaviourProgram
-patrolHorizontal speed frames
-  | speed > 0 && frames > 0 =
-      BehaviourProgram (fix body)
-  | otherwise = idleProgram
- where
-  body loop = do
-    setVel (-speed) 0
-    wait frames
-    setVel speed 0
-    wait frames
-    loop
-  setVel vx vy = Free (SetVelocity (velocity vx vy) (Pure ()))
-  wait n = Free (WaitFrames n (Pure ()))

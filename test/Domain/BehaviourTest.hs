@@ -1,38 +1,38 @@
 module Domain.BehaviourTest where
 
 import Domain.Fixtures (dtFrame, testParams)
-import Domain.Logic.EntityBehaviour (
+import Domain.Logic.EntityBehaviours (patrolHorizontal)
+import Domain.Logic.RunBehaviour (runBehaviourStep, stepEnemyBehaviour)
+import Domain.Logic.Step (step)
+import Domain.Model.Enemy (Enemy (..), enemyPos, enemyProgram, enemyVel, mkEnemy)
+import Domain.Model.EntityBehaviour (
   idleProgram,
-  patrolHorizontal,
   setVelocity,
   waitFrames,
   waitFramesRemaining,
   waitThen,
  )
-import Domain.Logic.Step (step)
-import Domain.Model.Enemy (Enemy (..), enemyPos, enemyProgram, enemyVel, mkEnemy)
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..), demoWorld)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
 import Domain.ValueObjects.Velocity (velX, velocity)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
 import UseCases.GameMonad (defaultConfig, runGameM)
-import UseCases.InterpretBehaviour (runBehaviourStep)
 import UseCases.UpdateGame (updateGame)
 
 unit_waitFramesDecrements :: Assertion
 unit_waitFramesDecrements =
   let e = mkEnemy 0 (position 0 0) (waitFrames 3)
-      e' = stepEnemy e
+      e' = stepEnemyBehaviour e
    in waitFramesRemaining (enemyProgram e') @?= Just 2
 
 unit_waitFramesHoldsVelocity :: Assertion
 unit_waitFramesHoldsVelocity = do
   let e0 = mkEnemy 0 (position 0 0) (waitFrames 2)
-      e1 = stepEnemy e0
-      e2 = stepEnemy e1
+      e1 = stepEnemyBehaviour e0
+      e2 = stepEnemyBehaviour e1
   velX (enemyVel e0) @?= 0
   velX (enemyVel e1) @?= 0
   velX (enemyVel e2) @?= 0
@@ -41,8 +41,8 @@ unit_waitThenRunsSetVelocityAfterWait :: Assertion
 unit_waitThenRunsSetVelocityAfterWait = do
   let prog = waitThen 1 (setVelocity (velocity 7 0))
       e0 = mkEnemy 0 (position 0 0) prog
-      e1 = stepEnemy e0
-      e2 = stepEnemy e1
+      e1 = stepEnemyBehaviour e0
+      e2 = stepEnemyBehaviour e1
   waitFramesRemaining (enemyProgram e1) @?= Nothing
   velX (enemyVel e1) @?= 0
   velX (enemyVel e2) @?= 7
@@ -50,13 +50,13 @@ unit_waitThenRunsSetVelocityAfterWait = do
 unit_setVelocityOnStep :: Assertion
 unit_setVelocityOnStep =
   let e = mkEnemy 0 (position 0 0) (setVelocity (velocity 10 0))
-      e' = stepEnemy e
+      e' = stepEnemyBehaviour e
    in velX (enemyVel e') @?= 10
 
 unit_idleProgramNoOp :: Assertion
 unit_idleProgramNoOp =
   let e = mkEnemy 0 (position 0 0) idleProgram
-      e' = stepEnemy e
+      e' = stepEnemyBehaviour e
    in e' @?= e
 
 unit_behaviourThenStepMovesEnemy :: Assertion
@@ -118,20 +118,10 @@ unit_stepWithoutInterpreterLeavesEnemyStill =
 
 unit_updateGameAdvancesPatrolPosition :: Assertion
 unit_updateGameAdvancesPatrolPosition =
-  case runGameM defaultConfig initialWorld (updateGame dtFrame noInput) of
+  case runGameM defaultConfig demoWorld (updateGame dtFrame noInput) of
     Left err -> assertFailure (show err)
     Right ((), w') ->
       posX (enemyPos (head (worldEnemies w'))) < 50 @?= True
-
-stepEnemy :: Enemy -> Enemy
-stepEnemy e = head (worldEnemies (runBehaviourStep w))
- where
-  w =
-    World
-      { worldPlayer = spawnPlayer (position 0 0)
-      , worldEnemies = [e]
-      , worldPlatforms = []
-      }
 
 runTicks :: Int -> World -> World
 runTicks 0 w = w

@@ -2,7 +2,7 @@
 
 Un enemigo es una __entidad__: tiene identidad propia (puede haber varios enemigos
 en la misma posición y el motor necesita distinguirlos). Su 'enemyProgram' describe
-el comportamiento; el intérprete en @UseCases.InterpretBehaviour@ lo ejecuta.
+el comportamiento; el intérprete puro en @Domain.Logic.RunBehaviour@ lo ejecuta.
 -}
 module Domain.Model.Enemy (
   -- * Tipo
@@ -15,7 +15,7 @@ where
 
 import GHC.Generics (Generic)
 
-import Domain.Logic.EntityBehaviour (BehaviourProgram)
+import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 

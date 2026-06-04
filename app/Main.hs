@@ -3,7 +3,7 @@ module Main where
 
 import Domain.Model.Enemy (enemyPos, enemyVel)
 import Domain.Model.Player (playerOnGround, playerPos, playerVel)
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..), demoWorld)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
@@ -45,7 +45,7 @@ main = do
   putStrLn ""
 
   let dt = 0.016
-      w0 = initialWorld
+      w0 = demoWorld
       pp = physicsParamsFromConfig defaultConfig
 
   putStrLn "Tick 0 (spawn above ground):"
