@@ -52,13 +52,14 @@ integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
       dtSub = deltaTimeSub dt n
-   in foldl
-        ( \pAcc _ ->
-            let pInt = integratePlayer dtSub pAcc
-             in resolvePlayerPlatforms plats vyBefore pInt
+   in ( iterate
+          ( \pAcc ->
+              let pInt = integratePlayer dtSub pAcc
+               in resolvePlayerPlatforms plats vyBefore pInt
+          )
+          p
+          !! n
         )
-        p
-        [1 .. n]
 
 substeps :: DeltaTime -> Player -> [Platform] -> Int
 substeps dt p plats =
