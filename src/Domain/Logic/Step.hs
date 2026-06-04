@@ -24,8 +24,8 @@ import Domain.ValueObjects.Velocity (velY)
 
 Con @dt = 0@ devuelve el mundo sin cambios (identidad temporal).
 
-Los enemigos sólo reciben cinemática M2 (@pos += vel * dt@); sin gravedad ni
-colisiones hasta el DSL (M6).
+Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DSL
+(M6) antes de este paso. Sin gravedad ni colisiones enemigo–plataforma en M6.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 step _ dt _ w | seconds dt == 0 = w

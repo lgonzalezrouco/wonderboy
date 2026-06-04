@@ -84,6 +84,7 @@ library
       , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
       , Domain.Logic.Collision
+      , Domain.Logic.EntityBehaviour
       , Domain.Logic.Physics
       , Domain.Logic.Step
       , Domain.Model.Enemy
@@ -91,8 +92,10 @@ library
       , Domain.Model.Player
       , Domain.Model.World
       , UseCases.GameMonad
+      , UseCases.InterpretBehaviour
       , UseCases.UpdateGame
     build-depends:
+      , free >=5.2 && <5.3
       , mtl >=2.3 && <2.4
 
 executable wonderboy-hs
@@ -123,6 +126,7 @@ test-suite wonderboy-hs-test
 
     other-modules:
         Domain.AabbTest
+      , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.StepTest
 

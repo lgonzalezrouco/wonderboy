@@ -1,8 +1,8 @@
 {- | Modelo de un enemigo dentro del mundo del juego.
 
 Un enemigo es una __entidad__: tiene identidad propia (puede haber varios enemigos
-en la misma posición y el motor necesita distinguirlos). Su comportamiento se describe
-mediante el DSL de entidades (Free monad, Milestone 6); aquí sólo modelamos el estado.
+en la misma posición y el motor necesita distinguirlos). Su 'enemyProgram' describe
+el comportamiento; el intérprete en @UseCases.InterpretBehaviour@ lo ejecuta.
 -}
 module Domain.Model.Enemy (
   -- * Tipo
@@ -15,6 +15,7 @@ where
 
 import GHC.Generics (Generic)
 
+import Domain.Logic.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -26,12 +27,8 @@ Dos value objects con los mismos valores son indistinguibles: dos 'Position' igu
 son el mismo punto. Pero dos enemigos en la misma posición son enemigos distintos —
 tienen identidad separada. El 'enemyId' es esa identidad.
 
-En el DSL (M6), los intérpretes de comportamiento usarán este id para identificar
-sobre qué enemigo actúa una instrucción. También facilita la detección de colisiones
-(M3): se puede ignorar la colisión de una entidad consigo misma.
-
-No usamos `newtype EnemyId = EnemyId Int` por simplicidad en M2; si el tamaño del
-proyecto lo justifica, puede crearse el newtype en M3+ para mayor seguridad de tipos.
+Los intérpretes de comportamiento usan este id para colisiones futuras. También
+facilita ignorar la colisión de una entidad consigo misma.
 -}
 data Enemy = Enemy
   { enemyId :: Int
@@ -39,19 +36,26 @@ data Enemy = Enemy
   , enemyPos :: Position
   -- ^ Posición actual del enemigo en el espacio del juego (píxeles lógicos).
   , enemyVel :: Velocity
-  -- ^ Velocidad actual (px/s). Actualizada por el intérprete de comportamiento (M6).
+  -- ^ Velocidad actual (px/s). La fija el intérprete del DSL antes de integrar.
+  , enemyProgram :: BehaviourProgram
+  -- ^ Programa de comportamiento (descripción, no ejecución).
   }
-  deriving (Eq, Show, Generic)
+  deriving (Show, Generic)
 
-{- | Crea un enemigo con el identificador y posición dados, en reposo.
+instance Eq Enemy where
+  a == b =
+    enemyId a == enemyId b
+      && enemyPos a == enemyPos b
+      && enemyVel a == enemyVel b
+      && enemyProgram a == enemyProgram b
 
-El comportamiento inicial (patrullar, perseguir, etc.) lo asigna el intérprete
-del DSL de entidades (Milestone 6). En M2, los enemigos arrancan quietos.
+{- | Crea un enemigo con identificador, posición y programa de comportamiento.
 -}
-mkEnemy :: Int -> Position -> Enemy
-mkEnemy eid pos =
+mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
+mkEnemy eid pos prog =
   Enemy
     { enemyId = eid
     , enemyPos = pos
-    , enemyVel = velocity 0 0 -- en reposo hasta que el DSL lo mueva (M6)
+    , enemyVel = velocity 0 0
+    , enemyProgram = prog
     }
