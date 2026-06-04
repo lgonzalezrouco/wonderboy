@@ -6,5 +6,5 @@ dist-newstyle/
 *.o
 *.dyn_o
 
-# Docs
-docs/
+# Haddock output va a dist-newstyle/, no a docs/
+# docs/ contiene documentación de diseño (.md) que sí se versiona
