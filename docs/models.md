@@ -113,34 +113,44 @@ El ADT tiene la ventaja de que `Set.fromList [MoveLeft, MoveLeft]` no duplica la
 ## `World` en Milestone 2 vs Milestones siguientes
 
 ```text
-M2: World = Player + [Enemy]          (este milestone)
-M3: World = Player + [Enemy] + [Platform]   (geometría del nivel)
+M2: World = Player + [Enemy]
+M3: World = Player + [Enemy] + [Platform]   (geometría del nivel — actual)
 M8: World + carga desde JSON (Aeson)
 ```
 
 `World` crece gradualmente. El alias `type GameState = World` en `UseCases.GameMonad`
 hace que el `StateT` de la pila monádica maneje el tipo correcto desde M2.
 
+`initialWorld` incluye un suelo de prueba y el jugador en `(0, 80)` para el demo de caída.
+
 ---
 
-## El placeholder cinemático `advance` y su relación con `step`
+## `step` y `PhysicsParams` (Milestone 3)
 
-En M2, `advance :: DeltaTime -> World -> World` integra `pos += vel * dt` sin
-gravedad ni colisiones. Es un **placeholder explícito** del futuro
-`step :: DeltaTime -> Input -> World -> World` de `Domain.Logic.Physics` (M3).
-
-La diferencia de firmas:
+La transición de frame vive en `Domain.Logic.Step`:
 
 ```haskell
--- M2: avance puro sin input (el input lo procesa UpdateGame antes de llamar advance)
-advance :: DeltaTime -> World -> World
-
--- M3: step con input y física completa (reemplaza advance en UpdateGame)
-step :: DeltaTime -> Input -> World -> World
+step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 ```
 
-La separación actual entre `applyInput` (ajusta velocidades según input) y `advance`
-(integra posiciones) anticipa la estructura de M3: `step` hará ambas cosas en el dominio puro.
+`PhysicsParams` (gravedad, velocidad horizontal, impulso de salto) se construye en
+`UseCases` con `physicsParamsFromConfig` desde `GameConfig`, sin importar la pila
+monádica desde `Domain/`.
+
+Pipeline dentro de `step` (el orden importa):
+
+1. Input horizontal → `vx` (`applyHorizontalInput`)
+2. Gravedad sobre `vy` (`applyGravity`)
+3. Salto (`applyJump`): si el jugador estaba en el suelo al inicio del frame,
+   **sobrescribe** `vy` con `ppJumpSpeed`. Se aplica *después* de la gravedad,
+   por eso un salto desde el suelo deja `vy` exactamente en `ppJumpSpeed`
+   (es lo que verifica `Domain.StepTest`).
+4. Integración de posición del jugador + colisión AABB Y-then-X contra
+   `worldPlatforms`, en sub-pasos (`integrateAndCollide`)
+5. Cinemática M2 de enemigos (`pos += vel * dt`, sin gravedad ni colisión)
+
+Convenciones de hitbox: `playerPos` = centro inferior (pies); plataformas = esquina
+inferior izquierda con altura hacia arriba. Ver `Domain.ValueObjects.Aabb`.
 
 ---
 
@@ -153,14 +163,10 @@ Domain.ValueObjects.Input
         ↓
 UseCases.UpdateGame.updateGame :: DeltaTime -> Input -> GameM ()
    │
-   ├── asks gcMoveSpeed           ← lee config (MonadReader)
-   ├── modify (mapPlayer applyInput)   ← ajusta vel del player (MonadState)
-   └── modify (advance dt)             ← integra posiciones (MonadState)
+   ├── ask / physicsParamsFromConfig
+   └── modify (step params dt input)
         ↓
 Domain.Model.World (estado actualizado)
         ↓  [Adapters/Rendering — M8]
 Pantalla
 ```
-
-En M3, `modify (advance dt)` se reemplaza por `modify (step dt input)` donde `step`
-incorpora gravedad y colisiones desde `Domain.Logic.Physics`.

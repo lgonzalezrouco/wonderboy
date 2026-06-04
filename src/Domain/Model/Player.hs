@@ -10,6 +10,11 @@ module Domain.Model.Player (
   -- * Tipo
   Player (..),
 
+  -- * Hitbox
+  playerWidth,
+  playerHeight,
+  playerAabb,
+
   -- * Construcción
   spawnPlayer,
 )
@@ -17,6 +22,7 @@ where
 
 import GHC.Generics (Generic)
 
+import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -38,8 +44,8 @@ Con campos nombrados:
 
 __Por qué `playerOnGround :: Bool`?__
 
-Este flag lo necesita la lógica de salto en @Domain.Logic.Physics@ (M3):
-el jugador sólo puede saltar si está apoyado. Se establece en esta entidad
+Este flag lo necesita 'applyJump' en @Domain.Logic.Physics@ (M3):
+el jugador sólo puede saltar si estaba apoyado al inicio del frame. Se establece en esta entidad
 porque es parte del estado observable del juego, no un detalle de la física.
 
 __Entidad vs value object__ (resumen):
@@ -60,6 +66,19 @@ data Player = Player
   -- ^ Puntos de vida. 0 = muerto. Decrece al recibir daño (M2+).
   }
   deriving (Eq, Show, Generic)
+
+-- | Ancho del hitbox del jugador en píxeles lógicos (constante M3).
+playerWidth :: Float
+playerWidth = 32.0
+
+-- | Alto del hitbox del jugador en píxeles lógicos (constante M3).
+playerHeight :: Float
+playerHeight = 48.0
+
+-- | Caja de colisión del jugador: @playerPos@ es el centro inferior (pies).
+playerAabb :: Player -> Aabb
+playerAabb p =
+  aabbFromBottomCenter (playerPos p) playerWidth playerHeight
 
 {- | Crea un jugador en su posición de spawn, en reposo y con vida completa.
 
