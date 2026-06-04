@@ -49,8 +49,7 @@ instance Eq Enemy where
       && enemyVel a == enemyVel b
       && enemyProgram a == enemyProgram b
 
-{- | Crea un enemigo con identificador, posición y programa de comportamiento.
--}
+-- | Crea un enemigo con identificador, posición y programa de comportamiento.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
 mkEnemy eid pos prog =
   Enemy

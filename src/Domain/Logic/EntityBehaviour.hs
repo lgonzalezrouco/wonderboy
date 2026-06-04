@@ -65,22 +65,19 @@ setVelocity :: Velocity -> BehaviourProgram
 setVelocity vel =
   BehaviourProgram (Free (SetVelocity vel (Pure ())))
 
-{- | Espera @n@ frames sin cambiar velocidad (@n <= 0@ no espera).
--}
+-- | Espera @n@ frames sin cambiar velocidad (@n <= 0@ no espera).
 waitFrames :: Int -> BehaviourProgram
 waitFrames n
   | n > 0 = BehaviourProgram (Free (WaitFrames n (Pure ())))
   | otherwise = idleProgram
 
-{- | Ejecuta @prog@ tras esperar @n@ frames (@n > 0@).
--}
+-- | Ejecuta @prog@ tras esperar @n@ frames (@n > 0@).
 waitThen :: Int -> BehaviourProgram -> BehaviourProgram
 waitThen n prog
   | n > 0 = BehaviourProgram (Free (WaitFrames n (unBehaviourProgram prog)))
   | otherwise = prog
 
-{- | Contador de espera en la instrucción activa, si aplica.
--}
+-- | Contador de espera en la instrucción activa, si aplica.
 waitFramesRemaining :: BehaviourProgram -> Maybe Int
 waitFramesRemaining (BehaviourProgram prog) = case prog of
   Free (WaitFrames n _) -> Just n

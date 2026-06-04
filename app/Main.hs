@@ -1,4 +1,4 @@
-{- | Punto de entrada del ejecutable. Demo de física (M3) y patrulla enemiga (M6). -}
+-- | Punto de entrada del ejecutable. Demo de física (M3) y patrulla enemiga (M6).
 module Main where
 
 import Domain.Model.Enemy (enemyPos, enemyVel)
