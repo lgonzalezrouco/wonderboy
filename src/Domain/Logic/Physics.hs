@@ -30,8 +30,9 @@ applyHorizontalInput pp input p =
     (False, True) -> speed
     _ -> 0
 
-{- | Impulso de salto tras gravedad, si el jugador estaba en el suelo al inicio del frame.
+{- | Impulso de salto tras gravedad, si hubo press de salto y el jugador estaba en el suelo al inicio del frame.
 
+'inputJump' debe ser 'True' solo en el frame del press (ver 'Domain.ValueObjects.Input').
 @wasOnGround@ es @playerOnGround@ antes de cualquier actualización del frame.
 -}
 applyJump :: PhysicsParams -> Input -> Bool -> Player -> Player

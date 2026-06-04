@@ -1,8 +1,8 @@
 {- | Intención del jugador durante un frame.
 
-Captura qué acciones están activas (presionadas/sostenidas) en un instante dado.
-Es un value object puro: su significado es "el jugador quiere hacer X este frame",
-no "el jugador pulsó X ahora". Esa distinción la gestiona el adaptador de entrada.
+Captura la intención del jugador en un frame: izquierda/derecha sostenidas;
+salto solo en el frame del press (edge), no mientras se mantiene la tecla.
+El adaptador de entrada (M7) convierte eventos del SO en este valor.
 
 Ver 'noInput' para el valor neutro (ninguna acción activa).
 -}
@@ -49,7 +49,7 @@ data Input = Input
   , inputRight :: Bool
   -- ^ 'True' si el jugador mantiene pulsado "mover derecha" este frame.
   , inputJump :: Bool
-  -- ^ 'True' si el jugador mantiene pulsado "saltar" este frame.
+  -- ^ 'True' solo en el frame en que se presiona saltar (no mientras se sostiene).
   --   El salto efectivo depende de `playerOnGround` (ver M3).
   }
   deriving (Eq, Show, Generic)

@@ -1,14 +1,4 @@
-module Main (main) where
+{-# OPTIONS_GHC -F -pgmF tasty-discover #-}
+{-# OPTIONS_GHC -optF "--modules=**/*Test.hs" #-}
 
-import Domain.AabbTest qualified as AabbTest
-import Domain.StepTest qualified as StepTest
-import Test.Tasty (defaultMain, testGroup)
-
-main :: IO ()
-main =
-  defaultMain $
-    testGroup
-      "wonderboy-hs"
-      [ StepTest.tests
-      , AabbTest.tests
-      ]
+module Main where
