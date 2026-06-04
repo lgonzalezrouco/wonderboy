@@ -51,8 +51,7 @@ colisión se subdividen cuando @|vy| * dt@ supera la mitad del sólido más bajo
 integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
-      dtSub = deltaTimeSub dt n
-   in runSubsteps n dtSub plats vyBefore p
+   in runSubsteps n (deltaTimeSub dt n) plats vyBefore p
 
 {- | Aplica integración + colisión @n@ veces de forma /estricta/.
 
@@ -64,11 +63,11 @@ thunks. @seq@ fuerza cada @Player@ a WHNF antes de la siguiente iteración, así
 estado se reduce paso a paso sin lista ni cadena de thunks.
 -}
 runSubsteps :: Int -> DeltaTime -> [Platform] -> Float -> Player -> Player
-runSubsteps n _ _ _ p | n <= 0 = p
-runSubsteps n dtSub plats vyBefore p =
-  let pInt = integratePlayer dtSub p
-      p' = resolvePlayerPlatforms plats vyBefore pInt
-   in p' `seq` runSubsteps (n - 1) dtSub plats vyBefore p'
+runSubsteps n dtSub plats vyBefore p
+  | n <= 0 = p
+  | otherwise =
+      let p' = resolvePlayerPlatforms plats vyBefore (integratePlayer dtSub p)
+       in p' `seq` runSubsteps (n - 1) dtSub plats vyBefore p'
 
 {- | Tope de sub-pasos por frame: cota dura del trabajo aun con sólidos
   extremadamente finos o velocidades muy altas (evita @n@ patológico).
@@ -89,15 +88,18 @@ substeps :: DeltaTime -> Player -> [Platform] -> Int
 substeps dt p plats =
   let t = seconds dt
       dy = abs (velY (playerVel p)) * t
-      minH = minimumPlatformHeight plats
-      maxStep = max minSubstep (minH * 0.5) -- nunca 0: evita ceiling de Infinity/NaN
+      maxStep = max minSubstep (minPlatformHeight plats * 0.5)
       raw = ceiling (dy / maxStep) :: Int
-   in max 1 (min maxSubsteps raw) -- acota a [1, maxSubsteps]
+   in clampSubsteps raw
 
 deltaTimeSub :: DeltaTime -> Int -> DeltaTime
 deltaTimeSub dt n =
   deltaTime (seconds dt / fromIntegral (max 1 n))
 
-minimumPlatformHeight :: [Platform] -> Float
-minimumPlatformHeight [] = 1e6
-minimumPlatformHeight plats = minimum (platformHeight <$> plats)
+clampSubsteps :: Int -> Int
+clampSubsteps n = max 1 (min maxSubsteps n)
+
+-- | Sin plataformas, un paso grueso evita subdividir en exceso.
+minPlatformHeight :: [Platform] -> Float
+minPlatformHeight [] = 1e6
+minPlatformHeight plats = minimum (platformHeight <$> plats)
