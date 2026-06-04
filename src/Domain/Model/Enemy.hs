@@ -42,12 +42,22 @@ data Enemy = Enemy
   }
   deriving (Show, Generic)
 
+{- | Igualdad por __estado observable__: identidad, posición y velocidad.
+
+No se compara 'enemyProgram'. El programa de comportamiento es el controlador
+interno de la entidad: una descripción posiblemente cíclica (la patrulla se
+construye con @fix@). Dos enemigos son iguales cuando denotan el __mismo estado
+observable en el frame__, no la misma continuación de comportamiento; incluir el
+programa acoplaría '==' a los internos del intérprete y, como 'BehaviourProgram'
+no admite una igualdad estructural total, rompería las leyes de 'Eq'. Los tests
+que necesitan inspeccionar el programa usan observadores explícitos
+(@waitFramesRemaining@).
+-}
 instance Eq Enemy where
   a == b =
     enemyId a == enemyId b
       && enemyPos a == enemyPos b
       && enemyVel a == enemyVel b
-      && enemyProgram a == enemyProgram b
 
 -- | Crea un enemigo con identificador, posición y programa de comportamiento.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy

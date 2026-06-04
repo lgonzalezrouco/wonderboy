@@ -24,7 +24,7 @@ import Control.Monad.Free (Free (..))
 import Data.Function (fix)
 import GHC.Generics (Generic)
 
-import Domain.ValueObjects.Velocity (Velocity, velX, velY, velocity)
+import Domain.ValueObjects.Velocity (Velocity, velocity)
 
 -- | Instrucciones del DSL (functor para 'Free').
 data EntityAction next
@@ -42,13 +42,13 @@ newtype BehaviourProgram = BehaviourProgram
   {unBehaviourProgram :: Free EntityAction ()}
   deriving (Generic)
 
-{- | Igualdad por la instrucción activa (cabecera del programa).
-
-No compara profundidad ni bucles; basta para tests y 'Eq' de 'Enemy'.
--}
-instance Eq BehaviourProgram where
-  BehaviourProgram a == BehaviourProgram b =
-    behaviourHeadTag a == behaviourHeadTag b
+-- Nota: 'BehaviourProgram' no tiene instancia 'Eq' a propósito. Un 'Free
+-- EntityAction ()' es una descripción posiblemente cíclica (p. ej. la patrulla
+-- de 'patrolHorizontal' construida con @fix@), así que no admite una igualdad
+-- estructural total ni barata. Una comparación parcial (solo la instrucción
+-- activa) rompería las leyes de 'Eq' —programas distintos compararían iguales—,
+-- por eso se observa el programa con funciones explícitas como
+-- 'waitFramesRemaining' en lugar de '=='.
 
 instance Show BehaviourProgram where
   show (BehaviourProgram prog) = case prog of
@@ -100,11 +100,3 @@ patrolHorizontal speed frames
     loop
   setVel vx vy = Free (SetVelocity (velocity vx vy) (Pure ()))
   wait n = Free (WaitFrames n (Pure ()))
-
-behaviourHeadTag :: Free EntityAction () -> (Int, Int, Int)
-behaviourHeadTag prog = case prog of
-  Pure () -> (0, 0, 0)
-  Free (SetVelocity vel _) ->
-    (1, round (velX vel), round (velY vel))
-  Free (WaitFrames n _) ->
-    (2, n, 0)
