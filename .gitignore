@@ -3,6 +3,8 @@ dist-newstyle/
 *.hi
 *.hie
 *.md
+*.json
+*.toml
 *.o
 *.dyn_o
 
