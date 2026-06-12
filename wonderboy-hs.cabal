@@ -95,6 +95,9 @@ library
       , Domain.Model.World
       , Domain.DemoLevels
       , UseCases.GameMonad
+      , UseCases.Ports.InputPort
+      , UseCases.Ports.RenderPort
+      , UseCases.Ports.TimePort
       , UseCases.UpdateGame
     build-depends:
       , free >=5.2 && <5.3
