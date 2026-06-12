@@ -1,5 +1,6 @@
--- | Transición pura de un frame: orquesta física y colisiones.
+-- | Transición pura de un frame: orquesta behaviour, física y colisiones.
 module Domain.Logic.Step (
+  advanceFrame,
   step,
 )
 where
@@ -12,6 +13,7 @@ import Domain.Logic.Physics (
   integrateEnemies,
   integratePlayer,
  )
+import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player (..), playerVel)
 import Domain.Model.World (World (..))
@@ -20,12 +22,26 @@ import Domain.ValueObjects.Input (Input)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Velocity (velY)
 
-{- | Avanza el mundo un frame: input → gravedad → salto → integración → colisiones.
+{- | Transición completa de un frame: behaviour step y luego física, o identidad si @dt = 0@.
 
-Con @dt = 0@ devuelve el mundo sin cambios (identidad temporal).
+Única declaración de la política de "frame congelado" del motor: con @dt = 0@ no
+avanza ninguna fase (ni behaviour ni física). Si @dt > 0@, primero el DSL fija la
+velocidad de los enemigos ('runBehaviourStep') y después 'step' integra física y
+colisiones. 'UseCases.UpdateGame.updateGame' sólo eleva esta función a 'GameM'.
+-}
+advanceFrame :: PhysicsParams -> DeltaTime -> Input -> World -> World
+advanceFrame params dt input w
+  | seconds dt == 0 = w
+  | otherwise = step params dt input (runBehaviourStep w)
 
-Los enemigos sólo reciben cinemática M2 (@pos += vel * dt@); sin gravedad ni
-colisiones hasta el DSL (M6).
+{- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
+
+Con @dt = 0@ devuelve el mundo sin cambios: es la identidad temporal /propia/ de
+'step' como función pura (verificada en 'Domain.StepTest'). La política a nivel de
+frame la posee 'advanceFrame'; esta guarda protege a 'step' cuando se la llama aislada.
+
+Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DSL
+(M6) antes de este paso. Sin gravedad ni colisiones enemigo–plataforma en M6.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 step _ dt _ w | seconds dt == 0 = w

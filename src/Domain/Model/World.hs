@@ -17,7 +17,7 @@ where
 
 import GHC.Generics (Generic)
 
-import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.Enemy (Enemy)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
 import Domain.ValueObjects.Position (position)
@@ -30,17 +30,19 @@ data World = World
   }
   deriving (Eq, Show, Generic)
 
-{- | Mundo inicial: jugador sobre el origen del nivel, suelo de prueba, sin enemigos.
+-- | Plataforma de suelo compartida por mundos de prueba y demo.
+testFloor :: Platform
+testFloor = platform (position (-200) 0) 400 8
+
+{- | Mundo inicial para tests de física del jugador: jugador sobre el suelo, sin enemigos.
 
 El jugador spawnea en @y = 80@ para que la gravedad lo baje hasta el suelo
-en el demo de @app/Main.hs@.
+en tests y demos.
 -}
 initialWorld :: World
 initialWorld =
   World
     { worldPlayer = spawnPlayer (position 0 80)
     , worldEnemies = []
-    , worldPlatforms =
-        [ platform (position (-200) 0) 400 8
-        ]
+    , worldPlatforms = [testFloor]
     }

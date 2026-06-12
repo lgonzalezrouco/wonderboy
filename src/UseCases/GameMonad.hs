@@ -8,7 +8,7 @@ Combina tres efectos apilados sobre una base pura:
   * 'MonadError'  'GameError'  — manejo de errores recuperables sin lanzar excepciones.
 
 Nada en este módulo es 'IO'. Toda la impureza vive en @Adapters/@ y @Frameworks/@.
-Ver @docs\/gamemonad.md@ para la justificación de cada capa y su orden.
+Ver @docs\/adr\/0008-gamemonad-stack.md@ para la justificación de cada capa y su orden.
 -}
 module UseCases.GameMonad (
   -- * Configuración

@@ -52,7 +52,7 @@ homepage:           https://github.com/lgonzalezrouco/wonderboy
 bug-reports:        https://github.com/lgonzalezrouco/wonderboy/issues
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
-extra-doc-files:    CHANGELOG.md
+extra-doc-files:    README.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
@@ -84,15 +84,20 @@ library
       , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
       , Domain.Logic.Collision
+      , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
+      , Domain.Logic.RunBehaviour
       , Domain.Logic.Step
+      , Domain.Model.EntityBehaviour
       , Domain.Model.Enemy
       , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
+      , Domain.DemoLevels
       , UseCases.GameMonad
       , UseCases.UpdateGame
     build-depends:
+      , free >=5.2 && <5.3
       , mtl >=2.3 && <2.4
 
 executable wonderboy-hs
@@ -123,8 +128,10 @@ test-suite wonderboy-hs-test
 
     other-modules:
         Domain.AabbTest
+      , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.StepTest
+      , UseCases.UpdateGameTest
 
     type:             exitcode-stdio-1.0
 

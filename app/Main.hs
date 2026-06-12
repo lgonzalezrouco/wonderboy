@@ -1,27 +1,30 @@
-{- | Punto de entrada del ejecutable. Demo de Milestone 3.
-
-Simula caída con gravedad, aterrizaje en plataforma, salto y propiedad @dt=0@.
--}
+-- | Punto de entrada del ejecutable. Demo de física (M3) y patrulla enemiga (M6).
 module Main where
 
+import Domain.DemoLevels (demoWorld)
+import Domain.Model.Enemy (enemyPos, enemyVel)
 import Domain.Model.Player (playerOnGround, playerPos, playerVel)
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
+import Domain.ValueObjects.Position (posX)
 import Domain.ValueObjects.Velocity (velY)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import UseCases.GameMonad (defaultConfig, physicsParamsFromConfig, runGameM)
-import UseCases.UpdateGame (updateGame)
+import UseCases.GameMonad (GameError, defaultConfig, physicsParamsFromConfig)
+import UseCases.UpdateGame (runFrames)
+
+-- | Aborta el demo si un frame falla; en éxito devuelve el mundo resultante.
+orDie :: Either GameError World -> IO World
+orDie (Left err) = do
+  hPutStrLn stderr ("Error: " ++ show err)
+  exitFailure
+orDie (Right w) = pure w
 
 stepWorld :: Float -> Input -> World -> IO World
 stepWorld dtSec input w =
-  case runGameM defaultConfig w (updateGame (deltaTime dtSec) input) of
-    Left err -> do
-      hPutStrLn stderr ("Error: " ++ show err)
-      exitFailure
-    Right ((), w') -> pure w'
+  orDie (runFrames defaultConfig 1 (deltaTime dtSec) input w)
 
 printPlayer :: String -> World -> IO ()
 printPlayer label w = do
@@ -31,20 +34,29 @@ printPlayer label w = do
   putStrLn ("  vel:       " ++ show (playerVel p))
   putStrLn ("  onGround:  " ++ show (playerOnGround p))
 
+printEnemy :: String -> World -> IO ()
+printEnemy label w =
+  case worldEnemies w of
+    [] -> putStrLn (label ++ " (no enemies)")
+    e : _ -> do
+      putStrLn label
+      putStrLn ("  pos: " ++ show (enemyPos e))
+      putStrLn ("  vel: " ++ show (enemyVel e))
+
 main :: IO ()
 main = do
-  putStrLn "=== Wonder Boy - Demo Milestone 3 ==="
+  putStrLn "=== Wonder Boy - Demo (player M3 + enemy patrol M6) ==="
   putStrLn ""
 
   let dt = 0.016
-      w0 = initialWorld
+      w0 = demoWorld
       pp = physicsParamsFromConfig defaultConfig
 
   putStrLn "Tick 0 (spawn above ground):"
   printPlayer "" w0
+  printEnemy "" w0
   putStrLn ""
 
-  -- Caída libre hasta estar en el suelo (máx. 120 ticks ≈ 2 s).
   (wFall, n) <- fallUntilGround dt w0 120
   putStrLn ("After " ++ show n ++ " fall tick(s):")
   printPlayer "" wFall
@@ -61,13 +73,26 @@ main = do
       ++ show (velY (playerVel (worldPlayer wJump)))
   putStrLn ""
 
+  wPatrol <- runPatrolTicks 30 dt wFall
+  putStrLn "After 30 ticks (enemy patrol + player idle):"
+  printEnemy "" wPatrol
+  case worldEnemies wPatrol of
+    e : _ -> putStrLn ("  enemy x moved left from 50? " ++ show (posX (enemyPos e) < 50))
+    [] -> putStrLn "  (no enemy to report)"
+  putStrLn ""
+
   wIdle <- stepWorld 0 noInput w0
   putStrLn "Tick with dt=0 and noInput (from spawn):"
   printPlayer "" wIdle
+  printEnemy "" wIdle
   putStrLn ""
   putStrLn $
     "dt=0 + noInput leaves world unchanged? "
       ++ show (wIdle == w0)
+
+runPatrolTicks :: Int -> Float -> World -> IO World
+runPatrolTicks n dtSec w =
+  orDie (runFrames defaultConfig n (deltaTime dtSec) noInput w)
 
 fallUntilGround :: Float -> World -> Int -> IO (World, Int)
 fallUntilGround dtSec w0 maxTicks = loop w0 0

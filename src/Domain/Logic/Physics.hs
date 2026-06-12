@@ -54,7 +54,7 @@ integratePlayer :: DeltaTime -> Player -> Player
 integratePlayer dt p =
   p{playerPos = integratePos (playerPos p) (playerVel p) dt}
 
--- | Integra posición de todos los enemigos (cinemática M2, sin gravedad).
+-- | Integra posición de todos los enemigos (cinemática; sin gravedad ni colisión M6).
 integrateEnemies :: DeltaTime -> [Enemy] -> [Enemy]
 integrateEnemies dt = map (integrateEnemy dt)
 
