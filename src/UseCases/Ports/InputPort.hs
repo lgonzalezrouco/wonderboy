@@ -13,5 +13,5 @@ where
 import Domain.ValueObjects.Input (Input)
 
 -- | Capacidad de consultar la intención del jugador en el frame actual.
-class Monad m => InputPort m where
+class (Monad m) => InputPort m where
   pollInput :: m Input

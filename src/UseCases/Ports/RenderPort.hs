@@ -13,5 +13,5 @@ where
 import Domain.Model.World (World)
 
 -- | Capacidad de dibujar el estado runtime del juego en un frame.
-class Monad m => RenderPort m where
+class (Monad m) => RenderPort m where
   renderWorld :: World -> m ()

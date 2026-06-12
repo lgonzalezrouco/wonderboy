@@ -12,5 +12,5 @@ where
 import Domain.ValueObjects.DeltaTime (DeltaTime)
 
 -- | Capacidad de consultar el delta time del frame actual.
-class Monad m => TimePort m where
+class (Monad m) => TimePort m where
   pollDeltaTime :: m DeltaTime
