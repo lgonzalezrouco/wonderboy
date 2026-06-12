@@ -18,8 +18,10 @@ import Domain.Model.EntityBehaviour (
  )
 import Domain.ValueObjects.Velocity (velocity)
 
-{- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames@ frames
-  por tramo (sobre suelo plano, cinemática M6). Requiere @speed > 0@ y @frames > 0@.
+{- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
+  frames por tramo. Son @frames + 1@ y no @frames@ porque 'setVelocity' consume un
+  behaviour step propio (fija la velocidad) y luego 'waitFrames' la mantiene @frames@
+  frames más. Sobre suelo plano, cinemática M6. Requiere @speed > 0@ y @frames > 0@.
 -}
 patrolHorizontal :: Float -> Int -> BehaviourProgram
 patrolHorizontal speed frames

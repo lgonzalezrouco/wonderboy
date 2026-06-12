@@ -76,8 +76,9 @@ main = do
   wPatrol <- runPatrolTicks 30 dt wFall
   putStrLn "After 30 ticks (enemy patrol + player idle):"
   printEnemy "" wPatrol
-  let ex = posX (enemyPos (head (worldEnemies wPatrol)))
-  putStrLn ("  enemy x moved left from 50? " ++ show (ex < 50))
+  case worldEnemies wPatrol of
+    e : _ -> putStrLn ("  enemy x moved left from 50? " ++ show (posX (enemyPos e) < 50))
+    [] -> putStrLn "  (no enemy to report)"
   putStrLn ""
 
   wIdle <- stepWorld 0 noInput w0

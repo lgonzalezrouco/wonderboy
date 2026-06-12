@@ -21,7 +21,7 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
 import Domain.ValueObjects.Velocity (velX, velocity)
-import Test.Tasty.HUnit (Assertion, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 unit_waitFramesDecrements :: Assertion
 unit_waitFramesDecrements =
@@ -71,8 +71,9 @@ unit_behaviourThenStepMovesEnemy =
           }
       w1 = runBehaviourStep w0
       w2 = step testParams dtFrame noInput w1
-      x1 = posX (enemyPos (head (worldEnemies w2)))
-   in (x1 < 0) @?= True
+   in case worldEnemies w2 of
+        e : _ -> (posX (enemyPos e) < 0) @?= True
+        [] -> assertFailure "expected one enemy after stepping"
 
 unit_stepDoesNotRunBehaviour :: Assertion
 unit_stepDoesNotRunBehaviour =
@@ -84,4 +85,6 @@ unit_stepDoesNotRunBehaviour =
           , worldPlatforms = []
           }
       w1 = step testParams dtFrame noInput w0
-   in posX (enemyPos (head (worldEnemies w1))) @?= 50
+   in case worldEnemies w1 of
+        enemy : _ -> posX (enemyPos enemy) @?= 50
+        [] -> assertFailure "expected one enemy to remain"

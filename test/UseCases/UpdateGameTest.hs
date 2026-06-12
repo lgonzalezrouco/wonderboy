@@ -41,20 +41,22 @@ unit_updateGamePatrolReversesVelocity =
           , worldPlatforms = []
           }
       wLeft = runTicks 1 w0
-      vxLeft = velX (enemyVel (head (worldEnemies wLeft)))
       -- Tras setVel izquierda: 2 frames de wait + 1 frame que arma setVel derecha + 1 que la ejecuta
       wRight = runTicks 4 wLeft
-      vxRight = velX (enemyVel (head (worldEnemies wRight)))
-   in do
-        assertBool "patrol starts moving left" (vxLeft < 0)
-        assertBool "patrol reverses to move right" (vxRight > 0)
+   in case (worldEnemies wLeft, worldEnemies wRight) of
+        (eLeft : _, eRight : _) -> do
+          assertBool "patrol starts moving left" (velX (enemyVel eLeft) < 0)
+          assertBool "patrol reverses to move right" (velX (enemyVel eRight) > 0)
+        _ -> assertFailure "expected one enemy in each sampled world"
 
 unit_updateGameAdvancesPatrolPosition :: Assertion
 unit_updateGameAdvancesPatrolPosition =
   case runGameM defaultConfig demoWorld (updateGame dtFrame noInput) of
     Left err -> assertFailure (show err)
     Right ((), w') ->
-      posX (enemyPos (head (worldEnemies w'))) < 50 @?= True
+      case worldEnemies w' of
+        e : _ -> posX (enemyPos e) < 50 @?= True
+        [] -> assertFailure "expected one enemy after one frame"
 
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
 runTicks :: Int -> World -> World
