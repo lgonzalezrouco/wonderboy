@@ -8,27 +8,35 @@ import Domain.Fixtures (dtFrame)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
+import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..))
+import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
 import Domain.ValueObjects.Velocity (velX)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
-import UseCases.GameMonad (defaultConfig, runGameM)
+import UseCases.GameMonad (
+  GameState (..),
+  defaultConfig,
+  initialGameState,
+  runGameM,
+ )
 import UseCases.UpdateGame (runFrames, updateGame)
 
 unit_updateGameDtZeroSkipsBehaviour :: Assertion
 unit_updateGameDtZeroSkipsBehaviour =
-  case runGameM defaultConfig worldWithWait (updateGame (deltaTime 0) noInput) of
+  case runGameM defaultConfig gsWithWait (updateGame (deltaTime 0) noInput) of
     Left err -> assertFailure (show err)
-    Right ((), w') -> w' @?= worldWithWait
+    Right ((), gs') -> gs' @?= gsWithWait
  where
+  gsWithWait = initialGameState defaultConfig worldWithWait
   worldWithWait =
     World
-      { worldPlayer = spawnPlayer (position 0 0)
+      { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
       , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
       , worldPlatforms = []
+      , worldSpawnPoint = position 0 0
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -36,14 +44,15 @@ unit_updateGamePatrolReversesVelocity =
   let patrol = patrolHorizontal 40 2
       w0 =
         World
-          { worldPlayer = spawnPlayer (position 0 0)
+          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
           , worldEnemies = [mkEnemy 1 (position 50 8) patrol]
           , worldPlatforms = []
+          , worldSpawnPoint = position 0 0
           }
-      wLeft = runTicks 1 w0
-      -- Tras setVel izquierda: 2 frames de wait + 1 frame que arma setVel derecha + 1 que la ejecuta
-      wRight = runTicks 4 wLeft
-   in case (worldEnemies wLeft, worldEnemies wRight) of
+      gs0 = initialGameState defaultConfig w0
+      gsLeft = runTicks 1 gs0
+      gsRight = runTicks 4 gsLeft
+   in case (worldEnemies (gsWorld gsLeft), worldEnemies (gsWorld gsRight)) of
         (eLeft : _, eRight : _) -> do
           assertBool "patrol starts moving left" (velX (enemyVel eLeft) < 0)
           assertBool "patrol reverses to move right" (velX (enemyVel eRight) > 0)
@@ -51,13 +60,25 @@ unit_updateGamePatrolReversesVelocity =
 
 unit_updateGameAdvancesPatrolPosition :: Assertion
 unit_updateGameAdvancesPatrolPosition =
-  case runGameM defaultConfig demoWorld (updateGame dtFrame noInput) of
+  case runGameM defaultConfig (initialGameState defaultConfig demoWorld) (updateGame dtFrame noInput) of
     Left err -> assertFailure (show err)
-    Right ((), w') ->
-      case worldEnemies w' of
+    Right ((), gs') ->
+      case worldEnemies (gsWorld gs') of
         e : _ -> posX (enemyPos e) < 50 @?= True
         [] -> assertFailure "expected one enemy after one frame"
 
+unit_gameOverSkipsUpdate :: Assertion
+unit_gameOverSkipsUpdate =
+  let gs0 =
+        GameState
+          { gsWorld = demoWorld
+          , gsLives = 0
+          , gsPhase = GameOver
+          }
+   in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
+        Left err -> assertFailure (show err)
+        Right ((), gs') -> gs' @?= gs0
+
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
-runTicks :: Int -> World -> World
+runTicks :: Int -> GameState -> GameState
 runTicks n = either (error . show) id . runFrames defaultConfig n dtFrame noInput

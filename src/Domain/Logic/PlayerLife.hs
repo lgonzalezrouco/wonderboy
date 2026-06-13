@@ -1,0 +1,76 @@
+{- | Vida del jugador: daño, out-of-bounds, muerte y respawn (puro).
+
+La orquestación por frame vive en @UseCases.UpdateGame@; este módulo
+expone transformaciones totales sobre 'World', vidas y 'GamePhase'.
+-}
+module Domain.Logic.PlayerLife (
+  applyDamage,
+  isPlayerOutOfBounds,
+  resolveHazardsAndDeath,
+)
+where
+
+import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.Platform (Platform (..))
+import Domain.Model.Player (
+  Player (..),
+  playerHealth,
+  playerPos,
+  spawnPlayer,
+ )
+import Domain.Model.World (World (..))
+import Domain.ValueObjects.LifeParams (LifeParams (..))
+import Domain.ValueObjects.Position (Position, posY)
+
+-- | Resta @amount@ a la salud del jugador, con piso en 0.
+applyDamage :: Int -> Player -> Player
+applyDamage amount p =
+  p{playerHealth = max 0 (playerHealth p - amount)}
+
+-- | Coordenada Y del borde inferior de la plataforma más baja (0 si no hay plataformas).
+lowestPlatformBottomY :: World -> Float
+lowestPlatformBottomY w =
+  case worldPlatforms w of
+    [] -> 0
+    ps -> minimum (map (posY . platformPos) ps)
+
+-- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
+deathLineY :: LifeParams -> World -> Float
+deathLineY lp w = lowestPlatformBottomY w - lpDeathMargin lp
+
+-- | 'True' si los pies del jugador están por debajo de la línea de muerte.
+isPlayerOutOfBounds :: LifeParams -> World -> Bool
+isPlayerOutOfBounds lp w =
+  posY (playerPos (worldPlayer w)) < deathLineY lp w
+
+-- | Respawn del jugador en el punto de spawn del nivel (solo el jugador).
+respawnPlayerAt :: LifeParams -> Position -> World -> World
+respawnPlayerAt lp spawn w =
+  w{worldPlayer = spawnPlayer (lpMaxHealth lp) spawn}
+
+-- | Resuelve muerte cuando la salud ya es 0.
+resolveDeath :: LifeParams -> Int -> World -> (World, Int, GamePhase)
+resolveDeath lp lives w
+  | lives > 1 =
+      ( respawnPlayerAt lp (worldSpawnPoint w) w
+      , lives - 1
+      , Playing
+      )
+  | otherwise = (w, 0, GameOver)
+
+-- | Out-of-bounds y muerte tras un paso de física (solo en 'Playing').
+resolveHazardsAndDeath ::
+  LifeParams ->
+  Int ->
+  GamePhase ->
+  World ->
+  (World, Int, GamePhase)
+resolveHazardsAndDeath _ lives GameOver w = (w, lives, GameOver)
+resolveHazardsAndDeath lp lives Playing w =
+  let w'
+        | isPlayerOutOfBounds lp w =
+            w{worldPlayer = (worldPlayer w){playerHealth = 0}}
+        | otherwise = w
+   in case playerHealth (worldPlayer w') of
+        0 -> resolveDeath lp lives w'
+        _ -> (w', lives, Playing)

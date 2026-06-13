@@ -1,4 +1,4 @@
--- | Adaptador de renderizado: 'World' → primitivas Gloss con cámara y HUD.
+-- | Adaptador de renderizado: 'GameView' → primitivas Gloss con cámara y HUD.
 module Adapters.Gloss.Rendering (
   renderFrame,
 )
@@ -16,6 +16,8 @@ import Adapters.Gloss.Config (
   windowWidth,
  )
 import Domain.Model.Enemy (enemyAabb)
+import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.GameView (GameView (..))
 import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (playerAabb, playerHealth, playerPos)
 import Domain.Model.World (World (..))
@@ -23,11 +25,11 @@ import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.Position (posX)
 
 -- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
-renderFrame :: World -> Picture
-renderFrame w =
+renderFrame :: GameView -> Picture
+renderFrame gv =
   pictures
-    [ renderWorldLayer w
-    , renderHud w
+    [ renderWorldLayer (gvWorld gv)
+    , renderHud gv
     ]
 
 -- | Capa del mundo con transformación de cámara.
@@ -42,12 +44,20 @@ renderWorldLayer w =
           ]
 
 -- | HUD fijo en pantalla (no afectado por la cámara).
-renderHud :: World -> Picture
-renderHud w =
-  let margin = 20
+renderHud :: GameView -> Picture
+renderHud gv =
+  let w = gvWorld gv
+      margin = 20
       hudX = fromIntegral windowWidth / (-2) + margin
       hudY = fromIntegral windowHeight / 2 - margin
-      label = "Health: " ++ show (playerHealth (worldPlayer w))
+      label =
+        "Lives: "
+          ++ show (gvLives gv)
+          ++ "  Health: "
+          ++ show (playerHealth (worldPlayer w))
+          ++ case gvPhase gv of
+            GameOver -> "\nGAME OVER"
+            Playing -> ""
    in Translate hudX hudY $
         Scale 0.25 0.25 $
           text label

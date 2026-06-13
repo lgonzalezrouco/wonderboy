@@ -10,3 +10,4 @@ dist-newstyle/
 
 # Haddock output va a dist-newstyle/, no a docs/
 # docs/ contiene documentación de diseño (.md) que sí se versiona
+.agents/skills/brainstorming/

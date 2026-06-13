@@ -19,7 +19,7 @@ import Domain.Model.Player (
   playerVel,
   spawnPlayer,
  )
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
@@ -55,18 +55,20 @@ worldWithCeiling =
     { worldPlayer = risingPlayer (position 0 25)
     , worldEnemies = []
     , worldPlatforms = [ceilingPlatform]
+    , worldSpawnPoint = position 0 25
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
 worldWithWall :: World
 worldWithWall =
   World
-    { worldPlayer = spawnPlayer (position 33 8)
+    { worldPlayer = spawnPlayer defaultMaxHealth (position 33 8)
     , worldEnemies = []
     , worldPlatforms =
         [ floorPlatform
         , wallPlatform
         ]
+    , worldSpawnPoint = position 33 8
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).
@@ -82,4 +84,4 @@ ceilingPlatform = platform (position (-100) 80) 200 8
 
 risingPlayer :: Position -> Player
 risingPlayer pos =
-  (spawnPlayer pos){playerVel = velocity 0 500, playerOnGround = False}
+  (spawnPlayer defaultMaxHealth pos){playerVel = velocity 0 500, playerOnGround = False}

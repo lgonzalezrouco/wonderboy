@@ -15,12 +15,15 @@ module UseCases.GameMonad (
   GameConfig (..),
   defaultConfig,
   physicsParamsFromConfig,
+  lifeParamsFromConfig,
 
   -- * Errores
   GameError (..),
 
   -- * Estado
-  GameState,
+  GameState (..),
+  initialGameState,
+  gameViewFromState,
 
   -- * La mónada
   GameM (..),
@@ -40,7 +43,11 @@ import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.State (MonadState, StateT, runStateT)
 
 -- Grupo 3 — proyecto
-import Domain.Model.World (World)
+import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.GameView (GameView (..))
+import Domain.Model.Player (spawnPlayer)
+import Domain.Model.World (World (..))
+import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
 
 -- ---------------------------------------------------------------------------
@@ -65,6 +72,12 @@ data GameConfig = GameConfig
   --   @Domain.Logic.Step@ la recibe vía 'PhysicsParams'.
   , gcJumpSpeed :: Float
   -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
+  , gcStartingLives :: Int
+  -- ^ Vidas al iniciar una partida nueva (run-wide; no por nivel).
+  , gcMaxHealth :: Int
+  -- ^ Salud tras spawn o respawn.
+  , gcDeathMargin :: Float
+  -- ^ Margen bajo la plataforma más baja para out-of-bounds (px).
   }
   deriving (Eq, Show, Generic)
 
@@ -78,6 +91,9 @@ defaultConfig =
     { gcGravity = 980.0 -- aprox. 1g a escala de píxeles (px/s²)
     , gcMoveSpeed = 200.0 -- 200 px/s de movimiento horizontal
     , gcJumpSpeed = 400.0 -- impulso de salto (px/s)
+    , gcStartingLives = 3
+    , gcMaxHealth = 3
+    , gcDeathMargin = 64.0
     }
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
@@ -87,6 +103,11 @@ physicsParamsFromConfig cfg =
     (gcGravity cfg)
     (gcMoveSpeed cfg)
     (gcJumpSpeed cfg)
+
+-- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
+lifeParamsFromConfig :: GameConfig -> LifeParams
+lifeParamsFromConfig cfg =
+  lifeParams (gcMaxHealth cfg) (gcDeathMargin cfg)
 
 {- | Errores recuperables del motor.
 
@@ -101,16 +122,35 @@ error real y podamos diseñarlo con los casos concretos necesarios.
 newtype GameError = GameError String
   deriving (Eq, Show, Generic)
 
-{- | Estado mutable del juego: el 'World' completo.
+{- | Estado mutable del juego: mundo de nivel + estado run-wide.
 
-Cambio respecto a Milestone 1: antes era @()@ (unit, sin datos).
-Ahora contiene el estado real de la simulación que @UpdateGame@ lee y modifica.
-
-Usamos `type` (alias de tipo) en lugar de `newtype` porque no necesitamos un
-tipo nominativo distinto — el alias es suficiente para renombrar 'World' a
-'GameState' en la firma de 'runGameM' sin overhead extra.
+Contiene el 'World' del nivel actual más vidas y fase de la partida.
+Ver @docs\/adr\/0012-gamestate-run-snapshot.md@.
 -}
-type GameState = World
+data GameState = GameState
+  { gsWorld :: World
+  , gsLives :: Int
+  , gsPhase :: GamePhase
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Estado inicial de una partida nueva a partir de un mundo de nivel.
+initialGameState :: GameConfig -> World -> GameState
+initialGameState cfg w =
+  GameState
+    { gsWorld = w{worldPlayer = spawnPlayer (gcMaxHealth cfg) (worldSpawnPoint w)}
+    , gsLives = gcStartingLives cfg
+    , gsPhase = Playing
+    }
+
+-- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).
+gameViewFromState :: GameState -> GameView
+gameViewFromState gs =
+  GameView
+    { gvWorld = gsWorld gs
+    , gvLives = gsLives gs
+    , gvPhase = gsPhase gs
+    }
 
 -- ---------------------------------------------------------------------------
 -- La mónada GameM
