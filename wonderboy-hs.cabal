@@ -99,8 +99,15 @@ library
       , UseCases.Ports.RenderPort
       , UseCases.Ports.TimePort
       , UseCases.UpdateGame
+      , Frameworks.Gloss.GameLoop
+    other-modules:
+        Adapters.Gloss.Config
+      , Adapters.Gloss.Input
+      , Adapters.Gloss.Rendering
+      , Adapters.Gloss.Time
     build-depends:
       , free >=5.2 && <5.3
+      , gloss >=1.13 && <1.15
       , mtl >=2.3 && <2.4
 
 executable wonderboy-hs

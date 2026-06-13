@@ -8,6 +8,11 @@ module Domain.Model.Enemy (
   -- * Tipo
   Enemy (..),
 
+  -- * Hitbox
+  enemyWidth,
+  enemyHeight,
+  enemyAabb,
+
   -- * Construcción
   mkEnemy,
 )
@@ -16,6 +21,7 @@ where
 import GHC.Generics (Generic)
 
 import Domain.Model.EntityBehaviour (BehaviourProgram)
+import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -58,6 +64,19 @@ instance Eq Enemy where
     enemyId a == enemyId b
       && enemyPos a == enemyPos b
       && enemyVel a == enemyVel b
+
+-- | Ancho del hitbox del enemigo en píxeles lógicos.
+enemyWidth :: Float
+enemyWidth = 24.0
+
+-- | Alto del hitbox del enemigo en píxeles lógicos.
+enemyHeight :: Float
+enemyHeight = 24.0
+
+-- | Caja de colisión del enemigo: @enemyPos@ es el centro inferior (pies).
+enemyAabb :: Enemy -> Aabb
+enemyAabb e =
+  aabbFromBottomCenter (enemyPos e) enemyWidth enemyHeight
 
 -- | Crea un enemigo con identificador, posición y programa de comportamiento.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
