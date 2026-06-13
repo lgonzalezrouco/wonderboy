@@ -15,6 +15,9 @@ module Domain.Model.Player (
   playerHeight,
   playerAabb,
 
+  -- * Salud
+  playerMaxHealth,
+
   -- * Construcción
   spawnPlayer,
 )
@@ -80,6 +83,10 @@ playerAabb :: Player -> Aabb
 playerAabb p =
   aabbFromBottomCenter (playerPos p) playerWidth playerHeight
 
+-- | Salud máxima por vida; el respawn restaura a este valor (M9).
+playerMaxHealth :: Int
+playerMaxHealth = 3
+
 {- | Crea un jugador en su posición de spawn, en reposo y con vida completa.
 
 Smart constructor: establece los valores por defecto razonables de un jugador
@@ -94,8 +101,5 @@ spawnPlayer pos =
     { playerPos = pos
     , playerVel = velocity 0 0 -- en reposo: vx=0, vy=0
     , playerOnGround = False -- empieza en el aire; la gravedad (M3) lo baja
-    , playerHealth = 3 -- vida inicial: 3 golpes
+    , playerHealth = playerMaxHealth
     }
-
--- La elección de 3 como vida inicial es arbitraria; en M2+ esta constante
--- podría moverse a `GameConfig` para hacerla configurable por nivel.

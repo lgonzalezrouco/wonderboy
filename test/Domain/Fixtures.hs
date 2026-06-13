@@ -19,7 +19,7 @@ import Domain.Model.Player (
   playerVel,
   spawnPlayer,
  )
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..), initialWorld, mkTestWorld)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
@@ -51,23 +51,18 @@ worldGrounded = fallUntilGround 500 initialWorld
 -- | Player rising toward a low ceiling (one platform overhead).
 worldWithCeiling :: World
 worldWithCeiling =
-  World
-    { worldPlayer = risingPlayer (position 0 25)
-    , worldEnemies = []
-    , worldPlatforms = [ceilingPlatform]
-    }
+  mkTestWorld (position 0 25) (risingPlayer (position 0 25)) [] [ceilingPlatform]
 
 -- | Player just left of a vertical wall, on a floor strip.
 worldWithWall :: World
 worldWithWall =
-  World
-    { worldPlayer = spawnPlayer (position 33 8)
-    , worldEnemies = []
-    , worldPlatforms =
-        [ floorPlatform
-        , wallPlatform
-        ]
-    }
+  mkTestWorld
+    (position 33 8)
+    (spawnPlayer (position 33 8))
+    []
+    [ floorPlatform
+    , wallPlatform
+    ]
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).
 wallPlatform :: Platform

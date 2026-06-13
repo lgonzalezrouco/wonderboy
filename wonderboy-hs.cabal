@@ -85,11 +85,13 @@ library
       , Domain.ValueObjects.Velocity
       , Domain.Logic.Collision
       , Domain.Logic.EntityBehaviours
+      , Domain.Logic.Health
       , Domain.Logic.Physics
       , Domain.Logic.RunBehaviour
       , Domain.Logic.Step
       , Domain.Model.EntityBehaviour
       , Domain.Model.Enemy
+      , Domain.Model.GamePhase
       , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
@@ -140,6 +142,7 @@ test-suite wonderboy-hs-test
         Domain.AabbTest
       , Domain.BehaviourTest
       , Domain.Fixtures
+      , Domain.HealthTest
       , Domain.StepTest
       , UseCases.UpdateGameTest
 

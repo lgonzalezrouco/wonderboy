@@ -65,6 +65,10 @@ data GameConfig = GameConfig
   --   @Domain.Logic.Step@ la recibe vía 'PhysicsParams'.
   , gcJumpSpeed :: Float
   -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
+  , gcInitialLives :: Int
+  -- ^ Vidas al iniciar un nivel (M9); M14 podrá sobreescribir por JSON.
+  , gcMaxHealth :: Int
+  -- ^ Salud máxima por vida; debe coincidir con 'Domain.Model.Player.playerMaxHealth'.
   }
   deriving (Eq, Show, Generic)
 
@@ -78,6 +82,8 @@ defaultConfig =
     { gcGravity = 980.0 -- aprox. 1g a escala de píxeles (px/s²)
     , gcMoveSpeed = 200.0 -- 200 px/s de movimiento horizontal
     , gcJumpSpeed = 400.0 -- impulso de salto (px/s)
+    , gcInitialLives = 3
+    , gcMaxHealth = 3
     }
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.

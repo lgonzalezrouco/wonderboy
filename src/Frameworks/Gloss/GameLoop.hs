@@ -9,7 +9,9 @@ import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Time (capDeltaTime)
 import Domain.DemoLevels (demoWorld)
-import Domain.Model.World (World)
+import Domain.Logic.Health (applyDamage, resolveLifeLoss)
+import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.World (World (..))
 import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
@@ -56,10 +58,20 @@ drawFrame state = pure (renderFrame (appWorld state))
 
 handleEvent :: Event -> AppState -> IO AppState
 handleEvent (EventKey (SpecialKey KeyEsc) Gloss.Down _ _) _ = exitSuccess
+-- | Debug M9: aplica 1 de daño por pulsación hasta M10 aporte contacto real.
+handleEvent (EventKey (Char 'h') Gloss.Down _ _) state
+  | worldPhase (appWorld state) == Playing =
+      pure
+        state
+          { appWorld =
+              resolveLifeLoss (applyDamage 1 (appWorld state))
+          }
 handleEvent event state =
   pure state{appKeysHeld = handleKeyEvent event (appKeysHeld state)}
 
 advanceFrame :: Float -> AppState -> IO AppState
+advanceFrame _dt state
+  | worldPhase (appWorld state) == GameOver = pure state
 advanceFrame dt state = do
   let dt' = capDeltaTime dt
       (input, jumpPrev) = buildInput (appKeysHeld state) (appJumpPrev state)

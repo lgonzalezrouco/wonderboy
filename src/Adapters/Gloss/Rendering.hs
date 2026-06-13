@@ -4,7 +4,7 @@ module Adapters.Gloss.Rendering (
 )
 where
 
-import Graphics.Gloss.Data.Color (Color)
+import Graphics.Gloss.Data.Color (Color, greyN)
 import Graphics.Gloss.Data.Picture (Picture (..), pictures, rectangleSolid, text)
 
 import Adapters.Gloss.Config (
@@ -17,6 +17,7 @@ import Adapters.Gloss.Config (
  )
 import Domain.Model.Enemy (enemyAabb)
 import Domain.Model.Platform (platformAabb)
+import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAabb, playerHealth, playerPos)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
@@ -44,13 +45,32 @@ renderWorldLayer w =
 -- | HUD fijo en pantalla (no afectado por la cámara).
 renderHud :: World -> Picture
 renderHud w =
+  pictures
+    [ renderHudStats w
+    , renderGameOverOverlay w
+    ]
+
+renderHudStats :: World -> Picture
+renderHudStats w =
   let margin = 20
       hudX = fromIntegral windowWidth / (-2) + margin
       hudY = fromIntegral windowHeight / 2 - margin
-      label = "Health: " ++ show (playerHealth (worldPlayer w))
+      label =
+        "Lives: "
+          ++ show (worldLives w)
+          ++ "  Health: "
+          ++ show (playerHealth (worldPlayer w))
    in Translate hudX hudY $
         Scale 0.25 0.25 $
           text label
+
+renderGameOverOverlay :: World -> Picture
+renderGameOverOverlay w
+  | worldPhase w /= GameOver = Blank
+  | otherwise =
+      Color (greyN 0.3) $
+        Scale 0.5 0.5 $
+          text "GAME OVER"
 
 -- | Convierte un 'Aabb' en un rectángulo sólido centrado en su caja.
 aabbToPicture :: Color -> Aabb -> Picture

@@ -9,7 +9,7 @@ import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..))
+import Domain.Model.World (World (..), mkTestWorld)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
@@ -25,21 +25,21 @@ unit_updateGameDtZeroSkipsBehaviour =
     Right ((), w') -> w' @?= worldWithWait
  where
   worldWithWait =
-    World
-      { worldPlayer = spawnPlayer (position 0 0)
-      , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
-      , worldPlatforms = []
-      }
+    mkTestWorld
+      (position 0 0)
+      (spawnPlayer (position 0 0))
+      [mkEnemy 1 (position 50 8) (waitFrames 5)]
+      []
 
 unit_updateGamePatrolReversesVelocity :: Assertion
 unit_updateGamePatrolReversesVelocity =
   let patrol = patrolHorizontal 40 2
       w0 =
-        World
-          { worldPlayer = spawnPlayer (position 0 0)
-          , worldEnemies = [mkEnemy 1 (position 50 8) patrol]
-          , worldPlatforms = []
-          }
+        mkTestWorld
+          (position 0 0)
+          (spawnPlayer (position 0 0))
+          [mkEnemy 1 (position 50 8) patrol]
+          []
       wLeft = runTicks 1 w0
       -- Tras setVel izquierda: 2 frames de wait + 1 frame que arma setVel derecha + 1 que la ejecuta
       wRight = runTicks 4 wLeft

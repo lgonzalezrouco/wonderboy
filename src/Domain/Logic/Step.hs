@@ -6,6 +6,7 @@ module Domain.Logic.Step (
 where
 
 import Domain.Logic.Collision (resolvePlayerPlatforms)
+import Domain.Logic.Health (resolveLifeLoss)
 import Domain.Logic.Physics (
   applyGravity,
   applyHorizontalInput,
@@ -14,6 +15,7 @@ import Domain.Logic.Physics (
   integratePlayer,
  )
 import Domain.Logic.RunBehaviour (runBehaviourStep)
+import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player (..), playerVel)
 import Domain.Model.World (World (..))
@@ -32,7 +34,9 @@ colisiones. 'UseCases.UpdateGame.updateGame' sólo eleva esta función a 'GameM'
 advanceFrame :: PhysicsParams -> DeltaTime -> Input -> World -> World
 advanceFrame params dt input w
   | seconds dt == 0 = w
-  | otherwise = step params dt input (runBehaviourStep w)
+  | worldPhase w == GameOver = w
+  | otherwise =
+      resolveLifeLoss (step params dt input (runBehaviourStep w))
 
 {- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
 
