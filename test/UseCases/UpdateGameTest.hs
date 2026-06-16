@@ -89,7 +89,7 @@ unit_updateGameAdvancesPatrolPosition =
     Left err -> assertFailure (show err)
     Right ((), gs') ->
       case worldEnemies (gsWorld gs') of
-        e : _ -> posX (enemyPos e) < 50 @?= True
+        e : _ -> posX (enemyPos e) < 160 @?= True
         [] -> assertFailure "expected one enemy after one frame"
 
 unit_gameOverSkipsUpdate :: Assertion

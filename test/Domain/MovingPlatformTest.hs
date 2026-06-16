@@ -39,13 +39,17 @@ horizontalShuttle =
   mustMovingPlatform $
     mkMovingPlatform
       1
-      (position (-60) 24)
+      (position 30 36)
       48
       8
-      (position (-60) 24)
-      (position 60 24)
-      40
+      (position 30 36)
+      (position 90 36)
+      35
       True
+
+-- | Pies sobre el tramo superior del shuttle horizontal (top y = 44).
+onHorizontalShuttleTop :: Position
+onHorizontalShuttleTop = position 60 44
 
 verticalShuttle :: MovingPlatform
 verticalShuttle =
@@ -93,13 +97,13 @@ unit_pingPongReversesAtEndpoint =
         (adv : _) ->
           let mp = mpaPlatform adv
            in do
-                posX (movingPlatformPos mp) @?= 60
+                posX (movingPlatformPos mp) @?= 90
                 movingPlatformTowardB mp @?= False
         [] -> error "expected one advance result"
 
 unit_horizontalCarryOnGround :: Assertion
 unit_horizontalCarryOnGround =
-  let pos = position 0 32
+  let pos = onHorizontalShuttleTop
       w0 = worldWithShuttle horizontalShuttle (playerOnShuttle pos)
       expectedDx =
         case advanceMovingPlatforms dtFrame [horizontalShuttle] of
@@ -128,7 +132,7 @@ unit_verticalCarryDownOnGround =
 
 unit_jumpOffDoesNotInheritPlatformVelocity :: Assertion
 unit_jumpOffDoesNotInheritPlatformVelocity =
-  let pos = position 0 32
+  let pos = onHorizontalShuttleTop
       w0 =
         worldWithShuttle
           horizontalShuttle
@@ -152,11 +156,46 @@ unit_noCarryInAir =
 
 unit_verticalCarryOnGround :: Assertion
 unit_verticalCarryOnGround =
-  let pos = position 0 32
+  let pos = position 24 32
       w0 = worldWithShuttle verticalShuttle (playerOnShuttle pos)
       w1 = step testParams dtFrame noInput w0
       dy = posY (playerPos (worldPlayer w1)) - posY (playerPos (worldPlayer w0))
    in assertBool "player moves vertically with shuttle" (dy > 0.01)
+
+unit_jumpIntoSideDoesNotTeleport :: Assertion
+unit_jumpIntoSideDoesNotTeleport =
+  let w0 =
+        World
+          { worldPlayer =
+              (spawnPlayer defaultMaxHealth (position 20 8))
+                { playerOnGround = True
+                , playerVel = velocity 0 0
+                }
+          , worldEnemies = []
+          , worldPlatforms = [floorPlat]
+          , worldMovingPlatforms = [horizontalShuttle]
+          , worldSpawnPoint = position 20 8
+          , worldPickups = []
+          , worldMinScore = 0
+          }
+      w1 = step testParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
+      px = posX (playerPos (worldPlayer w1))
+   in do
+        assertBool "did not tunnel past platform right edge" (px < 78)
+        assertBool "did not teleport left while hitting platform side" (px > 0)
+
+unit_sideContactDoesNotCarry :: Assertion
+unit_sideContactDoesNotCarry =
+  let pos = position 10 8
+      p =
+        (spawnPlayer defaultMaxHealth pos)
+          { playerOnGround = True
+          , playerVel = velocity 0 0
+          }
+      w0 = worldWithShuttle horizontalShuttle p
+      w1 = step testParams dtFrame noInput w0
+      dx = posX (playerPos (worldPlayer w1)) - posX pos
+   in assertBool "side contact does not apply platform carry" (abs dx < 0.5)
 
 unit_landingOnMovingPlatformSetsOnGround :: Assertion
 unit_landingOnMovingPlatformSetsOnGround =
@@ -164,16 +203,16 @@ unit_landingOnMovingPlatformSetsOnGround =
       w0 =
         World
           { worldPlayer =
-              (spawnPlayer defaultMaxHealth (position 0 40))
+              (spawnPlayer defaultMaxHealth (position 60 56))
                 { playerVel = velocity 0 (-200)
                 , playerOnGround = False
                 }
           , worldEnemies = []
           , worldPlatforms = []
           , worldMovingPlatforms = [mp]
-          , worldSpawnPoint = position 0 40
+          , worldSpawnPoint = position 60 56
           , worldPickups = []
           , worldMinScore = 0
           }
-      w1 = step testParams (deltaTime 0.05) noInput w0
+      w1 = foldl (\w _ -> step testParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
    in playerOnGround (worldPlayer w1) @?= True

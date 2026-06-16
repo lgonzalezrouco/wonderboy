@@ -1,4 +1,4 @@
--- | Avance ping-pong y desplazamiento (carry) de plataformas móviles.
+-- | Avance ping-pong y desplazamiento (carry) de plataformas m?viles.
 module Domain.Logic.MovingPlatforms (
   MovingPlatformAdvance (..),
   advanceMovingPlatforms,
@@ -7,7 +7,7 @@ module Domain.Logic.MovingPlatforms (
 )
 where
 
-import Domain.Logic.Collision (landEpsilon, playerRestingOnPlatformTop)
+import Domain.Logic.Collision (landEpsilon, playerRidingPlatformTop)
 import Domain.Model.MovingPlatform (
   MovingPlatform (..),
   movingPlatformAsPlatform,
@@ -17,7 +17,7 @@ import Domain.Model.Player (Player (..), playerOnGround, playerPos)
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Position (Position, posX, posY, position)
 
--- | Resultado de avanzar una plataforma móvil un frame.
+-- | Resultado de avanzar una plataforma m?vil un frame.
 data MovingPlatformAdvance = MovingPlatformAdvance
   { mpaPlatform :: MovingPlatform
   , mpaDeltaX :: Float
@@ -25,7 +25,7 @@ data MovingPlatformAdvance = MovingPlatformAdvance
   }
   deriving (Eq, Show)
 
--- | Avanza todas las plataformas móviles y registra el delta de posición por una.
+-- | Avanza todas las plataformas m?viles y registra el delta de posici?n por una.
 advanceMovingPlatforms :: DeltaTime -> [MovingPlatform] -> [MovingPlatformAdvance]
 advanceMovingPlatforms dt =
   map (advanceOne dt)
@@ -81,13 +81,13 @@ moveAlongAxis cur target dist
 near :: Float -> Float -> Bool
 near x y = abs (x - y) <= landEpsilon
 
--- | Plataformas estáticas más instantáneas de las móviles para colisión del jugador.
+-- | Plataformas est?ticas m?s instant?neas de las m?viles para colisi?n del jugador.
 allCollisionPlatforms :: [Platform] -> [MovingPlatform] -> [Platform]
 allCollisionPlatforms static moving =
   static ++ map movingPlatformAsPlatform moving
 
-{- | Aplica el delta /antes/ de integrar física: el jugador se apoya sobre la
-posición previa de la plataforma; la colisión posterior usa la posición nueva
+{- | Aplica el delta /antes/ de integrar f?sica: el jugador se apoya sobre la
+posici?n previa de la plataforma; la colisi?n posterior usa la posici?n nueva
 sin volver a sumar el desplazamiento (evita doble carry en eje Y).
 -}
 applyPrePhysicsCarry :: Player -> [MovingPlatformAdvance] -> Player
@@ -97,7 +97,7 @@ applyPrePhysicsCarry =
   applyOne player adv =
     let oldMp = movingPlatformBeforeAdvance adv
      in if playerOnGround player
-          && playerRestingOnPlatformTop player (movingPlatformAsPlatform oldMp)
+          && playerRidingPlatformTop player (movingPlatformAsPlatform oldMp)
           then nudgePlayer (mpaDeltaX adv) (mpaDeltaY adv) player
           else player
 

@@ -59,7 +59,7 @@ step params dt input w =
       moving = map mpaPlatform advances
       w' = w{worldMovingPlatforms = moving}
       p0 = worldPlayer w'
-      wasOnGround = playerOnGround p0
+      wasOnGround = playerOnGround p0carried
       p0carried = applyPrePhysicsCarry p0 advances
       p1 = applyHorizontalInput params input p0carried
       p2 = applyGravity params dt p1
