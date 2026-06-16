@@ -32,6 +32,8 @@ floorWorld =
     , worldEnemies = []
     , worldPlatforms = [platform (position (-200) 0) 400 8]
     , worldSpawnPoint = testSpawn
+    , worldPickups = []
+    , worldMinScore = 0
     }
 
 unit_attackEdgeStartsWindow :: Assertion

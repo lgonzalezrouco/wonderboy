@@ -8,8 +8,11 @@ module Domain.DemoLevels (
 )
 where
 
+import Data.Maybe (catMaybes)
+
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (mkEnemy)
+import Domain.Model.Pickup (mkPickup)
 import Domain.Model.World (World (..), initialWorld)
 import Domain.ValueObjects.Position (position)
 
@@ -22,4 +25,11 @@ demoWorld =
   initialWorld
     { worldEnemies =
         [mkEnemy 1 (position 50 8) (patrolHorizontal 40 90)]
+    , worldPickups =
+        catMaybes
+          [ mkPickup 1 (position (-80) 8) 100
+          , mkPickup 2 (position 120 8) 50
+          , mkPickup 3 (position 0 40) 200
+          ]
+    , worldMinScore = 150
     }

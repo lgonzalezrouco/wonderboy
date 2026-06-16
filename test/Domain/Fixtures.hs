@@ -3,15 +3,21 @@ module Domain.Fixtures (
   ceilingPlatform,
   dtFrame,
   fallUntilGround,
+  floorWorld,
+  mkTestPickup,
   testParams,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
+  worldWithPickups,
   worldWithWall,
 )
 where
 
+import Data.Maybe (fromMaybe)
+
 import Domain.Logic.Step (step)
+import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (
   Player (..),
@@ -35,6 +41,35 @@ testParams = physicsParams 980 200 400
 dtFrame :: DeltaTime
 dtFrame = deltaTime 0.016
 
+-- | Spawn point shared by floor-based pickup and combat fixtures.
+testSpawn :: Position
+testSpawn = position 0 80
+
+-- | Floor world with no enemies or pickups (player at 'testSpawn').
+floorWorld :: World
+floorWorld =
+  World
+    { worldPlayer = spawnPlayer defaultMaxHealth testSpawn
+    , worldEnemies = []
+    , worldPlatforms = [floorPlatform]
+    , worldSpawnPoint = testSpawn
+    , worldPickups = []
+    , worldMinScore = 0
+    }
+
+-- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
+mkTestPickup :: Int -> Position -> Int -> Pickup
+mkTestPickup pid pos value =
+  fromMaybe (error "mkTestPickup: negative pickup value") (mkPickup pid pos value)
+
+-- | 'floorWorld' with the player at @pos@ and the given pickups.
+worldWithPickups :: Position -> [Pickup] -> World
+worldWithPickups pos pickups =
+  floorWorld
+    { worldPlayer = spawnPlayer defaultMaxHealth pos
+    , worldPickups = pickups
+    }
+
 -- | Steps until the player is on ground or fails when @n@ reaches zero.
 fallUntilGround :: Int -> World -> IO World
 fallUntilGround _ w
@@ -56,6 +91,8 @@ worldWithCeiling =
     , worldEnemies = []
     , worldPlatforms = [ceilingPlatform]
     , worldSpawnPoint = position 0 25
+    , worldPickups = []
+    , worldMinScore = 0
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -69,6 +106,8 @@ worldWithWall =
         , wallPlatform
         ]
     , worldSpawnPoint = position 33 8
+    , worldPickups = []
+    , worldMinScore = 0
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).

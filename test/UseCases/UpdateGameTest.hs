@@ -4,13 +4,13 @@ política de frame congelado (@dt = 0@) y bucle multi-frame ('runFrames').
 module UseCases.UpdateGameTest where
 
 import Domain.DemoLevels (demoWorld)
-import Domain.Fixtures (dtFrame)
+import Domain.Fixtures (dtFrame, mkTestPickup, worldWithPickups)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAttackFrames, spawnPlayer)
-import Domain.Model.World (World (..), defaultMaxHealth, worldPlayer)
+import Domain.Model.World (World (..), defaultMaxHealth, worldPickups, worldPlayer)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
@@ -25,6 +25,24 @@ import UseCases.GameMonad (
  )
 import UseCases.UpdateGame (runFrames, updateGame)
 
+playingState :: World -> GameState
+playingState w =
+  GameState
+    { gsWorld = w
+    , gsLives = gcStartingLives defaultConfig
+    , gsPhase = Playing
+    , gsScore = 0
+    }
+
+gameOverState :: World -> GameState
+gameOverState w =
+  GameState
+    { gsWorld = w
+    , gsLives = 0
+    , gsPhase = GameOver
+    , gsScore = 0
+    }
+
 unit_updateGameDtZeroSkipsBehaviour :: Assertion
 unit_updateGameDtZeroSkipsBehaviour =
   case runGameM defaultConfig gsWithWait (updateGame (deltaTime 0) noInput) of
@@ -38,6 +56,8 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
       , worldPlatforms = []
       , worldSpawnPoint = position 0 0
+      , worldPickups = []
+      , worldMinScore = 0
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -49,6 +69,8 @@ unit_updateGamePatrolReversesVelocity =
           , worldEnemies = [mkEnemy 1 (position 50 8) patrol]
           , worldPlatforms = []
           , worldSpawnPoint = position 0 0
+          , worldPickups = []
+          , worldMinScore = 0
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0
@@ -70,12 +92,7 @@ unit_updateGameAdvancesPatrolPosition =
 
 unit_gameOverSkipsUpdate :: Assertion
 unit_gameOverSkipsUpdate =
-  let gs0 =
-        GameState
-          { gsWorld = demoWorld
-          , gsLives = 0
-          , gsPhase = GameOver
-          }
+  let gs0 = gameOverState demoWorld
    in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') -> gs' @?= gs0
@@ -89,16 +106,33 @@ unit_updateGameDtZeroSkipsCombat =
                 { playerAttackFrames = 3
                 }
           }
-      gs0 =
-        GameState
-          { gsWorld = w
-          , gsLives = gcStartingLives defaultConfig
-          , gsPhase = Playing
-          }
+      gs0 = playingState w
    in case runGameM defaultConfig gs0 (updateGame (deltaTime 0) noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') ->
           playerAttackFrames (worldPlayer (gsWorld gs')) @?= 3
+
+unit_updateGameCollectsPickup :: Assertion
+unit_updateGameCollectsPickup =
+  let pickup = mkTestPickup 1 (position 0 8) 100
+      w = worldWithPickups (position 0 8) [pickup]
+      gs0 = playingState w
+   in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
+        Left err -> assertFailure (show err)
+        Right ((), gs') -> do
+          gsScore gs' @?= 100
+          worldPickups (gsWorld gs') @?= []
+
+unit_gameOverSkipsPickup :: Assertion
+unit_gameOverSkipsPickup =
+  let pickup = mkTestPickup 1 (position 0 8) 100
+      w = worldWithPickups (position 0 8) [pickup]
+      gs0 = gameOverState w
+   in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
+        Left err -> assertFailure (show err)
+        Right ((), gs') -> do
+          gsScore gs' @?= 0
+          worldPickups (gsWorld gs') @?= [pickup]
 
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
 runTicks :: Int -> GameState -> GameState

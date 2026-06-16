@@ -18,6 +18,7 @@ import Adapters.Gloss.Config (
   hudOverlayDim,
   hudPanelBg,
   hudTextColor,
+  pickupColor,
   platformColor,
   playerColor,
   windowHeight,
@@ -26,6 +27,7 @@ import Adapters.Gloss.Config (
 import Domain.Model.Enemy (enemyAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
+import Domain.Model.Pickup (pickupAabb)
 import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
 import Domain.Model.World (World (..))
@@ -39,7 +41,7 @@ hudPanelWidth :: Float
 hudPanelWidth = 248
 
 hudPanelHeight :: Float
-hudPanelHeight = 108
+hudPanelHeight = 136
 
 hudLabelScale :: Float
 hudLabelScale = 0.2
@@ -57,9 +59,13 @@ hudContentInset = 12
 hudRow1Offset :: Float
 hudRow1Offset = 20
 
--- | Separación vertical entre filas (LIVES, HEALTH, ATTACK).
+-- | Separación vertical entre filas (LIVES, HEALTH, SCORE, ATTACK).
 hudRowGap :: Float
 hudRowGap = 28
+
+-- | Distancia horizontal del valor numérico respecto del rótulo "SCORE".
+hudScoreValueGap :: Float
+hudScoreValueGap = 62
 
 -- | Separación vertical de la fila de hint respecto de la fila anterior.
 hudHintGap :: Float
@@ -146,6 +152,7 @@ renderWorldLayer w =
         pictures
           [ pictures (map (aabbToPicture platformColor . platformAabb) (worldPlatforms w))
           , pictures (map (aabbToPicture enemyColor . enemyAabb) (worldEnemies w))
+          , pictures (map (aabbToPicture pickupColor . pickupAabb) (worldPickups w))
           , aabbToPicture playerColor (playerAabb (worldPlayer w))
           ]
 
@@ -162,7 +169,8 @@ renderHud gv =
       row1Y = topLeftY - hudRow1Offset
       row2Y = row1Y - hudRowGap
       row3Y = row2Y - hudRowGap
-      row4Y = row3Y - hudHintGap
+      row4Y = row3Y - hudRowGap
+      row5Y = row4Y - hudHintGap
       p = worldPlayer (gvWorld gv)
    in pictures
         [ Translate panelCenterX panelCenterY $
@@ -173,8 +181,10 @@ renderHud gv =
         , hudLabel contentX row2Y "HEALTH"
         , Translate (contentX + hudHealthValueGap) (row2Y - hudHealthPipDrop) $
             renderHealthPips (playerHealth p) (gvMaxHealth gv)
-        , renderAttackRow contentX row3Y p
-        , hudHint contentX row4Y "Space — attack"
+        , hudLabel contentX row3Y "SCORE"
+        , hudLabel (contentX + hudScoreValueGap) row3Y (show (gvScore gv))
+        , renderAttackRow contentX row4Y p
+        , hudHint contentX row5Y "Space — attack"
         ]
 
 renderGameOverOverlay :: GameView -> Picture

@@ -20,5 +20,7 @@ data GameView = GameView
   -- ^ Salud máxima (run-wide, derivada de config): cuántos pips dibuja el HUD.
   , gvStartingLives :: Int
   -- ^ Vidas iniciales (run-wide, derivada de config): cuántos iconos dibuja el HUD.
+  , gvScore :: Int
+  -- ^ Puntuación del nivel actual (run-state, proyectada desde 'GameState').
   }
   deriving (Eq, Show)
