@@ -9,7 +9,7 @@ module Domain.Logic.Combat (
 where
 
 import Domain.Logic.PlayerLife (applyDamage)
-import Domain.Model.Enemy (Enemy, enemyAabb)
+import Domain.Model.Enemy (Enemy (..), enemyAabb)
 import Domain.Model.Player (
   Player (..),
   playerAabb,
@@ -83,7 +83,10 @@ resolveMelee cp w =
               hitbox = meleeHitbox cp body (playerFacing p)
               -- Alcance hacia adelante o solapamiento cuerpo–enemigo durante la ventana.
               isMeleeHit e = let eb = enemyAabb e in aabbOverlaps hitbox eb || aabbOverlaps body eb
-           in w{worldEnemies = filter (not . isMeleeHit) (worldEnemies w)}
+              applyMeleeHit e
+                | isMeleeHit e = e{enemyHealth = enemyHealth e - 1}
+                | otherwise = e
+           in w{worldEnemies = filter ((> 0) . enemyHealth) (map applyMeleeHit (worldEnemies w))}
 
 {- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
 
