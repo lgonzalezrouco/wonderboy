@@ -118,9 +118,11 @@ resolveContact cp w
         Just _ ->
           let p = worldPlayer w
               p' =
-                applyDamage (cpContactDamage cp) p
-                  { playerInvincibilityFrames = cpInvincibilityDuration cp
-                  }
+                applyDamage
+                  (cpContactDamage cp)
+                  p
+                    { playerInvincibilityFrames = cpInvincibilityDuration cp
+                    }
            in w{worldPlayer = p'}
 
 isDamagingContact :: Player -> Enemy -> Bool
