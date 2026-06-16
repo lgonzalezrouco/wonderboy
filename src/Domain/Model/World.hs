@@ -19,6 +19,7 @@ where
 import GHC.Generics (Generic)
 
 import Domain.Model.Enemy (Enemy)
+import Domain.Model.MovingPlatform (MovingPlatform)
 import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
@@ -33,6 +34,7 @@ data World = World
   { worldPlayer :: Player
   , worldEnemies :: [Enemy]
   , worldPlatforms :: [Platform]
+  , worldMovingPlatforms :: [MovingPlatform]
   , worldSpawnPoint :: Position
   , worldPickups :: [Pickup]
   , worldMinScore :: Int
@@ -55,6 +57,7 @@ initialWorld =
         { worldPlayer = spawnPlayer defaultMaxHealth spawn
         , worldEnemies = []
         , worldPlatforms = [testFloor]
+        , worldMovingPlatforms = []
         , worldSpawnPoint = spawn
         , worldPickups = []
         , worldMinScore = 0

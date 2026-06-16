@@ -11,6 +11,7 @@ module Domain.Logic.PlayerLife (
 where
 
 import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.MovingPlatform (movingPlatformPos)
 import Domain.Model.Platform (Platform (..))
 import Domain.Model.Player (
   Player (..),
@@ -30,9 +31,10 @@ applyDamage amount p =
 -- | Coordenada Y del borde inferior de la plataforma más baja (0 si no hay plataformas).
 lowestPlatformBottomY :: World -> Float
 lowestPlatformBottomY w =
-  case worldPlatforms w of
-    [] -> 0
-    ps -> minimum (map (posY . platformPos) ps)
+  let ys =
+        map (posY . platformPos) (worldPlatforms w)
+          ++ map (posY . movingPlatformPos) (worldMovingPlatforms w)
+   in if null ys then 0 else minimum ys
 
 -- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
 deathLineY :: LifeParams -> World -> Float

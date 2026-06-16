@@ -2,6 +2,8 @@
 module Domain.Logic.Collision (
   resolvePlayerPlatforms,
   playerOverlapsAnyPlatform,
+  playerRestingOnPlatformTop,
+  landEpsilon,
 )
 where
 
@@ -115,6 +117,11 @@ bumpCeiling pushDown = zeroVy . nudgeY (-pushDown)
 restingOnTop :: Aabb -> Aabb -> Bool
 restingOnTop box solid =
   nearZero (aabbMinY box - aabbMaxY solid)
+
+-- | 'True' si los pies del jugador apoyan el borde superior de la plataforma.
+playerRestingOnPlatformTop :: Player -> Platform -> Bool
+playerRestingOnPlatformTop p plat =
+  restingOnTop (playerAabb p) (platformAabb plat)
 
 resolveAxisX :: Player -> Aabb -> Aabb -> Player
 resolveAxisX p box solid =

@@ -9,6 +9,7 @@ module Adapters.Gloss.Config (
   enemyColor,
   pickupColor,
   platformColor,
+  movingPlatformColor,
   hudPanelBg,
   hudTextColor,
   hudMutedColor,
@@ -57,6 +58,10 @@ pickupColor = makeColor 1.0 0.85 0.15 1.0
 -- | Color del rectángulo de plataformas.
 platformColor :: Color
 platformColor = makeColor 0.3 0.7 0.3 1.0
+
+-- | Color del rectángulo de plataformas móviles.
+movingPlatformColor :: Color
+movingPlatformColor = makeColor 0.45 0.85 0.55 1.0
 
 -- | Fondo semitransparente del panel del HUD (adaptador; no es dominio).
 hudPanelBg :: Color

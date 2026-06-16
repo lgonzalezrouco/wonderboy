@@ -33,6 +33,7 @@ floorWorld =
     { worldPlayer = spawnPlayer 3 testSpawn
     , worldEnemies = []
     , worldPlatforms = [platform (position (-200) 0) 400 8]
+    , worldMovingPlatforms = []
     , worldSpawnPoint = testSpawn
     , worldPickups = []
     , worldMinScore = 0

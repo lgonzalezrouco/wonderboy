@@ -8,13 +8,28 @@ module Domain.DemoLevels (
 )
 where
 
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (mkEnemy)
+import Domain.Model.MovingPlatform (MovingPlatform, mkMovingPlatform)
 import Domain.Model.Pickup (mkPickup)
 import Domain.Model.World (World (..), initialWorld)
 import Domain.ValueObjects.Position (position)
+
+-- | Shuttle horizontal de demo (M12): recorre x ∈ [-60, 60] a y = 24.
+demoShuttle :: MovingPlatform
+demoShuttle =
+  fromMaybe (error "demoShuttle: invalid moving platform") $
+    mkMovingPlatform
+      1
+      (position (-60) 24)
+      48
+      8
+      (position (-60) 24)
+      (position 60 24)
+      40
+      True
 
 {- | Mundo de demo M6: mismo layout que 'initialWorld' más un enemigo de patrulla.
 
@@ -31,5 +46,6 @@ demoWorld =
           , mkPickup 2 (position 120 8) 50
           , mkPickup 3 (position 0 40) 200
           ]
+    , worldMovingPlatforms = [demoShuttle]
     , worldMinScore = 150
     }

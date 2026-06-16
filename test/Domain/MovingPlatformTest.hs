@@ -1,0 +1,179 @@
+-- | Pure moving platform motion, carry, and landing tests.
+module Domain.MovingPlatformTest where
+
+import Domain.Logic.MovingPlatforms (
+  advanceMovingPlatforms,
+  mpaDeltaX,
+  mpaDeltaY,
+  mpaPlatform,
+ )
+import Domain.Logic.Step (step)
+import Domain.Model.MovingPlatform (MovingPlatform (..), mkMovingPlatform, movingPlatformPos)
+import Domain.Model.Platform (Platform, platform)
+import Domain.Model.Player (
+  Player (..),
+  playerOnGround,
+  playerPos,
+  spawnPlayer,
+ )
+import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
+import Domain.ValueObjects.Input (Input (..), noInput)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
+import Domain.ValueObjects.Position (Position, posX, posY, position)
+import Domain.ValueObjects.Velocity (velX, velocity)
+import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
+
+testParams :: PhysicsParams
+testParams = physicsParams 980 200 400
+
+dtFrame :: DeltaTime
+dtFrame = deltaTime 0.016
+
+mustMovingPlatform :: Maybe MovingPlatform -> MovingPlatform
+mustMovingPlatform (Just mp) = mp
+mustMovingPlatform Nothing = error "mustMovingPlatform: invalid fixture"
+
+horizontalShuttle :: MovingPlatform
+horizontalShuttle =
+  mustMovingPlatform $
+    mkMovingPlatform
+      1
+      (position (-60) 24)
+      48
+      8
+      (position (-60) 24)
+      (position 60 24)
+      40
+      True
+
+verticalShuttle :: MovingPlatform
+verticalShuttle =
+  mustMovingPlatform $
+    mkMovingPlatform
+      2
+      (position 0 24)
+      48
+      8
+      (position 0 24)
+      (position 0 80)
+      30
+      True
+
+floorPlat :: Platform
+floorPlat = platform (position (-200) 0) 400 8
+
+playerOnShuttle :: Position -> Player
+playerOnShuttle pos =
+  (spawnPlayer defaultMaxHealth pos){playerOnGround = True, playerVel = velocity 0 0}
+
+worldWithShuttle :: MovingPlatform -> Player -> World
+worldWithShuttle mp p =
+  World
+    { worldPlayer = p
+    , worldEnemies = []
+    , worldPlatforms = [floorPlat]
+    , worldMovingPlatforms = [mp]
+    , worldSpawnPoint = playerPos p
+    , worldPickups = []
+    , worldMinScore = 0
+    }
+
+unit_mkMovingPlatformRejectsInvalid :: Assertion
+unit_mkMovingPlatformRejectsInvalid = do
+  mkMovingPlatform 1 (position 0 0) 0 8 (position 0 0) (position 10 0) 10 True @?= Nothing
+  mkMovingPlatform 1 (position 0 0) 10 8 (position 0 0) (position 10 0) 0 True @?= Nothing
+  mkMovingPlatform 1 (position 0 0) 10 8 (position 0 0) (position 10 10) 10 True @?= Nothing
+  mkMovingPlatform 1 (position 5 5) 10 8 (position 0 0) (position 10 0) 10 True @?= Nothing
+
+unit_pingPongReversesAtEndpoint :: Assertion
+unit_pingPongReversesAtEndpoint =
+  let advances = advanceMovingPlatforms (deltaTime 10) [horizontalShuttle]
+   in case advances of
+        (adv : _) ->
+          let mp = mpaPlatform adv
+           in do
+                posX (movingPlatformPos mp) @?= 60
+                movingPlatformTowardB mp @?= False
+        [] -> error "expected one advance result"
+
+unit_horizontalCarryOnGround :: Assertion
+unit_horizontalCarryOnGround =
+  let pos = position 0 32
+      w0 = worldWithShuttle horizontalShuttle (playerOnShuttle pos)
+      expectedDx =
+        case advanceMovingPlatforms dtFrame [horizontalShuttle] of
+          (adv : _) -> mpaDeltaX adv
+          [] -> 0
+      w1 = step testParams dtFrame noInput w0
+      dx = posX (playerPos (worldPlayer w1)) - posX (playerPos (worldPlayer w0))
+   in assertBool "player horizontal delta matches platform" (abs (dx - expectedDx) <= 1e-3)
+
+unit_verticalCarryDownOnGround :: Assertion
+unit_verticalCarryDownOnGround =
+  let mp =
+        verticalShuttle
+          { movingPlatformPos = position 0 80
+          , movingPlatformTowardB = False
+          }
+      pos = position 0 88
+      w0 = worldWithShuttle mp (playerOnShuttle pos)
+      expectedDy =
+        case advanceMovingPlatforms dtFrame [mp] of
+          (adv : _) -> mpaDeltaY adv
+          [] -> 0
+      w1 = step testParams dtFrame noInput w0
+      dy = posY (playerPos (worldPlayer w1)) - posY (playerPos (worldPlayer w0))
+   in assertBool "player vertical delta matches descending shuttle" (abs (dy - expectedDy) <= 1e-3)
+
+unit_jumpOffDoesNotInheritPlatformVelocity :: Assertion
+unit_jumpOffDoesNotInheritPlatformVelocity =
+  let pos = position 0 32
+      w0 =
+        worldWithShuttle
+          horizontalShuttle
+          (playerOnShuttle pos)
+            { playerVel = velocity 0 400
+            }
+      w1 = step testParams dtFrame (noInput{inputJump = True}) w0
+   in velX (playerVel (worldPlayer w1)) @?= 0
+
+unit_noCarryInAir :: Assertion
+unit_noCarryInAir =
+  let pos = position 0 80
+      p =
+        (spawnPlayer defaultMaxHealth pos)
+          { playerOnGround = False
+          , playerVel = velocity 0 100
+          }
+      w0 = worldWithShuttle horizontalShuttle p
+      w1 = step testParams dtFrame noInput w0
+   in posX (playerPos (worldPlayer w1)) @?= posX pos
+
+unit_verticalCarryOnGround :: Assertion
+unit_verticalCarryOnGround =
+  let pos = position 0 32
+      w0 = worldWithShuttle verticalShuttle (playerOnShuttle pos)
+      w1 = step testParams dtFrame noInput w0
+      dy = posY (playerPos (worldPlayer w1)) - posY (playerPos (worldPlayer w0))
+   in assertBool "player moves vertically with shuttle" (dy > 0.01)
+
+unit_landingOnMovingPlatformSetsOnGround :: Assertion
+unit_landingOnMovingPlatformSetsOnGround =
+  let mp = horizontalShuttle
+      w0 =
+        World
+          { worldPlayer =
+              (spawnPlayer defaultMaxHealth (position 0 40))
+                { playerVel = velocity 0 (-200)
+                , playerOnGround = False
+                }
+          , worldEnemies = []
+          , worldPlatforms = []
+          , worldMovingPlatforms = [mp]
+          , worldSpawnPoint = position 0 40
+          , worldPickups = []
+          , worldMinScore = 0
+          }
+      w1 = step testParams (deltaTime 0.05) noInput w0
+   in playerOnGround (worldPlayer w1) @?= True

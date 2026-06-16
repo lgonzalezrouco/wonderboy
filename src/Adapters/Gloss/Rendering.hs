@@ -18,6 +18,7 @@ import Adapters.Gloss.Config (
   hudOverlayDim,
   hudPanelBg,
   hudTextColor,
+  movingPlatformColor,
   pickupColor,
   platformColor,
   playerColor,
@@ -27,6 +28,7 @@ import Adapters.Gloss.Config (
 import Domain.Model.Enemy (enemyAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
+import Domain.Model.MovingPlatform (movingPlatformAabb)
 import Domain.Model.Pickup (pickupAabb)
 import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
@@ -143,6 +145,7 @@ renderWorldLayer w =
    in Translate (-playerX) (-cameraY) $
         pictures
           [ pictures (map (aabbToPicture platformColor . platformAabb) (worldPlatforms w))
+          , pictures (map (aabbToPicture movingPlatformColor . movingPlatformAabb) (worldMovingPlatforms w))
           , pictures (map (aabbToPicture enemyColor . enemyAabb) (worldEnemies w))
           , pictures (map (aabbToPicture pickupColor . pickupAabb) (worldPickups w))
           , aabbToPicture playerColor (playerAabb (worldPlayer w))
