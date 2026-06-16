@@ -73,16 +73,20 @@ tickInvincibility p
 
 resolveMelee :: CombatParams -> World -> World
 resolveMelee cp w =
-  let box = meleeAabb cp (worldPlayer w)
-   in case box of
+  let p = worldPlayer w
+   in case meleeAabb cp p of
         Nothing -> w
         Just hitbox ->
-          w
-            { worldEnemies =
-                filter (not . enemyOverlapsMelee hitbox) (worldEnemies w)
-            }
+          let body = playerAabb p
+           in w
+                { worldEnemies =
+                    filter (not . isMeleeHit body hitbox) (worldEnemies w)
+                }
  where
-  enemyOverlapsMelee hitbox e = aabbOverlaps hitbox (enemyAabb e)
+  -- Alcance hacia adelante o solapamiento cuerpo–enemigo durante la ventana.
+  isMeleeHit body hitbox e =
+    let eb = enemyAabb e
+     in aabbOverlaps hitbox eb || aabbOverlaps body eb
 
 meleeAabb :: CombatParams -> Player -> Maybe Aabb
 meleeAabb cp p

@@ -54,6 +54,33 @@ unit_meleeRemovesEnemy =
       w' = resolveCombat testCombatParams noInput w
    in worldEnemies w' @?= []
 
+unit_meleeRemovesEnemyWhenOverlapping :: Assertion
+unit_meleeRemovesEnemyWhenOverlapping =
+  let p =
+        (spawnPlayer 3 (position 50 8))
+          { playerAttackFrames = 3
+          , playerFacing = FacingRight
+          }
+      w =
+        floorWorld
+          { worldPlayer = p
+          , worldEnemies = [mkEnemy 1 (position 50 8) (patrolHorizontal 10 10)]
+          }
+      w' = resolveCombat testCombatParams noInput w
+   in worldEnemies w' @?= []
+
+unit_meleeAttackEdgeWhileOverlapping :: Assertion
+unit_meleeAttackEdgeWhileOverlapping =
+  let p = spawnPlayer 3 (position 50 8)
+      enemy = mkEnemy 1 (position 50 8) (patrolHorizontal 10 10)
+      w =
+        floorWorld
+          { worldPlayer = p
+          , worldEnemies = [enemy]
+          }
+      w' = resolveCombat testCombatParams (noInput{inputAttack = True}) w
+   in worldEnemies w' @?= []
+
 unit_noMeleeOutsideWindow :: Assertion
 unit_noMeleeOutsideWindow =
   let p =
