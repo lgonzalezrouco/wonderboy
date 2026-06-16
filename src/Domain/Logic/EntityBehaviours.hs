@@ -8,6 +8,7 @@ module Domain.Logic.EntityBehaviours (
   reactiveChase,
   reactiveGuard,
   defaultProgramForKind,
+  programForArchetype,
 )
 where
 
@@ -26,6 +27,7 @@ import Domain.Model.EntityBehaviour (
   waitFrames,
   (>>>),
  )
+import Domain.Model.LevelDefinition (BehaviourArchetype (..))
 import Domain.ValueObjects.Velocity (velocity)
 
 {- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
@@ -87,5 +89,14 @@ defaultProgramForKind kind =
    in case kind of
         SnailKind ->
           patrolHorizontal (eksPatrolSpeed stats) (eksPatrolFrames stats)
-        BatKind -> reactiveChase stats
-        GolemKind -> reactiveChase stats
+        _ -> reactiveChase stats
+
+-- | Programa según arquetipo explícito y stats de la clase.
+programForArchetype :: EnemyKind -> BehaviourArchetype -> BehaviourProgram
+programForArchetype kind archetype =
+  let stats = enemyKindStats kind
+   in case archetype of
+        PatrolArchetype ->
+          patrolHorizontal (eksPatrolSpeed stats) (eksPatrolFrames stats)
+        ChaseArchetype -> reactiveChase stats
+        GuardArchetype -> reactiveGuard stats

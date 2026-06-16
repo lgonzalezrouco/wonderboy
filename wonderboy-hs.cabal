@@ -54,8 +54,7 @@ bug-reports:        https://github.com/lgonzalezrouco/wonderboy/issues
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 extra-doc-files:    README.md
 
--- Extra source files to be distributed with the package, such as examples, or a tutorial module.
--- extra-source-files:
+data-files:         levels/demo.json
 
 source-repository head
     type:     git
@@ -106,7 +105,10 @@ library
       , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
-      , Domain.DemoLevels
+      , Domain.Model.ExitZone
+      , Domain.Model.LevelDefinition
+      , Domain.Logic.BuildWorld
+      , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.Ports.InputPort
       , UseCases.Ports.RenderPort
@@ -118,10 +120,15 @@ library
       , Adapters.Gloss.Input
       , Adapters.Gloss.Rendering
       , Adapters.Gloss.Time
+      , Adapters.LevelFile
+      , Paths_wonderboy_hs
     build-depends:
+      , aeson >=2.1 && <2.3
+      , bytestring >=0.11 && <0.13
       , free >=5.2 && <5.3
       , gloss >=1.13 && <1.15
       , mtl >=2.3 && <2.4
+      , text >=2.0 && <2.2
 
 executable wonderboy-hs
     import:           warnings, deps
@@ -159,6 +166,7 @@ test-suite wonderboy-hs-test
       , Domain.MovingPlatformTest
       , Domain.PickupTest
       , Domain.StepTest
+      , Domain.LevelLoadTest
       , UseCases.UpdateGameTest
 
     type:             exitcode-stdio-1.0
@@ -169,8 +177,10 @@ test-suite wonderboy-hs-test
 
     build-depends:
         wonderboy-hs
+      , aeson >=2.1 && <2.3
       , tasty >=1.5 && <1.6
       , tasty-hunit >=0.10 && <0.11
+      , text >=2.0 && <2.2
 
     build-tool-depends:
         tasty-discover:tasty-discover >=5.0 && <5.3

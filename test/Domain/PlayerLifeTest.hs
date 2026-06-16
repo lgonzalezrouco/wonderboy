@@ -5,6 +5,7 @@ import Domain.Logic.PlayerLife (
   applyDamage,
   resolveHazardsAndDeath,
  )
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Platform (platform)
 import Domain.Model.Player (
@@ -37,6 +38,7 @@ floorWorld =
     , worldSpawnPoint = testSpawn
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 belowFloor :: Position
