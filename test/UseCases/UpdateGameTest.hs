@@ -9,8 +9,8 @@ import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
 import Domain.Model.GamePhase (GamePhase (..))
-import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.Model.Player (playerAttackFrames, spawnPlayer)
+import Domain.Model.World (World (..), defaultMaxHealth, worldPlayer)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
@@ -19,6 +19,7 @@ import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
 import UseCases.GameMonad (
   GameState (..),
   defaultConfig,
+  gcStartingLives,
   initialGameState,
   runGameM,
  )
@@ -78,6 +79,26 @@ unit_gameOverSkipsUpdate =
    in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') -> gs' @?= gs0
+
+unit_updateGameDtZeroSkipsCombat :: Assertion
+unit_updateGameDtZeroSkipsCombat =
+  let w =
+        demoWorld
+          { worldPlayer =
+              (spawnPlayer defaultMaxHealth (position 0 80))
+                { playerAttackFrames = 3
+                }
+          }
+      gs0 =
+        GameState
+          { gsWorld = w
+          , gsLives = gcStartingLives defaultConfig
+          , gsPhase = Playing
+          }
+   in case runGameM defaultConfig gs0 (updateGame (deltaTime 0) noInput) of
+        Left err -> assertFailure (show err)
+        Right ((), gs') ->
+          playerAttackFrames (worldPlayer (gsWorld gs')) @?= 3
 
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
 runTicks :: Int -> GameState -> GameState

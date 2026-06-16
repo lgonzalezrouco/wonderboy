@@ -10,7 +10,7 @@ where
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
   Key (..),
-  SpecialKey (KeyLeft, KeyRight, KeyUp),
+  SpecialKey (KeyLeft, KeyRight, KeySpace, KeyUp),
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
 
@@ -24,6 +24,7 @@ data KeyState = KeyState
   , dHeld :: Bool
   , upHeld :: Bool
   , wHeld :: Bool
+  , spaceHeld :: Bool
   }
   deriving (Eq, Show)
 
@@ -37,6 +38,7 @@ noKeys =
     , dHeld = False
     , upHeld = False
     , wHeld = False
+    , spaceHeld = False
     }
 
 -- | Actualiza 'KeyState' ante un evento de tecla (KeyDown / KeyUp).
@@ -47,20 +49,24 @@ handleKeyEvent (EventKey key state _ _) ks =
         Char 'a' -> ks{aHeld = held}
         Char 'd' -> ks{dHeld = held}
         Char 'w' -> ks{wHeld = held}
+        Char ' ' -> ks{spaceHeld = held}
+        SpecialKey KeySpace -> ks{spaceHeld = held}
         SpecialKey KeyLeft -> ks{leftHeld = held}
         SpecialKey KeyRight -> ks{rightHeld = held}
         SpecialKey KeyUp -> ks{upHeld = held}
         _ -> ks
 handleKeyEvent _ ks = ks
 
--- | Construye 'Input' de dominio y el nuevo flag de salto previo (edge detection).
-buildInput :: KeyState -> Bool -> (Input, Bool)
-buildInput ks prevJumpHeld =
+-- | Construye 'Input' de dominio y flags de salto/ataque previos (edge detection).
+buildInput :: KeyState -> Bool -> Bool -> (Input, Bool, Bool)
+buildInput ks prevJumpHeld prevAttackHeld =
   let jumpHeld = upHeld ks || wHeld ks
+      attackHeld = spaceHeld ks
       input =
         Input
           { inputLeft = leftHeld ks || aHeld ks
           , inputRight = rightHeld ks || dHeld ks
           , inputJump = jumpHeld && not prevJumpHeld
+          , inputAttack = attackHeld && not prevAttackHeld
           }
-   in (input, jumpHeld)
+   in (input, jumpHeld, attackHeld)

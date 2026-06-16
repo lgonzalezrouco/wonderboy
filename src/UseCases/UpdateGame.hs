@@ -18,16 +18,18 @@ where
 import Control.Monad.Reader (ask)
 import Control.Monad.State (get, modify)
 
+import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
 import Domain.Logic.Step (advanceFrame)
 import Domain.Model.GamePhase (GamePhase (..))
-import Domain.ValueObjects.DeltaTime (DeltaTime)
+import Domain.ValueObjects.DeltaTime (DeltaTime, isFrozen)
 import Domain.ValueObjects.Input (Input)
 import UseCases.GameMonad (
   GameConfig,
   GameError,
   GameM,
   GameState (..),
+  combatParamsFromConfig,
   lifeParamsFromConfig,
   physicsParamsFromConfig,
   runGameM,
@@ -35,25 +37,31 @@ import UseCases.GameMonad (
 
 {- | Actualiza el estado del juego para un frame dado.
 
-Con 'GameOver' no avanza simulación ni aplica input. En 'Playing': behaviour +
-física, luego out-of-bounds y resolución de muerte.
+Con 'GameOver' no avanza simulación ni aplica input. Con el frame congelado
+('Domain.ValueObjects.DeltaTime.isFrozen') tampoco avanza nada: una sola guarda fija aquí
+la política de "frame congelado" a nivel de frame. En 'Playing' con tiempo: behaviour +
+física, combate, luego out-of-bounds y resolución de muerte.
 -}
 updateGame :: DeltaTime -> Input -> GameM ()
 updateGame dt input = do
   st <- get
   case gsPhase st of
     GameOver -> pure ()
-    Playing -> do
-      cfg <- ask
-      let params = physicsParamsFromConfig cfg
-          life = lifeParamsFromConfig cfg
-          w' = advanceFrame params dt input (gsWorld st)
-          (w'', lives', phase') =
-            resolveHazardsAndDeath life (gsLives st) Playing w'
-      modify
-        ( \s ->
-            s{gsWorld = w'', gsLives = lives', gsPhase = phase'}
-        )
+    Playing
+      | isFrozen dt -> pure ()
+      | otherwise -> do
+          cfg <- ask
+          let params = physicsParamsFromConfig cfg
+              life = lifeParamsFromConfig cfg
+              combat = combatParamsFromConfig cfg
+              w' = advanceFrame params dt input (gsWorld st)
+              wCombat = resolveCombat combat input w'
+              (w'', lives', phase') =
+                resolveHazardsAndDeath life (gsLives st) Playing wCombat
+          modify
+            ( \s ->
+                s{gsWorld = w'', gsLives = lives', gsPhase = phase'}
+            )
 
 {- | Corre @n@ frames consecutivos con el mismo @dt@ e 'Input', o el primer error.
 

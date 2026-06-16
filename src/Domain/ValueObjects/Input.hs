@@ -51,6 +51,8 @@ data Input = Input
   , inputJump :: Bool
   -- ^ 'True' solo en el frame en que se presiona saltar (no mientras se sostiene).
   --   El salto efectivo depende de `playerOnGround` (ver M3).
+  , inputAttack :: Bool
+  -- ^ 'True' solo en el frame en que se presiona atacar (no mientras se sostiene).
   }
   deriving (Eq, Show, Generic)
 
@@ -69,7 +71,7 @@ También es el input por defecto cuando el adaptador de entrada (M7)
 aún no ha recibido eventos del sistema operativo.
 -}
 noInput :: Input
-noInput = Input{inputLeft = False, inputRight = False, inputJump = False}
+noInput = Input{inputLeft = False, inputRight = False, inputJump = False, inputAttack = False}
 
 -- `Input{...}` es notación de record para construir un valor nombrando los campos.
 -- Preferimos esta forma sobre `Input False False False` porque:

@@ -23,6 +23,7 @@ where
 import GHC.Generics (Generic)
 
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
+import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -64,6 +65,12 @@ data Player = Player
   --   Controla si puede iniciar un salto (M3).
   , playerHealth :: Int
   -- ^ Puntos de vida. 0 = muerto. Decrece al recibir daño (M2+).
+  , playerFacing :: Facing
+  -- ^ Orientación horizontal para alcance de melee (M10).
+  , playerAttackFrames :: Int
+  -- ^ Frames restantes de ventana de melee; 0 = sin ataque activo.
+  , playerInvincibilityFrames :: Int
+  -- ^ I-frames restantes; 0 = vulnerable a contacto enemigo.
   }
   deriving (Eq, Show, Generic)
 
@@ -95,4 +102,7 @@ spawnPlayer maxHealth pos =
     , playerVel = velocity 0 0 -- en reposo: vx=0, vy=0
     , playerOnGround = False -- empieza en el aire; la gravedad (M3) lo baja
     , playerHealth = maxHealth
+    , playerFacing = FacingRight
+    , playerAttackFrames = 0
+    , playerInvincibilityFrames = 0
     }

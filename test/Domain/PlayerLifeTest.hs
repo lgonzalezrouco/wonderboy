@@ -10,6 +10,7 @@ import Domain.Model.Platform (platform)
 import Domain.Model.Player (
   Player (..),
   playerHealth,
+  playerInvincibilityFrames,
   playerPos,
   playerVel,
   spawnPlayer,
@@ -21,7 +22,7 @@ import Domain.ValueObjects.Velocity (velX, velY, velocity)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 testLifeParams :: LifeParams
-testLifeParams = lifeParams 3 64
+testLifeParams = lifeParams 3 64 60
 
 testSpawn :: Position
 testSpawn = position 0 80
@@ -77,6 +78,14 @@ unit_deathWithLivesRemaining =
         phase @?= Playing
         playerHealth (worldPlayer w') @?= 3
         playerPos (worldPlayer w') @?= testSpawn
+
+unit_respawnGrantsInvincibility :: Assertion
+unit_respawnGrantsInvincibility =
+  let (w', lives, phase) = resolveHazardsAndDeath testLifeParams 3 Playing deadBelowFloor
+   in do
+        lives @?= 2
+        phase @?= Playing
+        playerInvincibilityFrames (worldPlayer w') @?= 60
 
 unit_deathOnLastLife :: Assertion
 unit_deathOnLastLife =
