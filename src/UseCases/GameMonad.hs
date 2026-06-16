@@ -166,6 +166,8 @@ data GameState = GameState
   { gsWorld :: World
   , gsLives :: Int
   , gsPhase :: GamePhase
+  , gsScore :: Int
+  -- ^ Puntuación del nivel actual; se reinicia al cargar un nivel (M18).
   }
   deriving (Eq, Show, Generic)
 
@@ -176,6 +178,7 @@ initialGameState cfg w =
     { gsWorld = w{worldPlayer = spawnPlayer (gcMaxHealth cfg) (worldSpawnPoint w)}
     , gsLives = gcStartingLives cfg
     , gsPhase = Playing
+    , gsScore = 0
     }
 
 {- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).
@@ -191,6 +194,7 @@ gameViewFromState cfg gs =
     , gvPhase = gsPhase gs
     , gvMaxHealth = gcMaxHealth cfg
     , gvStartingLives = gcStartingLives cfg
+    , gvScore = gsScore gs
     }
 
 -- ---------------------------------------------------------------------------

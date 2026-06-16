@@ -3,10 +3,10 @@ dist-newstyle/
 *.hi
 *.hie
 *.md
+*.html
+*.sh
+*js
 *.json
 *.toml
 *.o
 *.dyn_o
-
-# Haddock output va a dist-newstyle/, no a docs/
-# docs/ contiene documentación de diseño (.md) que sí se versiona

@@ -7,6 +7,7 @@ module Adapters.Gloss.Config (
   maxDeltaSeconds,
   playerColor,
   enemyColor,
+  pickupColor,
   platformColor,
   hudPanelBg,
   hudTextColor,
@@ -48,6 +49,10 @@ playerColor = makeColor 0.2 0.5 1.0 1.0
 -- | Color del rectángulo de enemigos.
 enemyColor :: Color
 enemyColor = makeColor 1.0 0.3 0.3 1.0
+
+-- | Color del rectángulo de pickups (coleccionables).
+pickupColor :: Color
+pickupColor = makeColor 1.0 0.85 0.15 1.0
 
 -- | Color del rectángulo de plataformas.
 platformColor :: Color

@@ -69,6 +69,8 @@ unit_behaviourThenStepMovesEnemy =
           , worldEnemies = [e0]
           , worldPlatforms = []
           , worldSpawnPoint = position 0 0
+          , worldPickups = []
+          , worldMinScore = 0
           }
       w1 = runBehaviourStep w0
       w2 = step testParams dtFrame noInput w1
@@ -85,6 +87,8 @@ unit_stepDoesNotRunBehaviour =
           , worldEnemies = [e]
           , worldPlatforms = []
           , worldSpawnPoint = position 0 0
+          , worldPickups = []
+          , worldMinScore = 0
           }
       w1 = step testParams dtFrame noInput w0
    in case worldEnemies w1 of

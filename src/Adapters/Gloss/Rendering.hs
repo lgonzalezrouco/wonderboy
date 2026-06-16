@@ -18,6 +18,7 @@ import Adapters.Gloss.Config (
   hudOverlayDim,
   hudPanelBg,
   hudTextColor,
+  pickupColor,
   platformColor,
   playerColor,
   windowHeight,
@@ -26,6 +27,7 @@ import Adapters.Gloss.Config (
 import Domain.Model.Enemy (enemyAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
+import Domain.Model.Pickup (pickupAabb)
 import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
 import Domain.Model.World (World (..))
@@ -39,7 +41,7 @@ hudPanelWidth :: Float
 hudPanelWidth = 248
 
 hudPanelHeight :: Float
-hudPanelHeight = 108
+hudPanelHeight = 168
 
 hudLabelScale :: Float
 hudLabelScale = 0.2
@@ -57,29 +59,25 @@ hudContentInset = 12
 hudRow1Offset :: Float
 hudRow1Offset = 20
 
--- | Separación vertical entre filas (LIVES, HEALTH, ATTACK).
+-- | Separación vertical entre filas (LIVES, HEALTH, SCORE, ATTACK).
 hudRowGap :: Float
-hudRowGap = 28
+hudRowGap = 36
 
 -- | Separación vertical de la fila de hint respecto de la fila anterior.
 hudHintGap :: Float
-hudHintGap = 22
+hudHintGap = 20
 
--- | Distancia horizontal de los iconos de vida respecto del rótulo "LIVES".
-hudLivesValueGap :: Float
-hudLivesValueGap = 62
+-- | Altura aproximada del texto del HUD a 'hudLabelScale' (ancla inferior izquierda).
+hudTextHeight :: Float
+hudTextHeight = 18
 
--- | Distancia horizontal de los pips de salud respecto del rótulo "HEALTH".
-hudHealthValueGap :: Float
-hudHealthValueGap = 72
+-- | Ancho fijo de la columna de rótulos; los valores empiezan después.
+hudLabelColumnWidth :: Float
+hudLabelColumnWidth = 82
 
--- | Ajuste vertical de los iconos de vida hacia la línea base del rótulo.
-hudLifeIconDrop :: Float
-hudLifeIconDrop = 6
-
--- | Ajuste vertical de los pips de salud hacia la línea base del rótulo.
-hudHealthPipDrop :: Float
-hudHealthPipDrop = 5
+-- | Centro vertical de iconos/pips respecto de la línea base del rótulo.
+hudValueCenterLift :: Float
+hudValueCenterLift = hudTextHeight / 2
 
 -- | Paso horizontal entre iconos de vida consecutivos.
 hudLifeIconStride :: Float
@@ -146,6 +144,7 @@ renderWorldLayer w =
         pictures
           [ pictures (map (aabbToPicture platformColor . platformAabb) (worldPlatforms w))
           , pictures (map (aabbToPicture enemyColor . enemyAabb) (worldEnemies w))
+          , pictures (map (aabbToPicture pickupColor . pickupAabb) (worldPickups w))
           , aabbToPicture playerColor (playerAabb (worldPlayer w))
           ]
 
@@ -162,19 +161,23 @@ renderHud gv =
       row1Y = topLeftY - hudRow1Offset
       row2Y = row1Y - hudRowGap
       row3Y = row2Y - hudRowGap
-      row4Y = row3Y - hudHintGap
+      row4Y = row3Y - hudRowGap
+      row5Y = row4Y - hudHintGap
+      valueX = contentX + hudLabelColumnWidth
       p = worldPlayer (gvWorld gv)
    in pictures
         [ Translate panelCenterX panelCenterY $
             Color hudPanelBg (rectangleSolid hudPanelWidth hudPanelHeight)
         , hudLabel contentX row1Y "LIVES"
-        , Translate (contentX + hudLivesValueGap) (row1Y - hudLifeIconDrop) $
+        , Translate valueX (row1Y + hudValueCenterLift) $
             renderLifeIcons (gvLives gv) (gvStartingLives gv)
         , hudLabel contentX row2Y "HEALTH"
-        , Translate (contentX + hudHealthValueGap) (row2Y - hudHealthPipDrop) $
+        , Translate valueX (row2Y + hudValueCenterLift) $
             renderHealthPips (playerHealth p) (gvMaxHealth gv)
-        , renderAttackRow contentX row3Y p
-        , hudHint contentX row4Y "Space — attack"
+        , hudLabel contentX row3Y "SCORE"
+        , hudLabel valueX row3Y (show (gvScore gv))
+        , renderAttackRow contentX row4Y p
+        , hudHint contentX row5Y "Space - attack"
         ]
 
 renderGameOverOverlay :: GameView -> Picture
@@ -196,13 +199,12 @@ renderAttackRow :: Float -> Float -> Player -> Picture
 renderAttackRow x y p
   | playerAttackFrames p <= 0 = Blank
   | otherwise =
-      pictures
-        [ Translate (x + hudAttackBoxOffsetX) (y - hudAttackBoxDrop) $
-            Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
-        , Translate x y $
-            Scale hudLabelScale hudLabelScale $
-              Color hudTextColor (text "ATTACK")
-        ]
+      let valueX = x + hudLabelColumnWidth
+       in pictures
+            [ Translate (valueX + hudAttackBoxOffsetX) (y + hudValueCenterLift - hudAttackBoxDrop) $
+                Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
+            , hudLabel x y "ATTACK"
+            ]
 
 renderLifeIcons :: Int -> Int -> Picture
 renderLifeIcons lives maxLives =

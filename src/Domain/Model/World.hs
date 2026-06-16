@@ -19,6 +19,7 @@ where
 import GHC.Generics (Generic)
 
 import Domain.Model.Enemy (Enemy)
+import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
 import Domain.ValueObjects.Position (Position, position)
@@ -33,6 +34,8 @@ data World = World
   , worldEnemies :: [Enemy]
   , worldPlatforms :: [Platform]
   , worldSpawnPoint :: Position
+  , worldPickups :: [Pickup]
+  , worldMinScore :: Int
   }
   deriving (Eq, Show, Generic)
 
@@ -53,4 +56,6 @@ initialWorld =
         , worldEnemies = []
         , worldPlatforms = [testFloor]
         , worldSpawnPoint = spawn
+        , worldPickups = []
+        , worldMinScore = 0
         }
