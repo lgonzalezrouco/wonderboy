@@ -6,6 +6,12 @@ module Domain.Logic.Step (
 where
 
 import Domain.Logic.Collision (resolvePlayerPlatforms)
+import Domain.Logic.MovingPlatforms (
+  advanceMovingPlatforms,
+  allCollisionPlatforms,
+  applyPrePhysicsCarry,
+  mpaPlatform,
+ )
 import Domain.Logic.Physics (
   applyGravity,
   applyHorizontalInput,
@@ -15,7 +21,7 @@ import Domain.Logic.Physics (
  )
 import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Model.Platform (Platform, platformHeight)
-import Domain.Model.Player (Player (..), playerVel)
+import Domain.Model.Player (Player, playerOnGround, playerVel)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime, isFrozen, seconds)
 import Domain.ValueObjects.Input (Input)
@@ -49,17 +55,21 @@ Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DS
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 step _ dt _ w | isFrozen dt = w
 step params dt input w =
-  let p0 = worldPlayer w
-      wasOnGround = playerOnGround p0
-      p1 = applyHorizontalInput params input p0
+  let advances = advanceMovingPlatforms dt (worldMovingPlatforms w)
+      moving = map mpaPlatform advances
+      w' = w{worldMovingPlatforms = moving}
+      p0 = worldPlayer w'
+      wasOnGround = playerOnGround p0carried
+      p0carried = applyPrePhysicsCarry p0 advances
+      p1 = applyHorizontalInput params input p0carried
       p2 = applyGravity params dt p1
       p3 = applyJump params input wasOnGround p2
       vyAtCollide = velY (playerVel p3)
-      plats = worldPlatforms w
+      plats = allCollisionPlatforms (worldPlatforms w') moving
       p4 = integrateAndCollide dt p3 plats vyAtCollide
-   in w
+   in w'
         { worldPlayer = p4
-        , worldEnemies = integrateEnemies dt (worldEnemies w)
+        , worldEnemies = integrateEnemies dt (worldEnemies w')
         }
 
 {- | Integra y resuelve colisiones en sub-pasos para reducir túnel AABB en sólidos finos.

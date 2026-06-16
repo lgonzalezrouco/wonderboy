@@ -52,6 +52,7 @@ floorWorld =
     { worldPlayer = spawnPlayer defaultMaxHealth testSpawn
     , worldEnemies = []
     , worldPlatforms = [floorPlatform]
+    , worldMovingPlatforms = []
     , worldSpawnPoint = testSpawn
     , worldPickups = []
     , worldMinScore = 0
@@ -90,6 +91,7 @@ worldWithCeiling =
     { worldPlayer = risingPlayer (position 0 25)
     , worldEnemies = []
     , worldPlatforms = [ceilingPlatform]
+    , worldMovingPlatforms = []
     , worldSpawnPoint = position 0 25
     , worldPickups = []
     , worldMinScore = 0
@@ -105,6 +107,7 @@ worldWithWall =
         [ floorPlatform
         , wallPlatform
         ]
+    , worldMovingPlatforms = []
     , worldSpawnPoint = position 33 8
     , worldPickups = []
     , worldMinScore = 0

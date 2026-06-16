@@ -90,6 +90,7 @@ library
       , Domain.Logic.Combat
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
+      , Domain.Logic.MovingPlatforms
       , Domain.Logic.Pickups
       , Domain.Logic.PlayerLife
       , Domain.Logic.RunBehaviour
@@ -98,6 +99,7 @@ library
       , Domain.Model.Enemy
       , Domain.Model.GamePhase
       , Domain.Model.GameView
+      , Domain.Model.MovingPlatform
       , Domain.Model.Pickup
       , Domain.Model.Platform
       , Domain.Model.Player
@@ -151,6 +153,7 @@ test-suite wonderboy-hs-test
       , Domain.Fixtures
       , Domain.PlayerLifeTest
       , Domain.CombatTest
+      , Domain.MovingPlatformTest
       , Domain.PickupTest
       , Domain.StepTest
       , UseCases.UpdateGameTest

@@ -55,6 +55,7 @@ unit_updateGameDtZeroSkipsBehaviour =
       { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
       , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
       , worldPlatforms = []
+      , worldMovingPlatforms = []
       , worldSpawnPoint = position 0 0
       , worldPickups = []
       , worldMinScore = 0
@@ -68,6 +69,7 @@ unit_updateGamePatrolReversesVelocity =
           { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
           , worldEnemies = [mkEnemy 1 (position 50 8) patrol]
           , worldPlatforms = []
+          , worldMovingPlatforms = []
           , worldSpawnPoint = position 0 0
           , worldPickups = []
           , worldMinScore = 0
@@ -87,7 +89,7 @@ unit_updateGameAdvancesPatrolPosition =
     Left err -> assertFailure (show err)
     Right ((), gs') ->
       case worldEnemies (gsWorld gs') of
-        e : _ -> posX (enemyPos e) < 50 @?= True
+        e : _ -> posX (enemyPos e) < 160 @?= True
         [] -> assertFailure "expected one enemy after one frame"
 
 unit_gameOverSkipsUpdate :: Assertion

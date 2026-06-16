@@ -2,6 +2,9 @@
 module Domain.Logic.Collision (
   resolvePlayerPlatforms,
   playerOverlapsAnyPlatform,
+  playerRestingOnPlatformTop,
+  playerRidingPlatformTop,
+  landEpsilon,
 )
 where
 
@@ -19,7 +22,7 @@ import Domain.ValueObjects.Aabb (
   aabbOverlaps,
  )
 import Domain.ValueObjects.Position (posX, posY, position)
-import Domain.ValueObjects.Velocity (velX, velocity)
+import Domain.ValueObjects.Velocity (velX, velY, velocity)
 
 landEpsilon :: Float
 landEpsilon = 1e-3
@@ -68,18 +71,18 @@ playerOverlapsAnyPlatform plats p =
    in any (aabbOverlaps box . platformAabb) plats
 
 resolveAgainst :: Float -> Player -> Platform -> Player
-resolveAgainst vyBefore p plat =
+resolveAgainst _vyBefore p plat =
   let box = playerAabb p
       solid = platformAabb plat
    in if aabbOverlaps box solid
-        then resolveOverlap vyBefore p box solid
+        then resolveOverlap (velY (playerVel p)) p box solid
         else p
 
 resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
 resolveOverlap vyBefore p box solid =
   let pY = resolveAxisY vyBefore p box solid
       box' = playerAabb pY
-   in if restingOnTop box' solid
+   in if pY /= p || restingOnTop box' solid || touchingCeiling box' solid
         then pY
         else resolveAxisX pY box' solid
 
@@ -116,6 +119,24 @@ restingOnTop :: Aabb -> Aabb -> Bool
 restingOnTop box solid =
   nearZero (aabbMinY box - aabbMaxY solid)
 
+touchingCeiling :: Aabb -> Aabb -> Bool
+touchingCeiling box solid =
+  nearZero (aabbMaxY box - aabbMinY solid)
+
+-- | 'True' si los pies del jugador apoyan el borde superior de la plataforma.
+playerRestingOnPlatformTop :: Player -> Platform -> Bool
+playerRestingOnPlatformTop p plat =
+  restingOnTop (playerAabb p) (platformAabb plat)
+
+-- | 'True' si el jugador está montado sobre la plataforma (pies sobre el tramo superior).
+playerRidingPlatformTop :: Player -> Platform -> Bool
+playerRidingPlatformTop p plat =
+  let solid = platformAabb plat
+      footX = posX (playerPos p)
+   in playerRestingOnPlatformTop p plat
+        && footX >= aabbMinX solid
+        && footX <= aabbMaxX solid
+
 resolveAxisX :: Player -> Aabb -> Aabb -> Player
 resolveAxisX p box solid =
   case horizontalNudge (separationsX box solid) (velX (playerVel p)) of
@@ -125,14 +146,11 @@ resolveAxisX p box solid =
 horizontalNudge :: (Float, Float) -> Float -> Maybe Float
 horizontalNudge (pushLeft, pushRight) vx
   | pushLeft <= landEpsilon || pushRight <= landEpsilon = Nothing
-  | nearZero (pushLeft - pushRight) =
-      Just $
-        case compare vx 0 of
-          LT -> -pushLeft
-          GT -> pushRight
-          EQ -> -pushLeft
-  | pushLeft < pushRight = Just (-pushLeft)
-  | otherwise = Just pushRight
+  | vx > 0 = Just (-pushLeft)
+  | vx < 0 = Just pushRight
+  | pushLeft < pushRight - landEpsilon = Just (-pushLeft)
+  | pushRight < pushLeft - landEpsilon = Just pushRight
+  | otherwise = Just (-pushLeft)
 
 separationsY :: Aabb -> Aabb -> (Float, Float)
 separationsY box solid =
