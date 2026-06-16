@@ -197,6 +197,36 @@ unit_sideContactDoesNotCarry =
       dx = posX (playerPos (worldPlayer w1)) - posX pos
    in assertBool "side contact does not apply platform carry" (abs dx < 0.5)
 
+unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways :: Assertion
+unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways =
+  let pos = position 60 23
+      p =
+        (spawnPlayer defaultMaxHealth pos)
+          { playerOnGround = False
+          , playerVel = velocity 0 400
+          }
+      w0 =
+        World
+          { worldPlayer = p
+          , worldEnemies = []
+          , worldPlatforms = []
+          , worldMovingPlatforms =
+              [ horizontalShuttle
+                  { movingPlatformPos = position 30 72
+                  , movingPlatformEndA = position 30 72
+                  , movingPlatformEndB = position 90 72
+                  }
+              ]
+          , worldSpawnPoint = pos
+          , worldPickups = []
+          , worldMinScore = 0
+          }
+      w1 = step testParams dtFrame noInput w0
+      p1 = worldPlayer w1
+   in do
+        posX (playerPos p1) @?= posX pos
+        assertBool "player stays below moving platform underside" (posY (playerPos p1) < 30)
+
 unit_landingOnMovingPlatformSetsOnGround :: Assertion
 unit_landingOnMovingPlatformSetsOnGround =
   let mp = horizontalShuttle

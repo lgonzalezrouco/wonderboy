@@ -82,7 +82,7 @@ resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
 resolveOverlap vyBefore p box solid =
   let pY = resolveAxisY vyBefore p box solid
       box' = playerAabb pY
-   in if pY /= p || restingOnTop box' solid
+   in if pY /= p || restingOnTop box' solid || touchingCeiling box' solid
         then pY
         else resolveAxisX pY box' solid
 
@@ -118,6 +118,10 @@ bumpCeiling pushDown = zeroVy . nudgeY (-pushDown)
 restingOnTop :: Aabb -> Aabb -> Bool
 restingOnTop box solid =
   nearZero (aabbMinY box - aabbMaxY solid)
+
+touchingCeiling :: Aabb -> Aabb -> Bool
+touchingCeiling box solid =
+  nearZero (aabbMaxY box - aabbMinY solid)
 
 -- | 'True' si los pies del jugador apoyan el borde superior de la plataforma.
 playerRestingOnPlatformTop :: Player -> Platform -> Bool
