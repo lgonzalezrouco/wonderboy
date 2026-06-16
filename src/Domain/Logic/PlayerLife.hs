@@ -46,7 +46,11 @@ isPlayerOutOfBounds lp w =
 -- | Respawn del jugador en el punto de spawn del nivel (solo el jugador).
 respawnPlayerAt :: LifeParams -> Position -> World -> World
 respawnPlayerAt lp spawn w =
-  w{worldPlayer = spawnPlayer (lpMaxHealth lp) spawn}
+  let p = spawnPlayer (lpMaxHealth lp) spawn
+   in w
+        { worldPlayer =
+            p{playerInvincibilityFrames = lpRespawnInvincibilityFrames lp}
+        }
 
 -- | Resuelve muerte cuando la salud ya es 0.
 resolveDeath :: LifeParams -> Int -> World -> (World, Int, GamePhase)

@@ -17,13 +17,16 @@ data LifeParams = LifeParams
   -- ^ Salud tras spawn o respawn.
   , lpDeathMargin :: Float
   -- ^ Píxeles bajo la plataforma más baja antes de out-of-bounds.
+  , lpRespawnInvincibilityFrames :: Int
+  -- ^ I-frames otorgados al respawn tras perder una vida (M10).
   }
   deriving (Eq, Show, Generic)
 
 -- | Construye 'LifeParams' desde componentes sueltos.
-lifeParams :: Int -> Float -> LifeParams
-lifeParams health margin =
+lifeParams :: Int -> Float -> Int -> LifeParams
+lifeParams health margin respawnInvincibility =
   LifeParams
     { lpMaxHealth = health
     , lpDeathMargin = margin
+    , lpRespawnInvincibilityFrames = respawnInvincibility
     }

@@ -84,7 +84,10 @@ library
       , Domain.ValueObjects.Position
       , Domain.ValueObjects.Velocity
       , Domain.ValueObjects.LifeParams
+      , Domain.ValueObjects.Facing
+      , Domain.ValueObjects.CombatParams
       , Domain.Logic.Collision
+      , Domain.Logic.Combat
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
       , Domain.Logic.PlayerLife
@@ -145,6 +148,7 @@ test-suite wonderboy-hs-test
       , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.PlayerLifeTest
+      , Domain.CombatTest
       , Domain.StepTest
       , UseCases.UpdateGameTest
 

@@ -27,6 +27,7 @@ data AppState = AppState
   { appGameState :: GameState
   , appKeysHeld :: KeyState
   , appJumpPrev :: Bool
+  , appAttackPrev :: Bool
   }
 
 -- | Estado inicial: demo con teclas sueltas y sin salto previo.
@@ -36,6 +37,7 @@ initialAppState =
     { appGameState = initialGameState defaultConfig demoWorld
     , appKeysHeld = noKeys
     , appJumpPrev = False
+    , appAttackPrev = False
     }
 
 -- | Arranca la ventana Gloss y el bucle de juego.
@@ -61,7 +63,8 @@ handleEvent event state =
 advanceFrame :: Float -> AppState -> IO AppState
 advanceFrame dt state = do
   let dt' = capDeltaTime dt
-      (input, jumpPrev) = buildInput (appKeysHeld state) (appJumpPrev state)
+      (input, jumpPrev, attackPrev) =
+        buildInput (appKeysHeld state) (appJumpPrev state) (appAttackPrev state)
   case runGameM defaultConfig (appGameState state) (updateGame dt' input) of
     Left err -> do
       hPutStrLn stderr ("Error: " ++ show err)
@@ -71,4 +74,5 @@ advanceFrame dt state = do
         state
           { appGameState = gs'
           , appJumpPrev = jumpPrev
+          , appAttackPrev = attackPrev
           }

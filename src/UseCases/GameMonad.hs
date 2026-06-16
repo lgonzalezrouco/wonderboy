@@ -16,6 +16,7 @@ module UseCases.GameMonad (
   defaultConfig,
   physicsParamsFromConfig,
   lifeParamsFromConfig,
+  combatParamsFromConfig,
 
   -- * Errores
   GameError (..),
@@ -47,6 +48,7 @@ import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..))
+import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
 import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
 
@@ -78,6 +80,14 @@ data GameConfig = GameConfig
   -- ^ Salud tras spawn o respawn.
   , gcDeathMargin :: Float
   -- ^ Margen bajo la plataforma más baja para out-of-bounds (px).
+  , gcAttackDuration :: Int
+  -- ^ Frames de ventana activa de melee (M10).
+  , gcInvincibilityDuration :: Int
+  -- ^ I-frames tras contacto enemigo o respawn (M10).
+  , gcContactDamage :: Int
+  -- ^ Daño por tick de contacto enemigo (M10).
+  , gcMeleeReach :: Float
+  -- ^ Alcance horizontal del melee en px lógicos (M10).
   }
   deriving (Eq, Show, Generic)
 
@@ -94,6 +104,10 @@ defaultConfig =
     , gcStartingLives = 3
     , gcMaxHealth = 3
     , gcDeathMargin = 64.0
+    , gcAttackDuration = 6
+    , gcInvincibilityDuration = 60
+    , gcContactDamage = 1
+    , gcMeleeReach = 20.0
     }
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
@@ -107,7 +121,19 @@ physicsParamsFromConfig cfg =
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
 lifeParamsFromConfig :: GameConfig -> LifeParams
 lifeParamsFromConfig cfg =
-  lifeParams (gcMaxHealth cfg) (gcDeathMargin cfg)
+  lifeParams
+    (gcMaxHealth cfg)
+    (gcDeathMargin cfg)
+    (gcInvincibilityDuration cfg)
+
+-- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Combat'.
+combatParamsFromConfig :: GameConfig -> CombatParams
+combatParamsFromConfig cfg =
+  combatParams
+    (gcAttackDuration cfg)
+    (gcInvincibilityDuration cfg)
+    (gcContactDamage cfg)
+    (gcMeleeReach cfg)
 
 {- | Errores recuperables del motor.
 

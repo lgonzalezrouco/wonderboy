@@ -18,16 +18,18 @@ where
 import Control.Monad.Reader (ask)
 import Control.Monad.State (get, modify)
 
+import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
 import Domain.Logic.Step (advanceFrame)
 import Domain.Model.GamePhase (GamePhase (..))
-import Domain.ValueObjects.DeltaTime (DeltaTime)
+import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Input (Input)
 import UseCases.GameMonad (
   GameConfig,
   GameError,
   GameM,
   GameState (..),
+  combatParamsFromConfig,
   lifeParamsFromConfig,
   physicsParamsFromConfig,
   runGameM,
@@ -36,7 +38,7 @@ import UseCases.GameMonad (
 {- | Actualiza el estado del juego para un frame dado.
 
 Con 'GameOver' no avanza simulación ni aplica input. En 'Playing': behaviour +
-física, luego out-of-bounds y resolución de muerte.
+física, combate, luego out-of-bounds y resolución de muerte.
 -}
 updateGame :: DeltaTime -> Input -> GameM ()
 updateGame dt input = do
@@ -47,9 +49,14 @@ updateGame dt input = do
       cfg <- ask
       let params = physicsParamsFromConfig cfg
           life = lifeParamsFromConfig cfg
+          combat = combatParamsFromConfig cfg
           w' = advanceFrame params dt input (gsWorld st)
+          wCombat =
+            if seconds dt == 0
+              then w'
+              else resolveCombat combat input w'
           (w'', lives', phase') =
-            resolveHazardsAndDeath life (gsLives st) Playing w'
+            resolveHazardsAndDeath life (gsLives st) Playing wCombat
       modify
         ( \s ->
             s{gsWorld = w'', gsLives = lives', gsPhase = phase'}
