@@ -46,7 +46,7 @@ unit_meleeRemovesEnemy :: Assertion
 unit_meleeRemovesEnemy =
   let p =
         (spawnPlayer 3 (position 0 8))
-          { playerAttackFrames = 3
+          { playerAttackFrames = 6
           , playerFacing = FacingRight
           }
       w =
@@ -61,7 +61,7 @@ unit_meleeRemovesEnemyWhenOverlapping :: Assertion
 unit_meleeRemovesEnemyWhenOverlapping =
   let p =
         (spawnPlayer 3 (position 50 8))
-          { playerAttackFrames = 3
+          { playerAttackFrames = 6
           , playerFacing = FacingRight
           }
       w =
@@ -132,7 +132,7 @@ unit_attackDirectionLatched :: Assertion
 unit_attackDirectionLatched =
   let p =
         (spawnPlayer 3 (position 0 8))
-          { playerAttackFrames = 3
+          { playerAttackFrames = 6
           , playerFacing = FacingRight
           }
       enemy = mkEnemy 1 (position (-40) 8) (patrolHorizontal 10 10)

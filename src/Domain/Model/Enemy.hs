@@ -78,13 +78,16 @@ instance Eq Enemy where
       && enemyHealth a == enemyHealth b
       && enemyFacing a == enemyFacing b
 
+enemyStats :: Enemy -> EnemyKindStats
+enemyStats = enemyKindStats . enemyKind
+
 -- | Ancho del hitbox según la clase del enemigo.
 enemyWidth :: Enemy -> Float
-enemyWidth e = eksWidth (enemyKindStats (enemyKind e))
+enemyWidth = eksWidth . enemyStats
 
 -- | Alto del hitbox según la clase del enemigo.
 enemyHeight :: Enemy -> Float
-enemyHeight e = eksHeight (enemyKindStats (enemyKind e))
+enemyHeight = eksHeight . enemyStats
 
 -- | Caja de colisión del enemigo: @enemyPos@ es el centro inferior (pies).
 enemyAabb :: Enemy -> Aabb

@@ -8,7 +8,7 @@ import Domain.Fixtures (dtFrame, testParams)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep, stepEnemyBehaviour)
 import Domain.Logic.Step (step)
-import Domain.Model.Enemy (enemyPos, enemyProgram, enemyVel, mkEnemy)
+import Domain.Model.Enemy (Enemy, enemyPos, enemyProgram, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (
   idleProgram,
   setVelocity,
@@ -34,6 +34,9 @@ minimalWorld =
     , worldPickups = []
     , worldMinScore = 0
     }
+
+worldWithEnemy :: Enemy -> World
+worldWithEnemy e = minimalWorld{worldEnemies = [e]}
 
 unit_waitFramesDecrements :: Assertion
 unit_waitFramesDecrements =
@@ -75,16 +78,7 @@ unit_idleProgramNoOp =
 unit_behaviourThenStepMovesEnemy :: Assertion
 unit_behaviourThenStepMovesEnemy =
   let e0 = mkEnemy 0 (position 0 8) (setVelocity (velocity (-40) 0))
-      w0 =
-        World
-          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
-          , worldEnemies = [e0]
-          , worldPlatforms = []
-          , worldMovingPlatforms = []
-          , worldSpawnPoint = position 0 0
-          , worldPickups = []
-          , worldMinScore = 0
-          }
+      w0 = worldWithEnemy e0
       w1 = runBehaviourStep w0
       w2 = step testParams dtFrame noInput w1
    in case worldEnemies w2 of
@@ -94,17 +88,7 @@ unit_behaviourThenStepMovesEnemy =
 unit_stepDoesNotRunBehaviour :: Assertion
 unit_stepDoesNotRunBehaviour =
   let e = mkEnemy 1 (position 50 8) (patrolHorizontal 40 90)
-      w0 =
-        World
-          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
-          , worldEnemies = [e]
-          , worldPlatforms = []
-          , worldMovingPlatforms = []
-          , worldSpawnPoint = position 0 0
-          , worldPickups = []
-          , worldMinScore = 0
-          }
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams dtFrame noInput (worldWithEnemy e)
    in case worldEnemies w1 of
         enemy : _ -> posX (enemyPos enemy) @?= 50
         [] -> assertFailure "expected one enemy to remain"

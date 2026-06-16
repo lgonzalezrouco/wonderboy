@@ -88,4 +88,4 @@ defaultProgramForKind kind =
         SnailKind ->
           patrolHorizontal (eksPatrolSpeed stats) (eksPatrolFrames stats)
         BatKind -> reactiveChase stats
-        GolemKind -> reactiveGuard stats
+        GolemKind -> reactiveChase stats

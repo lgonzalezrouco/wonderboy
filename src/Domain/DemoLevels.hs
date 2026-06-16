@@ -11,7 +11,7 @@ where
 import Data.Maybe (catMaybes, fromMaybe)
 
 import Domain.Logic.EntityBehaviours (defaultProgramForKind)
-import Domain.Model.Enemy (spawnEnemy)
+import Domain.Model.Enemy (Enemy, spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.MovingPlatform (MovingPlatform, mkMovingPlatform)
 import Domain.Model.Pickup (mkPickup)
@@ -22,6 +22,9 @@ import Domain.ValueObjects.Position (Position, position)
 -- | Spawn del demo: izquierda del escenario, lejos del enemigo y de la ruta del shuttle.
 demoSpawn :: Position
 demoSpawn = position (-100) 80
+
+demoEnemy :: Int -> EnemyKind -> Position -> Enemy
+demoEnemy eid kind pos = spawnEnemy eid kind pos (defaultProgramForKind kind)
 
 -- | Shuttle elevado: queda sobre la altura de cabeza del jugador caminando.
 demoShuttle :: MovingPlatform
@@ -47,9 +50,9 @@ demoWorld =
     { worldPlayer = spawnPlayer defaultMaxHealth demoSpawn
     , worldSpawnPoint = demoSpawn
     , worldEnemies =
-        [ spawnEnemy 1 SnailKind (position 40 8) (defaultProgramForKind SnailKind)
-        , spawnEnemy 2 BatKind (position 80 8) (defaultProgramForKind BatKind)
-        , spawnEnemy 3 GolemKind (position 170 8) (defaultProgramForKind GolemKind)
+        [ demoEnemy 1 SnailKind (position 40 8)
+        , demoEnemy 2 BatKind (position 80 8)
+        , demoEnemy 3 GolemKind (position 170 8)
         ]
     , worldPickups =
         catMaybes

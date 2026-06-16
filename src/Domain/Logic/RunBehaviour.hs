@@ -16,7 +16,9 @@ import Domain.Logic.BehaviourSensing (
   facingTowardHorizontal,
   horizontalSign,
   nearSpawnHorizontally,
+  playerHorizontalDelta,
   playerHorizontalDistance,
+  spawnHorizontalDelta,
  )
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EntityBehaviour (
@@ -24,9 +26,7 @@ import Domain.Model.EntityBehaviour (
   EntityAction (..),
   (>>>),
  )
-import Domain.Model.Player (playerPos)
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.Position (posX)
 import Domain.ValueObjects.Velocity (velocity)
 
 -- | Avanza un behaviour step en todos los enemigos del mundo (puro).
@@ -54,30 +54,35 @@ stepProgram w (BehaviourProgram prog) e =
       | otherwise ->
           (BehaviourProgram next, e)
     Free (IfPlayerWithinRange range thenBranch elseBranch next) ->
-      let chosen =
-            if playerHorizontalDistance w e <= range
-              then thenBranch
-              else elseBranch
-       in (chosen >>> BehaviourProgram next, e)
+      stepBranch (playerHorizontalDistance w e <= range) thenBranch elseBranch (BehaviourProgram next) e
     Free (IfNearSpawn radius thenBranch elseBranch next) ->
-      let chosen =
-            if nearSpawnHorizontally radius e
-              then thenBranch
-              else elseBranch
-       in (chosen >>> BehaviourProgram next, e)
+      stepBranch (nearSpawnHorizontally radius e) thenBranch elseBranch (BehaviourProgram next) e
     Free (MoveTowardPlayer speed next) ->
-      let dx = posX (playerPos (worldPlayer w)) - posX (enemyPos e)
-          dir = horizontalSign dx
-          vel = velocity (dir * speed) 0
-          facing = facingTowardHorizontal (enemyFacing e) dx
-       in (BehaviourProgram next, e{enemyVel = vel, enemyFacing = facing})
+      (BehaviourProgram next, moveHorizontallyToward (playerHorizontalDelta w e) speed e)
     Free (MoveTowardSpawn speed next) ->
-      let dx = posX (enemySpawnPos e) - posX (enemyPos e)
-          dir = horizontalSign dx
-          vel = velocity (dir * speed) 0
-          facing = facingTowardHorizontal (enemyFacing e) dx
-       in (BehaviourProgram next, e{enemyVel = vel, enemyFacing = facing})
+      (BehaviourProgram next, moveHorizontallyToward (spawnHorizontalDelta e) speed e)
     Free (FacePlayer next) ->
-      let dx = posX (playerPos (worldPlayer w)) - posX (enemyPos e)
-          facing = facingTowardHorizontal (enemyFacing e) dx
-       in (BehaviourProgram next, e{enemyVel = velocity 0 0, enemyFacing = facing})
+      ( BehaviourProgram next
+      , e
+          { enemyVel = velocity 0 0
+          , enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)
+          }
+      )
+
+stepBranch ::
+  Bool ->
+  BehaviourProgram ->
+  BehaviourProgram ->
+  BehaviourProgram ->
+  Enemy ->
+  (BehaviourProgram, Enemy)
+stepBranch cond thenBranch elseBranch next e =
+  (if cond then thenBranch else elseBranch >>> next, e{enemyVel = velocity 0 0})
+
+moveHorizontallyToward :: Float -> Float -> Enemy -> Enemy
+moveHorizontallyToward dx speed e =
+  let dir = horizontalSign dx
+   in e
+        { enemyVel = velocity (dir * speed) 0
+        , enemyFacing = facingTowardHorizontal (enemyFacing e) dx
+        }

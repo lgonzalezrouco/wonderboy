@@ -25,7 +25,7 @@ import Adapters.Gloss.Config (
   windowHeight,
   windowWidth,
  )
-import Domain.Model.Enemy (enemyAabb, enemyKind)
+import Domain.Model.Enemy (Enemy, enemyAabb, enemyKind)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.MovingPlatform (movingPlatformAabb)
@@ -146,10 +146,13 @@ renderWorldLayer w =
         pictures
           [ pictures (map (aabbToPicture platformColor . platformAabb) (worldPlatforms w))
           , pictures (map (aabbToPicture movingPlatformColor . movingPlatformAabb) (worldMovingPlatforms w))
-          , pictures (map (\e -> aabbToPicture (enemyColorForKind (enemyKind e)) (enemyAabb e)) (worldEnemies w))
+          , pictures (map renderEnemy (worldEnemies w))
           , pictures (map (aabbToPicture pickupColor . pickupAabb) (worldPickups w))
           , aabbToPicture playerColor (playerAabb (worldPlayer w))
           ]
+
+renderEnemy :: Enemy -> Picture
+renderEnemy e = aabbToPicture (enemyColorForKind (enemyKind e)) (enemyAabb e)
 
 -- | Panel superior izquierdo: vidas, salud, ataque y hint de controles.
 renderHud :: GameView -> Picture

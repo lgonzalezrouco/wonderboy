@@ -23,7 +23,7 @@ import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Input (noInput)
-import Domain.ValueObjects.Position (posX, position)
+import Domain.ValueObjects.Position (Position, posX, position)
 import Domain.ValueObjects.Velocity (velX)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
@@ -35,6 +35,16 @@ enemyFrom :: World -> Enemy
 enemyFrom w = case worldEnemies w of
   e : _ -> e
   [] -> error "enemyFrom: no enemies"
+
+attackingPlayerAt :: Position -> Player
+attackingPlayerAt pos =
+  (spawnPlayer 3 pos){playerAttackFrames = 6, playerFacing = FacingRight}
+
+golemAt :: Position -> Enemy
+golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
+
+meleeWorld :: Player -> [Enemy] -> World
+meleeWorld p enemies = floorWorld{worldPlayer = p, worldEnemies = enemies}
 
 testCombatParams :: CombatParams
 testCombatParams = combatParams 6 60 1 20.0
@@ -76,6 +86,13 @@ unit_golemGuardFacesPlayer =
       e = enemyFrom w1
    in enemyFacing e @?= FacingLeft
 
+unit_golemGuardIdleVelocity :: Assertion
+unit_golemGuardIdleVelocity =
+  let w0 = worldWithEnemyAt GolemKind (position 170 8) (position 0 8)
+      w1 = runBehaviourN 3 w0
+      e = enemyFrom w1
+   in velX (enemyVel e) @?= 0
+
 unit_golemChasesOnAlert :: Assertion
 unit_golemChasesOnAlert =
   let w0 = worldWithEnemyAt GolemKind (position 100 8) (position 50 8)
@@ -92,17 +109,8 @@ unit_chaseRangeBoundaryInclusive =
 
 unit_golemSurvivesFirstMelee :: Assertion
 unit_golemSurvivesFirstMelee =
-  let p =
-        (spawnPlayer 3 (position 170 8))
-          { playerAttackFrames = 3
-          , playerFacing = FacingRight
-          }
-      w =
-        floorWorld
-          { worldPlayer = p
-          , worldEnemies =
-              [spawnEnemy 1 GolemKind (position 170 8) (defaultProgramForKind GolemKind)]
-          }
+  let pos = position 170 8
+      w = meleeWorld (attackingPlayerAt pos) [golemAt pos]
       w' = resolveCombat testCombatParams noInput w
    in case worldEnemies w' of
         [e] -> enemyHealth e @?= 1
@@ -110,35 +118,27 @@ unit_golemSurvivesFirstMelee =
 
 unit_golemDiesOnSecondMelee :: Assertion
 unit_golemDiesOnSecondMelee =
-  let p =
-        (spawnPlayer 3 (position 170 8))
-          { playerAttackFrames = 3
-          , playerFacing = FacingRight
-          }
-      golem =
-        (spawnEnemy 1 GolemKind (position 170 8) (defaultProgramForKind GolemKind))
-          { enemyHealth = 1
-          }
-      w =
-        floorWorld
-          { worldPlayer = p
-          , worldEnemies = [golem]
-          }
+  let pos = position 170 8
+      w = meleeWorld (attackingPlayerAt pos) [(golemAt pos){enemyHealth = 1}]
       w' = resolveCombat testCombatParams noInput w
    in worldEnemies w' @?= []
 
+unit_meleeOneHitPerSwing :: Assertion
+unit_meleeOneHitPerSwing =
+  let pos = position 170 8
+      w0 = meleeWorld (attackingPlayerAt pos) [golemAt pos]
+      w1 = resolveCombat testCombatParams noInput w0
+      w2 = resolveCombat testCombatParams noInput w1
+   in case worldEnemies w2 of
+        [e] -> enemyHealth e @?= 1
+        _ -> assertFailure "golem should take only one hit per swing"
+
 unit_snailDiesInOneMelee :: Assertion
 unit_snailDiesInOneMelee =
-  let p =
-        (spawnPlayer 3 (position 40 8))
-          { playerAttackFrames = 3
-          , playerFacing = FacingRight
-          }
+  let pos = position 40 8
       w =
-        floorWorld
-          { worldPlayer = p
-          , worldEnemies =
-              [spawnEnemy 1 SnailKind (position 40 8) (patrolHorizontal 30 90)]
-          }
+        meleeWorld
+          (attackingPlayerAt pos)
+          [spawnEnemy 1 SnailKind pos (patrolHorizontal 30 90)]
       w' = resolveCombat testCombatParams noInput w
    in worldEnemies w' @?= []
