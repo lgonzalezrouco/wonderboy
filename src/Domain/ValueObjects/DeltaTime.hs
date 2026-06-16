@@ -15,6 +15,9 @@ module Domain.ValueObjects.DeltaTime (
 
   -- * Acceso
   seconds,
+
+  -- * Predicados
+  isFrozen,
 )
 where
 
@@ -63,3 +66,16 @@ Garantizado por construcción: `seconds dt >= 0`.
 -}
 seconds :: DeltaTime -> Float
 seconds (DeltaTime t) = t
+
+{- | 'True' cuando el frame está __congelado__: no transcurre tiempo simulado.
+
+Definición única de la política de "frame congelado" del motor: cuando es 'True',
+ninguna fase (behaviour, física, combate, peligros) debe avanzar. La comparten
+'Domain.Logic.Step', 'UseCases.UpdateGame' y el bucle de Gloss para no repetir el
+literal @seconds dt == 0@ en cada capa.
+
+Como 'deltaTime' garantiza @seconds dt >= 0@, el @<= 0@ equivale a @== 0@ pero es
+robusto ante cualquier valor degenerado.
+-}
+isFrozen :: DeltaTime -> Bool
+isFrozen dt = seconds dt <= 0

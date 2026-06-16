@@ -9,6 +9,7 @@ import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Time (capDeltaTime)
 import Domain.DemoLevels (demoWorld)
+import Domain.ValueObjects.DeltaTime (isFrozen)
 import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
@@ -53,7 +54,7 @@ runGame =
     advanceFrame
 
 drawFrame :: AppState -> IO Picture
-drawFrame state = pure (renderFrame (gameViewFromState (appGameState state)))
+drawFrame state = pure (renderFrame (gameViewFromState defaultConfig (appGameState state)))
 
 handleEvent :: Event -> AppState -> IO AppState
 handleEvent (EventKey (SpecialKey KeyEsc) Gloss.Down _ _) _ = exitSuccess
@@ -63,6 +64,7 @@ handleEvent event state =
 advanceFrame :: Float -> AppState -> IO AppState
 advanceFrame dt state = do
   let dt' = capDeltaTime dt
+      frozen = isFrozen dt'
       (input, jumpPrev, attackPrev) =
         buildInput (appKeysHeld state) (appJumpPrev state) (appAttackPrev state)
   case runGameM defaultConfig (appGameState state) (updateGame dt' input) of
@@ -70,9 +72,11 @@ advanceFrame dt state = do
       hPutStrLn stderr ("Error: " ++ show err)
       exitFailure
     Right (_, gs') ->
+      -- En un frame congelado no se simula nada, así que no avanzamos los flags de
+      -- flanco: una pulsación de salto/ataque encolada sobrevive al próximo frame vivo.
       pure
         state
           { appGameState = gs'
-          , appJumpPrev = jumpPrev
-          , appAttackPrev = attackPrev
+          , appJumpPrev = if frozen then appJumpPrev state else jumpPrev
+          , appAttackPrev = if frozen then appAttackPrev state else attackPrev
           }

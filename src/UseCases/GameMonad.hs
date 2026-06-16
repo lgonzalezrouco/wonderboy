@@ -118,7 +118,12 @@ physicsParamsFromConfig cfg =
     (gcMoveSpeed cfg)
     (gcJumpSpeed cfg)
 
--- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
+{- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
+
+Los i-frames de respawn usan 'gcInvincibilityDuration', el __mismo__ campo que los
+i-frames de contacto (ver 'combatParamsFromConfig'): hoy comparten valor a propósito.
+Si en el futuro hace falta tunearlos por separado, se añade un campo dedicado a 'GameConfig'.
+-}
 lifeParamsFromConfig :: GameConfig -> LifeParams
 lifeParamsFromConfig cfg =
   lifeParams
@@ -126,7 +131,11 @@ lifeParamsFromConfig cfg =
     (gcDeathMargin cfg)
     (gcInvincibilityDuration cfg)
 
--- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Combat'.
+{- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Combat'.
+
+Los i-frames de contacto usan 'gcInvincibilityDuration', el mismo campo que los de
+respawn (ver 'lifeParamsFromConfig'); el acoplamiento es intencional por ahora.
+-}
 combatParamsFromConfig :: GameConfig -> CombatParams
 combatParamsFromConfig cfg =
   combatParams
@@ -169,13 +178,19 @@ initialGameState cfg w =
     , gsPhase = Playing
     }
 
--- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).
-gameViewFromState :: GameState -> GameView
-gameViewFromState gs =
+{- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).
+
+Recibe 'GameConfig' para que el HUD derive sus máximos (salud, vidas iniciales) de la
+configuración y no de constantes duplicadas en el adaptador.
+-}
+gameViewFromState :: GameConfig -> GameState -> GameView
+gameViewFromState cfg gs =
   GameView
     { gvWorld = gsWorld gs
     , gvLives = gsLives gs
     , gvPhase = gsPhase gs
+    , gvMaxHealth = gcMaxHealth cfg
+    , gvStartingLives = gcStartingLives cfg
     }
 
 -- ---------------------------------------------------------------------------

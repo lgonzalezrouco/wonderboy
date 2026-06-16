@@ -8,8 +8,6 @@ module Domain.Logic.Combat (
 )
 where
 
-import Data.List (find)
-
 import Domain.Logic.PlayerLife (applyDamage)
 import Domain.Model.Enemy (Enemy, enemyAabb)
 import Domain.Model.Player (
@@ -23,17 +21,12 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (
   Aabb (..),
   aabbMaxX,
-  aabbMaxY,
   aabbMinX,
-  aabbMinY,
   aabbOverlaps,
  )
 import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Input (Input (..))
-
-contactEpsilon :: Float
-contactEpsilon = 1e-3
 
 -- | Facing, ataque, i-frames, melee y contacto en un solo paso puro.
 resolveCombat :: CombatParams -> Input -> World -> World
@@ -47,12 +40,21 @@ resolveCombat cp input w =
       p4 = tickInvincibility (worldPlayer w3)
    in w3{worldPlayer = p4}
 
+{- | Orienta al jugador según la intención horizontal del frame.
+
+La dirección queda __fija mientras hay un ataque activo__ (@playerAttackFrames > 0@):
+como 'resolveCombat' llama a 'updateFacing' antes que a 'tickAttack', en el frame de
+inicio el contador aún es 0 y el facing se fija con el input de ese frame; durante el
+resto de la ventana no se reorienta, de modo que el swing no se "da vuelta" a mitad.
+-}
 updateFacing :: Input -> Player -> Player
-updateFacing inp p =
-  case (inputLeft inp, inputRight inp) of
-    (True, False) -> p{playerFacing = FacingLeft}
-    (False, True) -> p{playerFacing = FacingRight}
-    _ -> p
+updateFacing inp p
+  | playerAttackFrames p > 0 = p
+  | otherwise =
+      case (inputLeft inp, inputRight inp) of
+        (True, False) -> p{playerFacing = FacingLeft}
+        (False, True) -> p{playerFacing = FacingRight}
+        _ -> p
 
 tickAttack :: CombatParams -> Input -> Player -> Player
 tickAttack cp inp p
@@ -74,68 +76,42 @@ tickInvincibility p
 resolveMelee :: CombatParams -> World -> World
 resolveMelee cp w =
   let p = worldPlayer w
-   in case meleeAabb cp p of
-        Nothing -> w
-        Just hitbox ->
+   in if playerAttackFrames p <= 0
+        then w
+        else
           let body = playerAabb p
-           in w
-                { worldEnemies =
-                    filter (not . isMeleeHit body hitbox) (worldEnemies w)
-                }
- where
-  -- Alcance hacia adelante o solapamiento cuerpo–enemigo durante la ventana.
-  isMeleeHit body hitbox e =
-    let eb = enemyAabb e
-     in aabbOverlaps hitbox eb || aabbOverlaps body eb
+              hitbox = meleeHitbox cp body (playerFacing p)
+              -- Alcance hacia adelante o solapamiento cuerpo–enemigo durante la ventana.
+              isMeleeHit e = let eb = enemyAabb e in aabbOverlaps hitbox eb || aabbOverlaps body eb
+           in w{worldEnemies = filter (not . isMeleeHit) (worldEnemies w)}
 
-meleeAabb :: CombatParams -> Player -> Maybe Aabb
-meleeAabb cp p
-  | playerAttackFrames p <= 0 = Nothing
-  | otherwise =
-      Just $
-        case playerFacing p of
-          FacingRight ->
-            let body = playerAabb p
-                reach = cpMeleeReach cp
-             in Aabb
-                  { aabbMinX = aabbMaxX body
-                  , aabbMinY = aabbMinY body
-                  , aabbMaxX = aabbMaxX body + reach
-                  , aabbMaxY = aabbMaxY body
-                  }
-          FacingLeft ->
-            let body = playerAabb p
-                reach = cpMeleeReach cp
-             in Aabb
-                  { aabbMinX = aabbMinX body - reach
-                  , aabbMinY = aabbMinY body
-                  , aabbMaxX = aabbMinX body
-                  , aabbMaxY = aabbMaxY body
-                  }
+{- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
+
+Se construye por /update de record/ sobre @body@ para preservar los bordes verticales
+(@aabbMinY@/@aabbMaxY@) del jugador y expresar únicamente la diferencia horizontal.
+-}
+meleeHitbox :: CombatParams -> Aabb -> Facing -> Aabb
+meleeHitbox cp body facing =
+  let reach = cpMeleeReach cp
+   in case facing of
+        FacingRight -> body{aabbMinX = aabbMaxX body, aabbMaxX = aabbMaxX body + reach}
+        FacingLeft -> body{aabbMinX = aabbMinX body - reach, aabbMaxX = aabbMinX body}
 
 resolveContact :: CombatParams -> World -> World
 resolveContact cp w
   | playerInvincibilityFrames (worldPlayer w) > 0 = w
-  | otherwise =
-      case find (isDamagingContact (worldPlayer w)) (worldEnemies w) of
-        Nothing -> w
-        Just _ ->
-          let p = worldPlayer w
-              p' =
-                applyDamage
-                  (cpContactDamage cp)
-                  p
-                    { playerInvincibilityFrames = cpInvincibilityDuration cp
-                    }
-           in w{worldPlayer = p'}
+  | any (isDamagingContact (worldPlayer w)) (worldEnemies w) =
+      let p = worldPlayer w
+          p' =
+            applyDamage
+              (cpContactDamage cp)
+              p
+                { playerInvincibilityFrames = cpInvincibilityDuration cp
+                }
+       in w{worldPlayer = p'}
+  | otherwise = w
 
+-- | Cualquier solape jugador–enemigo daña (sin excepción de pisotón).
 isDamagingContact :: Player -> Enemy -> Bool
 isDamagingContact p e =
-  let playerBox = playerAabb p
-      enemyBox = enemyAabb e
-   in aabbOverlaps playerBox enemyBox
-        && not (isStompSafe playerBox enemyBox)
-
-isStompSafe :: Aabb -> Aabb -> Bool
-isStompSafe playerBox enemyBox =
-  aabbMinY playerBox >= aabbMaxY enemyBox - contactEpsilon
+  aabbOverlaps (playerAabb p) (enemyAabb e)

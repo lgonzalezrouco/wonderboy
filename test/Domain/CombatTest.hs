@@ -110,8 +110,9 @@ unit_sideContactDamages =
         playerHealth (worldPlayer w') @?= 2
         playerInvincibilityFrames (worldPlayer w') @?= 59
 
-unit_stompSafeNoDamage :: Assertion
-unit_stompSafeNoDamage =
+-- | Sin pisotón seguro: tocar al enemigo desde arriba también daña.
+unit_topContactDamages :: Assertion
+unit_topContactDamages =
   let p = spawnPlayer 3 (position 0 32)
       w =
         floorWorld
@@ -120,8 +121,27 @@ unit_stompSafeNoDamage =
           }
       w' = resolveCombat testCombatParams noInput w
    in do
-        playerHealth (worldPlayer w') @?= 3
-        playerInvincibilityFrames (worldPlayer w') @?= 0
+        playerHealth (worldPlayer w') @?= 2
+        playerInvincibilityFrames (worldPlayer w') @?= 59
+
+-- | La dirección del swing queda fija al iniciar: tocar Izquierda a mitad no la cambia.
+unit_attackDirectionLatched :: Assertion
+unit_attackDirectionLatched =
+  let p =
+        (spawnPlayer 3 (position 0 8))
+          { playerAttackFrames = 3
+          , playerFacing = FacingRight
+          }
+      enemy = mkEnemy 1 (position (-40) 8) (patrolHorizontal 10 10)
+      w =
+        floorWorld
+          { worldPlayer = p
+          , worldEnemies = [enemy]
+          }
+      w' = resolveCombat testCombatParams (noInput{inputLeft = True}) w
+   in do
+        playerFacing (worldPlayer w') @?= FacingRight
+        worldEnemies w' @?= [enemy]
 
 unit_iframesBlockRehit :: Assertion
 unit_iframesBlockRehit =

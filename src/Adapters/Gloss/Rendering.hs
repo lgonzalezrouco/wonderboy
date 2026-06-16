@@ -14,11 +14,9 @@ import Adapters.Gloss.Config (
   hudHealthColor,
   hudHealthEmptyColor,
   hudLifeColor,
-  hudMaxHealth,
   hudMutedColor,
   hudOverlayDim,
   hudPanelBg,
-  hudStartingLives,
   hudTextColor,
   platformColor,
   playerColor,
@@ -49,6 +47,88 @@ hudLabelScale = 0.2
 hudHintScale :: Float
 hudHintScale = 0.16
 
+-- Geometría interna del panel (px de pantalla).
+
+-- | Margen interno del panel para el contenido.
+hudContentInset :: Float
+hudContentInset = 12
+
+-- | Desplazamiento de la primera fila bajo el borde superior del panel.
+hudRow1Offset :: Float
+hudRow1Offset = 20
+
+-- | Separación vertical entre filas (LIVES, HEALTH, ATTACK).
+hudRowGap :: Float
+hudRowGap = 28
+
+-- | Separación vertical de la fila de hint respecto de la fila anterior.
+hudHintGap :: Float
+hudHintGap = 22
+
+-- | Distancia horizontal de los iconos de vida respecto del rótulo "LIVES".
+hudLivesValueGap :: Float
+hudLivesValueGap = 62
+
+-- | Distancia horizontal de los pips de salud respecto del rótulo "HEALTH".
+hudHealthValueGap :: Float
+hudHealthValueGap = 72
+
+-- | Ajuste vertical de los iconos de vida hacia la línea base del rótulo.
+hudLifeIconDrop :: Float
+hudLifeIconDrop = 6
+
+-- | Ajuste vertical de los pips de salud hacia la línea base del rótulo.
+hudHealthPipDrop :: Float
+hudHealthPipDrop = 5
+
+-- | Paso horizontal entre iconos de vida consecutivos.
+hudLifeIconStride :: Float
+hudLifeIconStride = 20
+
+-- | Lado del cuadrado de un icono de vida.
+hudLifeIconSize :: Float
+hudLifeIconSize = 14
+
+-- | Paso horizontal entre pips de salud consecutivos.
+hudHealthPipStride :: Float
+hudHealthPipStride = 26
+
+-- | Ancho de un pip de salud.
+hudHealthPipWidth :: Float
+hudHealthPipWidth = 22
+
+-- | Alto de un pip de salud.
+hudHealthPipHeight :: Float
+hudHealthPipHeight = 10
+
+-- | Desplazamiento horizontal del recuadro "ATTACK" respecto del contenido.
+hudAttackBoxOffsetX :: Float
+hudAttackBoxOffsetX = 34
+
+-- | Ajuste vertical del recuadro "ATTACK".
+hudAttackBoxDrop :: Float
+hudAttackBoxDrop = 6
+
+-- | Ancho del recuadro indicador de ataque.
+hudAttackBoxWidth :: Float
+hudAttackBoxWidth = 52
+
+-- | Alto del recuadro indicador de ataque.
+hudAttackBoxHeight :: Float
+hudAttackBoxHeight = 14
+
+-- | Escala del texto "GAME OVER" en el overlay.
+hudGameOverScale :: Float
+hudGameOverScale = 0.42
+
+-- | Desplazamiento vertical del texto "GAME OVER".
+hudGameOverOffsetY :: Float
+hudGameOverOffsetY = 24
+
+-- | Desplazamiento vertical del hint bajo "GAME OVER".
+hudGameOverHintOffsetY :: Float
+hudGameOverHintOffsetY = -18
+
 -- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
 renderFrame :: GameView -> Picture
 renderFrame gv =
@@ -78,47 +158,47 @@ renderHud gv =
       topLeftY = halfH - hudMargin
       panelCenterX = topLeftX + hudPanelWidth / 2
       panelCenterY = topLeftY - hudPanelHeight / 2
-      contentX = topLeftX + 12
-      row1Y = topLeftY - 20
-      row2Y = row1Y - 28
-      row3Y = row2Y - 28
-      row4Y = row3Y - 22
+      contentX = topLeftX + hudContentInset
+      row1Y = topLeftY - hudRow1Offset
+      row2Y = row1Y - hudRowGap
+      row3Y = row2Y - hudRowGap
+      row4Y = row3Y - hudHintGap
       p = worldPlayer (gvWorld gv)
    in pictures
         [ Translate panelCenterX panelCenterY $
             Color hudPanelBg (rectangleSolid hudPanelWidth hudPanelHeight)
         , hudLabel contentX row1Y "LIVES"
-        , Translate (contentX + 62) (row1Y - 6) $
-            renderLifeIcons (gvLives gv) hudStartingLives
+        , Translate (contentX + hudLivesValueGap) (row1Y - hudLifeIconDrop) $
+            renderLifeIcons (gvLives gv) (gvStartingLives gv)
         , hudLabel contentX row2Y "HEALTH"
-        , Translate (contentX + 72) (row2Y - 5) $
-            renderHealthPips (playerHealth p) hudMaxHealth
+        , Translate (contentX + hudHealthValueGap) (row2Y - hudHealthPipDrop) $
+            renderHealthPips (playerHealth p) (gvMaxHealth gv)
         , renderAttackRow contentX row3Y p
         , hudHint contentX row4Y "Space — attack"
         ]
 
 renderGameOverOverlay :: GameView -> Picture
 renderGameOverOverlay gv
-  | gvPhase gv /= GameOver = blank
+  | gvPhase gv /= GameOver = Blank
   | otherwise =
       pictures
         [ Color hudOverlayDim $
             rectangleSolid (fromIntegral windowWidth) (fromIntegral windowHeight)
-        , Translate 0 24 $
-            Scale 0.42 0.42 $
+        , Translate 0 hudGameOverOffsetY $
+            Scale hudGameOverScale hudGameOverScale $
               Color hudAttackColor (text "GAME OVER")
-        , Translate 0 (-18) $
+        , Translate 0 hudGameOverHintOffsetY $
             Scale hudHintScale hudHintScale $
               Color hudMutedColor (text "Press Esc to quit")
         ]
 
 renderAttackRow :: Float -> Float -> Player -> Picture
 renderAttackRow x y p
-  | playerAttackFrames p <= 0 = blank
+  | playerAttackFrames p <= 0 = Blank
   | otherwise =
       pictures
-        [ Translate (x + 34) (y - 6) $
-            Color hudAttackColor (rectangleSolid 52 14)
+        [ Translate (x + hudAttackBoxOffsetX) (y - hudAttackBoxDrop) $
+            Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
         , Translate x y $
             Scale hudLabelScale hudLabelScale $
               Color hudTextColor (text "ATTACK")
@@ -127,24 +207,24 @@ renderAttackRow x y p
 renderLifeIcons :: Int -> Int -> Picture
 renderLifeIcons lives maxLives =
   pictures
-    [ lifeIconAt (fromIntegral i * 20) (i < lives) | i <- [0 .. maxLives - 1]
+    [ lifeIconAt (fromIntegral i * hudLifeIconStride) (i < lives) | i <- [0 .. maxLives - 1]
     ]
  where
   lifeIconAt dx filled =
     Translate dx 0 $
       Color (if filled then hudLifeColor else hudHealthEmptyColor) $
-        rectangleSolid 14 14
+        rectangleSolid hudLifeIconSize hudLifeIconSize
 
 renderHealthPips :: Int -> Int -> Picture
 renderHealthPips current maxHealth =
   pictures
-    [ healthPipAt (fromIntegral i * 26) (i < current) | i <- [0 .. maxHealth - 1]
+    [ healthPipAt (fromIntegral i * hudHealthPipStride) (i < current) | i <- [0 .. maxHealth - 1]
     ]
  where
   healthPipAt dx filled =
     Translate dx 0 $
       Color (if filled then hudHealthColor else hudHealthEmptyColor) $
-        rectangleSolid 22 10
+        rectangleSolid hudHealthPipWidth hudHealthPipHeight
 
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =
@@ -157,9 +237,6 @@ hudHint x y label =
   Translate x y $
     Scale hudHintScale hudHintScale $
       Color hudMutedColor (text label)
-
-blank :: Picture
-blank = pictures []
 
 -- | Convierte un 'Aabb' en un rectángulo sólido centrado en su caja.
 aabbToPicture :: Color -> Aabb -> Picture

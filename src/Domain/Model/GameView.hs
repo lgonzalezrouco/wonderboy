@@ -16,5 +16,9 @@ data GameView = GameView
   { gvWorld :: World
   , gvLives :: Int
   , gvPhase :: GamePhase
+  , gvMaxHealth :: Int
+  -- ^ Salud máxima (run-wide, derivada de config): cuántos pips dibuja el HUD.
+  , gvStartingLives :: Int
+  -- ^ Vidas iniciales (run-wide, derivada de config): cuántos iconos dibuja el HUD.
   }
   deriving (Eq, Show)

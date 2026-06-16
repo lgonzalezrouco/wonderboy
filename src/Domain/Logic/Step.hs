@@ -17,34 +17,37 @@ import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player (..), playerVel)
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime, seconds)
+import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime, isFrozen, seconds)
 import Domain.ValueObjects.Input (Input)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Velocity (velY)
 
-{- | Transición completa de un frame: behaviour step y luego física, o identidad si @dt = 0@.
+{- | Transición completa de un frame: behaviour step y luego física, o identidad si el frame está congelado.
 
-Única declaración de la política de "frame congelado" del motor: con @dt = 0@ no
-avanza ninguna fase (ni behaviour ni física). Si @dt > 0@, primero el DSL fija la
-velocidad de los enemigos ('runBehaviourStep') y después 'step' integra física y
-colisiones. 'UseCases.UpdateGame.updateGame' sólo eleva esta función a 'GameM'.
+La política de "frame congelado" la define 'Domain.ValueObjects.DeltaTime.isFrozen' y
+la aplica 'UseCases.UpdateGame.updateGame' a nivel de frame (behaviour + física + combate +
+peligros). Aquí 'isFrozen' actúa como /identidad defensiva/ para llamadas aisladas: con el
+frame congelado no avanza ninguna fase (ni behaviour ni física). Si avanza, primero el DSL
+fija la velocidad de los enemigos ('runBehaviourStep') y después 'step' integra física y
+colisiones.
 -}
 advanceFrame :: PhysicsParams -> DeltaTime -> Input -> World -> World
 advanceFrame params dt input w
-  | seconds dt == 0 = w
+  | isFrozen dt = w
   | otherwise = step params dt input (runBehaviourStep w)
 
 {- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
 
-Con @dt = 0@ devuelve el mundo sin cambios: es la identidad temporal /propia/ de
+Con el frame congelado devuelve el mundo sin cambios: es la identidad temporal /propia/ de
 'step' como función pura (verificada en 'Domain.StepTest'). La política a nivel de
-frame la posee 'advanceFrame'; esta guarda protege a 'step' cuando se la llama aislada.
+frame la define 'Domain.ValueObjects.DeltaTime.isFrozen'; esta guarda protege a 'step'
+cuando se la llama aislada.
 
 Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DSL
 (M6) antes de este paso. Sin gravedad ni colisiones enemigo–plataforma en M6.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
-step _ dt _ w | seconds dt == 0 = w
+step _ dt _ w | isFrozen dt = w
 step params dt input w =
   let p0 = worldPlayer w
       wasOnGround = playerOnGround p0

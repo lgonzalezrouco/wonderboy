@@ -8,8 +8,6 @@ module Adapters.Gloss.Config (
   playerColor,
   enemyColor,
   platformColor,
-  hudMaxHealth,
-  hudStartingLives,
   hudPanelBg,
   hudTextColor,
   hudMutedColor,
@@ -55,34 +53,34 @@ enemyColor = makeColor 1.0 0.3 0.3 1.0
 platformColor :: Color
 platformColor = makeColor 0.3 0.7 0.3 1.0
 
--- | Valores HUD alineados con 'UseCases.GameMonad.defaultConfig' (M10).
-hudMaxHealth :: Int
-hudMaxHealth = 3
-
-hudStartingLives :: Int
-hudStartingLives = 3
-
--- | Paleta del HUD (adaptador; no es dominio).
+-- | Fondo semitransparente del panel del HUD (adaptador; no es dominio).
 hudPanelBg :: Color
 hudPanelBg = makeColor 0.05 0.06 0.1 0.72
 
+-- | Color del texto principal del HUD.
 hudTextColor :: Color
 hudTextColor = makeColor 0.94 0.96 1.0 1.0
 
+-- | Color del texto secundario/atenuado (hints).
 hudMutedColor :: Color
 hudMutedColor = makeColor 0.62 0.68 0.78 1.0
 
+-- | Color de un icono de vida lleno.
 hudLifeColor :: Color
 hudLifeColor = makeColor 1.0 0.82 0.2 1.0
 
+-- | Color de un pip de salud lleno.
 hudHealthColor :: Color
 hudHealthColor = makeColor 0.35 0.9 0.5 1.0
 
+-- | Color de un icono/pip vacío (vida o salud agotada).
 hudHealthEmptyColor :: Color
 hudHealthEmptyColor = makeColor 0.22 0.25 0.32 1.0
 
+-- | Color del indicador de ataque activo.
 hudAttackColor :: Color
 hudAttackColor = makeColor 1.0 0.5 0.15 1.0
 
+-- | Color del velo que oscurece la pantalla en el overlay de Game Over.
 hudOverlayDim :: Color
 hudOverlayDim = makeColor 0.02 0.03 0.06 0.55
