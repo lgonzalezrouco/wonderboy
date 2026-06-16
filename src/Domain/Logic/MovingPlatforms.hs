@@ -91,8 +91,8 @@ posición previa de la plataforma; la colisión posterior usa la posición nueva
 sin volver a sumar el desplazamiento (evita doble carry en eje Y).
 -}
 applyPrePhysicsCarry :: Player -> [MovingPlatformAdvance] -> Player
-applyPrePhysicsCarry p advances =
-  foldl applyOne p advances
+applyPrePhysicsCarry =
+  foldl applyOne
  where
   applyOne player adv =
     let oldMp = movingPlatformBeforeAdvance adv
