@@ -111,7 +111,7 @@ spawnEnemy eid kind pos prog =
 
 -- | Crea un enemigo Snail para tests con programa explícito.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
-mkEnemy eid pos prog = spawnEnemy eid SnailKind pos prog
+mkEnemy eid = spawnEnemy eid SnailKind
 
 -- | Crea un enemigo con clase y programa explícito (tests).
 mkEnemyWithKind :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
