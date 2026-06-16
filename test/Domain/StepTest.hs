@@ -19,7 +19,7 @@ import Domain.Model.Player (
   playerWidth,
   spawnPlayer,
  )
-import Domain.Model.World (World (..), initialWorld)
+import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
 import Domain.ValueObjects.Aabb (aabbMaxY, aabbMinX, aabbMinY)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
@@ -34,7 +34,7 @@ unit_stepZeroIsIdentityAtSpawn =
 
 unit_stepZeroIsIdentityMoving :: Assertion
 unit_stepZeroIsIdentityMoving =
-  let p0 = spawnPlayer (position 10 50)
+  let p0 = spawnPlayer defaultMaxHealth (position 10 50)
       moving =
         initialWorld
           { worldPlayer =
@@ -72,7 +72,7 @@ unit_jumpGatingInAir = do
   let wAir =
         initialWorld
           { worldPlayer =
-              (spawnPlayer (position 0 80))
+              (spawnPlayer defaultMaxHealth (position 0 80))
                 { playerVel = velocity 0 (-100)
                 , playerOnGround = False
                 }

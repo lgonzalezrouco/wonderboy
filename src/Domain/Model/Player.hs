@@ -88,14 +88,11 @@ recién aparecido en el nivel — velocidad cero, en el aire, vida máxima.
 La posición de spawn varía por nivel; por eso se recibe como argumento en lugar
 de usar una constante.
 -}
-spawnPlayer :: Position -> Player
-spawnPlayer pos =
+spawnPlayer :: Int -> Position -> Player
+spawnPlayer maxHealth pos =
   Player
     { playerPos = pos
     , playerVel = velocity 0 0 -- en reposo: vx=0, vy=0
     , playerOnGround = False -- empieza en el aire; la gravedad (M3) lo baja
-    , playerHealth = 3 -- vida inicial: 3 golpes
+    , playerHealth = maxHealth
     }
-
--- La elección de 3 como vida inicial es arbitraria; en M2+ esta constante
--- podría moverse a `GameConfig` para hacerla configurable por nivel.

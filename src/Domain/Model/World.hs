@@ -12,6 +12,7 @@ module Domain.Model.World (
 
   -- * Construcción
   initialWorld,
+  defaultMaxHealth,
 )
 where
 
@@ -20,13 +21,18 @@ import GHC.Generics (Generic)
 import Domain.Model.Enemy (Enemy)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
-import Domain.ValueObjects.Position (position)
+import Domain.ValueObjects.Position (Position, position)
+
+-- | Punto de spawn del jugador en este nivel (respawn tras perder una vida).
+defaultMaxHealth :: Int
+defaultMaxHealth = 3
 
 -- | Estado completo de la simulación.
 data World = World
   { worldPlayer :: Player
   , worldEnemies :: [Enemy]
   , worldPlatforms :: [Platform]
+  , worldSpawnPoint :: Position
   }
   deriving (Eq, Show, Generic)
 
@@ -41,8 +47,10 @@ en tests y demos.
 -}
 initialWorld :: World
 initialWorld =
-  World
-    { worldPlayer = spawnPlayer (position 0 80)
-    , worldEnemies = []
-    , worldPlatforms = [testFloor]
-    }
+  let spawn = position 0 80
+   in World
+        { worldPlayer = spawnPlayer defaultMaxHealth spawn
+        , worldEnemies = []
+        , worldPlatforms = [testFloor]
+        , worldSpawnPoint = spawn
+        }

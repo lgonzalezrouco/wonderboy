@@ -9,7 +9,6 @@ import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Time (capDeltaTime)
 import Domain.DemoLevels (demoWorld)
-import Domain.Model.World (World)
 import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
@@ -20,12 +19,12 @@ import Graphics.Gloss.Interface.IO.Game (
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStrLn, stderr)
-import UseCases.GameMonad (defaultConfig, runGameM)
+import UseCases.GameMonad (GameState, defaultConfig, gameViewFromState, initialGameState, runGameM)
 import UseCases.UpdateGame (updateGame)
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState
-  { appWorld :: World
+  { appGameState :: GameState
   , appKeysHeld :: KeyState
   , appJumpPrev :: Bool
   }
@@ -34,7 +33,7 @@ data AppState = AppState
 initialAppState :: AppState
 initialAppState =
   AppState
-    { appWorld = demoWorld
+    { appGameState = initialGameState defaultConfig demoWorld
     , appKeysHeld = noKeys
     , appJumpPrev = False
     }
@@ -52,7 +51,7 @@ runGame =
     advanceFrame
 
 drawFrame :: AppState -> IO Picture
-drawFrame state = pure (renderFrame (appWorld state))
+drawFrame state = pure (renderFrame (gameViewFromState (appGameState state)))
 
 handleEvent :: Event -> AppState -> IO AppState
 handleEvent (EventKey (SpecialKey KeyEsc) Gloss.Down _ _) _ = exitSuccess
@@ -63,13 +62,13 @@ advanceFrame :: Float -> AppState -> IO AppState
 advanceFrame dt state = do
   let dt' = capDeltaTime dt
       (input, jumpPrev) = buildInput (appKeysHeld state) (appJumpPrev state)
-  case runGameM defaultConfig (appWorld state) (updateGame dt' input) of
+  case runGameM defaultConfig (appGameState state) (updateGame dt' input) of
     Left err -> do
       hPutStrLn stderr ("Error: " ++ show err)
       exitFailure
-    Right (_, w') ->
+    Right (_, gs') ->
       pure
         state
-          { appWorld = w'
+          { appGameState = gs'
           , appJumpPrev = jumpPrev
           }

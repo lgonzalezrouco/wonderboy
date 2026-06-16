@@ -17,7 +17,7 @@ import Domain.Model.EntityBehaviour (
   waitThen,
  )
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..))
+import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (posX, position)
 import Domain.ValueObjects.Velocity (velX, velocity)
@@ -65,9 +65,10 @@ unit_behaviourThenStepMovesEnemy =
   let e0 = mkEnemy 0 (position 0 8) (setVelocity (velocity (-40) 0))
       w0 =
         World
-          { worldPlayer = spawnPlayer (position 0 0)
+          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
           , worldEnemies = [e0]
           , worldPlatforms = []
+          , worldSpawnPoint = position 0 0
           }
       w1 = runBehaviourStep w0
       w2 = step testParams dtFrame noInput w1
@@ -80,9 +81,10 @@ unit_stepDoesNotRunBehaviour =
   let e = mkEnemy 1 (position 50 8) (patrolHorizontal 40 90)
       w0 =
         World
-          { worldPlayer = spawnPlayer (position 0 0)
+          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
           , worldEnemies = [e]
           , worldPlatforms = []
+          , worldSpawnPoint = position 0 0
           }
       w1 = step testParams dtFrame noInput w0
    in case worldEnemies w1 of
