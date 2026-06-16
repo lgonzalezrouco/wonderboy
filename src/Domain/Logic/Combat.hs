@@ -9,7 +9,7 @@ module Domain.Logic.Combat (
 where
 
 import Domain.Logic.PlayerLife (applyDamage)
-import Domain.Model.Enemy (Enemy, enemyAabb)
+import Domain.Model.Enemy (Enemy (..), enemyAabb)
 import Domain.Model.Player (
   Player (..),
   playerAabb,
@@ -33,17 +33,20 @@ resolveCombat :: CombatParams -> Input -> World -> World
 resolveCombat cp input w =
   let p0 = worldPlayer w
       p1 = updateFacing input p0
-      p2 = tickAttack cp input p1
+      attackStarted = inputAttack input && playerAttackFrames p1 == 0
+      p2 = startAttack cp input p1
       w1 = w{worldPlayer = p2}
       w2 = resolveMelee cp w1
-      w3 = resolveContact cp w2
-      p4 = tickInvincibility (worldPlayer w3)
-   in w3{worldPlayer = p4}
+      p3 = decrementAttack attackStarted (worldPlayer w2)
+      w3 = w2{worldPlayer = p3}
+      w4 = resolveContact cp w3
+      p4 = tickInvincibility (worldPlayer w4)
+   in w4{worldPlayer = p4}
 
 {- | Orienta al jugador según la intención horizontal del frame.
 
 La dirección queda __fija mientras hay un ataque activo__ (@playerAttackFrames > 0@):
-como 'resolveCombat' llama a 'updateFacing' antes que a 'tickAttack', en el frame de
+como 'resolveCombat' llama a 'updateFacing' antes de iniciar el ataque, en el frame de
 inicio el contador aún es 0 y el facing se fija con el input de ese frame; durante el
 resto de la ventana no se reorienta, de modo que el swing no se "da vuelta" a mitad.
 -}
@@ -56,11 +59,17 @@ updateFacing inp p
         (False, True) -> p{playerFacing = FacingRight}
         _ -> p
 
-tickAttack :: CombatParams -> Input -> Player -> Player
-tickAttack cp inp p
+startAttack :: CombatParams -> Input -> Player -> Player
+startAttack cp inp p
   | inputAttack inp
   , playerAttackFrames p == 0 =
       p{playerAttackFrames = cpAttackDuration cp}
+  | otherwise =
+      p
+
+decrementAttack :: Bool -> Player -> Player
+decrementAttack attackStarted p
+  | attackStarted = p
   | playerAttackFrames p > 0 =
       p{playerAttackFrames = playerAttackFrames p - 1}
   | otherwise =
@@ -76,14 +85,16 @@ tickInvincibility p
 resolveMelee :: CombatParams -> World -> World
 resolveMelee cp w =
   let p = worldPlayer w
-   in if playerAttackFrames p <= 0
+   in if playerAttackFrames p /= cpAttackDuration cp
         then w
         else
           let body = playerAabb p
               hitbox = meleeHitbox cp body (playerFacing p)
-              -- Alcance hacia adelante o solapamiento cuerpo–enemigo durante la ventana.
-              isMeleeHit e = let eb = enemyAabb e in aabbOverlaps hitbox eb || aabbOverlaps body eb
-           in w{worldEnemies = filter (not . isMeleeHit) (worldEnemies w)}
+              hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
+              applyMeleeHit e
+                | hitsEnemy e = e{enemyHealth = enemyHealth e - 1}
+                | otherwise = e
+           in w{worldEnemies = filter ((> 0) . enemyHealth) (map applyMeleeHit (worldEnemies w))}
 
 {- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
 

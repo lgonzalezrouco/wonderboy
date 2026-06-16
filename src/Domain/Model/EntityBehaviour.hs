@@ -1,8 +1,9 @@
 {- | AST del DSL de comportamiento de enemigos (Free monad).
 
-Instrucciones cinemáticas puras: 'setVelocity' y 'waitFrames'. Un behaviour step
-por frame vive en @Domain.Logic.RunBehaviour@; @Domain.Logic.Step.advanceFrame@ lo
-compone con la física y @UseCases.UpdateGame.updateGame@ lo eleva a 'GameM'.
+Instrucciones cinemáticas y de sensado puro: velocidad, espera, ramas por
+distancia y movimiento hacia jugador o spawn. Un behaviour step por frame vive
+en @Domain.Logic.RunBehaviour@; @Domain.Logic.Step.advanceFrame@ lo compone con
+la física y @UseCases.UpdateGame.updateGame@ lo eleva a 'GameM'.
 -}
 module Domain.Model.EntityBehaviour (
   -- * AST
@@ -14,6 +15,11 @@ module Domain.Model.EntityBehaviour (
   waitFrames,
   waitThen,
   idleProgram,
+  ifPlayerWithinRange,
+  ifNearSpawn,
+  moveTowardPlayer,
+  moveTowardSpawn,
+  facePlayer,
   (>>>),
 
   -- * Observación (tests / depuración)
@@ -32,7 +38,17 @@ data EntityAction next
     SetVelocity Velocity next
   | -- | Mantiene la velocidad actual durante @n@ frames (un frame por behaviour step).
     WaitFrames Int next
-  deriving (Functor, Eq, Show, Generic)
+  | -- | Continúa con @thenBranch@ o @elseBranch@ según distancia horizontal al jugador.
+    IfPlayerWithinRange Float BehaviourProgram BehaviourProgram next
+  | -- | Continúa según proximidad horizontal al spawn anchor del enemigo.
+    IfNearSpawn Float BehaviourProgram BehaviourProgram next
+  | -- | Velocidad horizontal hacia el jugador a @speed@ px/s (un behaviour step).
+    MoveTowardPlayer Float next
+  | -- | Velocidad horizontal hacia el spawn anchor a @speed@ px/s.
+    MoveTowardSpawn Float next
+  | -- | Orienta al enemigo hacia el jugador y fija velocidad cero.
+    FacePlayer next
+  deriving (Functor, Show, Generic)
 
 {- | Programa de comportamiento de un enemigo.
 
@@ -55,6 +71,11 @@ instance Show BehaviourProgram where
     Pure () -> "BehaviourProgram <done>"
     Free (SetVelocity _ _) -> "BehaviourProgram <setVelocity …>"
     Free (WaitFrames n _) -> "BehaviourProgram <waitFrames " ++ show n ++ ">"
+    Free (IfPlayerWithinRange{}) -> "BehaviourProgram <ifPlayerWithinRange …>"
+    Free (IfNearSpawn{}) -> "BehaviourProgram <ifNearSpawn …>"
+    Free (MoveTowardPlayer _ _) -> "BehaviourProgram <moveTowardPlayer …>"
+    Free (MoveTowardSpawn _ _) -> "BehaviourProgram <moveTowardSpawn …>"
+    Free (FacePlayer _) -> "BehaviourProgram <facePlayer>"
 
 -- | Encadena dos programas (monad @Free EntityAction@ con resultado @()@).
 infixl 1 >>>
@@ -82,6 +103,34 @@ waitThen :: Int -> BehaviourProgram -> BehaviourProgram
 waitThen n prog
   | n > 0 = waitFrames n >>> prog
   | otherwise = prog
+
+-- | Rama por distancia horizontal al jugador (un behaviour step de decisión).
+ifPlayerWithinRange ::
+  Float ->
+  BehaviourProgram ->
+  BehaviourProgram ->
+  BehaviourProgram
+ifPlayerWithinRange range thenBranch elseBranch =
+  BehaviourProgram (Free (IfPlayerWithinRange range thenBranch elseBranch (Pure ())))
+
+-- | Rama por proximidad horizontal al spawn anchor.
+ifNearSpawn :: Float -> BehaviourProgram -> BehaviourProgram -> BehaviourProgram
+ifNearSpawn radius thenBranch elseBranch =
+  BehaviourProgram (Free (IfNearSpawn radius thenBranch elseBranch (Pure ())))
+
+-- | Un behaviour step de persecución horizontal hacia el jugador.
+moveTowardPlayer :: Float -> BehaviourProgram
+moveTowardPlayer speed =
+  BehaviourProgram (Free (MoveTowardPlayer speed (Pure ())))
+
+-- | Un behaviour step de retorno horizontal hacia el spawn anchor.
+moveTowardSpawn :: Float -> BehaviourProgram
+moveTowardSpawn speed =
+  BehaviourProgram (Free (MoveTowardSpawn speed (Pure ())))
+
+-- | Un behaviour step: mirar al jugador sin moverse.
+facePlayer :: BehaviourProgram
+facePlayer = BehaviourProgram (Free (FacePlayer (Pure ())))
 
 -- | Contador de espera en la instrucción activa, si aplica.
 waitFramesRemaining :: BehaviourProgram -> Maybe Int

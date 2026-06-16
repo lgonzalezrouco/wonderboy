@@ -1,7 +1,7 @@
 {- | Definiciones de niveles de demo (contenido autoral, no estado de runtime).
 
 Mantiene 'Domain.Model.World' como una "fotografía" pura sin conocer el
-catálogo de comportamientos: el cableado de presets de patrulla vive aquí.
+catálogo de comportamientos: el cableado de presets vive aquí.
 -}
 module Domain.DemoLevels (
   demoWorld,
@@ -10,8 +10,9 @@ where
 
 import Data.Maybe (catMaybes, fromMaybe)
 
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
-import Domain.Model.Enemy (mkEnemy)
+import Domain.Logic.EntityBehaviours (defaultProgramForKind)
+import Domain.Model.Enemy (Enemy, spawnEnemy)
+import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.MovingPlatform (MovingPlatform, mkMovingPlatform)
 import Domain.Model.Pickup (mkPickup)
 import Domain.Model.Player (spawnPlayer)
@@ -21,6 +22,9 @@ import Domain.ValueObjects.Position (Position, position)
 -- | Spawn del demo: izquierda del escenario, lejos del enemigo y de la ruta del shuttle.
 demoSpawn :: Position
 demoSpawn = position (-100) 80
+
+demoEnemy :: Int -> EnemyKind -> Position -> Enemy
+demoEnemy eid kind pos = spawnEnemy eid kind pos (defaultProgramForKind kind)
 
 -- | Shuttle elevado: queda sobre la altura de cabeza del jugador caminando.
 demoShuttle :: MovingPlatform
@@ -36,9 +40,9 @@ demoShuttle =
       35
       True
 
-{- | Mundo de demo M6: mismo layout que 'initialWorld' más un enemigo de patrulla.
+{- | Mundo de demo M13: tres clases de enemigo sobre el suelo compartido.
 
-Usado por @app/Main.hs@ y tests de comportamiento integrado.
+Usado por @app/Main.hs@ y smoke manual.
 -}
 demoWorld :: World
 demoWorld =
@@ -46,7 +50,10 @@ demoWorld =
     { worldPlayer = spawnPlayer defaultMaxHealth demoSpawn
     , worldSpawnPoint = demoSpawn
     , worldEnemies =
-        [mkEnemy 1 (position 160 8) (patrolHorizontal 40 90)]
+        [ demoEnemy 1 SnailKind (position 40 8)
+        , demoEnemy 2 BatKind (position 80 8)
+        , demoEnemy 3 GolemKind (position 170 8)
+        ]
     , worldPickups =
         catMaybes
           [ mkPickup 1 (position (-120) 8) 100

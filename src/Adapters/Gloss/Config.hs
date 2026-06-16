@@ -7,6 +7,7 @@ module Adapters.Gloss.Config (
   maxDeltaSeconds,
   playerColor,
   enemyColor,
+  enemyColorForKind,
   pickupColor,
   platformColor,
   movingPlatformColor,
@@ -22,6 +23,8 @@ module Adapters.Gloss.Config (
 where
 
 import Graphics.Gloss.Data.Color (Color, makeColor)
+
+import Domain.Model.EnemyKind (EnemyKind (..))
 
 -- | Ancho de la ventana en píxeles.
 windowWidth :: Int
@@ -47,9 +50,16 @@ maxDeltaSeconds = 0.05
 playerColor :: Color
 playerColor = makeColor 0.2 0.5 1.0 1.0
 
--- | Color del rectángulo de enemigos.
+-- | Color del rectángulo de enemigos (fallback genérico).
 enemyColor :: Color
 enemyColor = makeColor 1.0 0.3 0.3 1.0
+
+-- | Color por clase de enemigo (placeholders hasta M17 sprites).
+enemyColorForKind :: EnemyKind -> Color
+enemyColorForKind kind = case kind of
+  SnailKind -> makeColor 0.85 0.75 0.2 1.0
+  BatKind -> makeColor 0.65 0.35 0.9 1.0
+  GolemKind -> makeColor 0.55 0.58 0.62 1.0
 
 -- | Color del rectángulo de pickups (coleccionables).
 pickupColor :: Color

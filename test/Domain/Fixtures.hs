@@ -11,12 +11,16 @@ module Domain.Fixtures (
   worldWithCeiling,
   worldWithPickups,
   worldWithWall,
+  worldWithEnemyAt,
 )
 where
 
 import Data.Maybe (fromMaybe)
 
+import Domain.Logic.EntityBehaviours (defaultProgramForKind)
 import Domain.Logic.Step (step)
+import Domain.Model.Enemy (spawnEnemy)
+import Domain.Model.EnemyKind (EnemyKind)
 import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (
@@ -127,3 +131,11 @@ ceilingPlatform = platform (position (-100) 80) 200 8
 risingPlayer :: Position -> Player
 risingPlayer pos =
   (spawnPlayer defaultMaxHealth pos){playerVel = velocity 0 500, playerOnGround = False}
+
+-- | Floor world with one enemy of the given kind and a fixed player position.
+worldWithEnemyAt :: EnemyKind -> Position -> Position -> World
+worldWithEnemyAt kind enemyPos playerPos =
+  floorWorld
+    { worldPlayer = spawnPlayer defaultMaxHealth playerPos
+    , worldEnemies = [spawnEnemy 1 kind enemyPos (defaultProgramForKind kind)]
+    }

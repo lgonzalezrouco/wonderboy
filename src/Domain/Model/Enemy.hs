@@ -14,14 +14,22 @@ module Domain.Model.Enemy (
   enemyAabb,
 
   -- * Construcción
+  spawnEnemy,
   mkEnemy,
+  mkEnemyWithKind,
 )
 where
 
 import GHC.Generics (Generic)
 
+import Domain.Model.EnemyKind (
+  EnemyKind (..),
+  EnemyKindStats (..),
+  enemyKindStats,
+ )
 import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
+import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -39,51 +47,72 @@ facilita ignorar la colisión de una entidad consigo misma.
 data Enemy = Enemy
   { enemyId :: Int
   -- ^ Identificador único del enemigo en el nivel. Asignado en la carga del nivel.
+  , enemyKind :: EnemyKind
+  -- ^ Clase de enemigo (stats y hitbox).
   , enemyPos :: Position
   -- ^ Posición actual del enemigo en el espacio del juego (píxeles lógicos).
   , enemyVel :: Velocity
   -- ^ Velocidad actual (px/s). La fija el intérprete del DSL antes de integrar.
+  , enemyHealth :: Int
+  -- ^ Salud actual; al llegar a 0 el enemigo es derrotado.
+  , enemySpawnPos :: Position
+  -- ^ Spawn anchor para FSM de retorno.
+  , enemyFacing :: Facing
+  -- ^ Orientación horizontal (render y persecución).
   , enemyProgram :: BehaviourProgram
   -- ^ Programa de comportamiento (descripción, no ejecución).
   }
   deriving (Show, Generic)
 
-{- | Igualdad por __estado observable__: identidad, posición y velocidad.
+{- | Igualdad por __estado observable__: identidad, clase, posición, velocidad,
+salud y facing.
 
-No se compara 'enemyProgram'. El programa de comportamiento es el controlador
-interno de la entidad: una descripción posiblemente cíclica (la patrulla se
-construye con @fix@). Dos enemigos son iguales cuando denotan el __mismo estado
-observable en el frame__, no la misma continuación de comportamiento; incluir el
-programa acoplaría '==' a los internos del intérprete y, como 'BehaviourProgram'
-no admite una igualdad estructural total, rompería las leyes de 'Eq'. Los tests
-que necesitan inspeccionar el programa usan observadores explícitos
-(@waitFramesRemaining@).
+No se compara 'enemyProgram' ni 'enemySpawnPos'.
 -}
 instance Eq Enemy where
   a == b =
     enemyId a == enemyId b
+      && enemyKind a == enemyKind b
       && enemyPos a == enemyPos b
       && enemyVel a == enemyVel b
+      && enemyHealth a == enemyHealth b
+      && enemyFacing a == enemyFacing b
 
--- | Ancho del hitbox del enemigo en píxeles lógicos.
-enemyWidth :: Float
-enemyWidth = 24.0
+enemyStats :: Enemy -> EnemyKindStats
+enemyStats = enemyKindStats . enemyKind
 
--- | Alto del hitbox del enemigo en píxeles lógicos.
-enemyHeight :: Float
-enemyHeight = 24.0
+-- | Ancho del hitbox según la clase del enemigo.
+enemyWidth :: Enemy -> Float
+enemyWidth = eksWidth . enemyStats
+
+-- | Alto del hitbox según la clase del enemigo.
+enemyHeight :: Enemy -> Float
+enemyHeight = eksHeight . enemyStats
 
 -- | Caja de colisión del enemigo: @enemyPos@ es el centro inferior (pies).
 enemyAabb :: Enemy -> Aabb
 enemyAabb e =
-  aabbFromBottomCenter (enemyPos e) enemyWidth enemyHeight
+  aabbFromBottomCenter (enemyPos e) (enemyWidth e) (enemyHeight e)
 
--- | Crea un enemigo con identificador, posición y programa de comportamiento.
+-- | Crea un enemigo con clase, posición y programa (salud y spawn desde kind).
+spawnEnemy :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
+spawnEnemy eid kind pos prog =
+  let stats = enemyKindStats kind
+   in Enemy
+        { enemyId = eid
+        , enemyKind = kind
+        , enemyPos = pos
+        , enemyVel = velocity 0 0
+        , enemyHealth = eksMaxHealth stats
+        , enemySpawnPos = pos
+        , enemyFacing = FacingRight
+        , enemyProgram = prog
+        }
+
+-- | Crea un enemigo Snail para tests con programa explícito.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
-mkEnemy eid pos prog =
-  Enemy
-    { enemyId = eid
-    , enemyPos = pos
-    , enemyVel = velocity 0 0
-    , enemyProgram = prog
-    }
+mkEnemy eid = spawnEnemy eid SnailKind
+
+-- | Crea un enemigo con clase y programa explícito (tests).
+mkEnemyWithKind :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
+mkEnemyWithKind = spawnEnemy
