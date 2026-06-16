@@ -19,7 +19,7 @@ import Domain.Model.Enemy (enemyAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.Platform (platformAabb)
-import Domain.Model.Player (playerAabb, playerHealth, playerPos)
+import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.Position (posX)
@@ -55,12 +55,20 @@ renderHud gv =
           ++ show (gvLives gv)
           ++ "  Health: "
           ++ show (playerHealth (worldPlayer w))
+          ++ attackHud (worldPlayer w)
+          ++ "\nSpace: attack"
           ++ case gvPhase gv of
             GameOver -> "\nGAME OVER"
             Playing -> ""
    in Translate hudX hudY $
         Scale 0.25 0.25 $
           text label
+
+-- | Indicador breve mientras la ventana de melee está activa.
+attackHud :: Player -> String
+attackHud p
+  | playerAttackFrames p > 0 = "  [ATTACK]"
+  | otherwise = ""
 
 -- | Convierte un 'Aabb' en un rectángulo sólido centrado en su caja.
 aabbToPicture :: Color -> Aabb -> Picture

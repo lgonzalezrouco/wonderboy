@@ -10,7 +10,7 @@ where
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
   Key (..),
-  SpecialKey (KeyLeft, KeyRight, KeyUp),
+  SpecialKey (KeyLeft, KeyRight, KeySpace, KeyUp),
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
 
@@ -50,6 +50,7 @@ handleKeyEvent (EventKey key state _ _) ks =
         Char 'd' -> ks{dHeld = held}
         Char 'w' -> ks{wHeld = held}
         Char ' ' -> ks{spaceHeld = held}
+        SpecialKey KeySpace -> ks{spaceHeld = held}
         SpecialKey KeyLeft -> ks{leftHeld = held}
         SpecialKey KeyRight -> ks{rightHeld = held}
         SpecialKey KeyUp -> ks{upHeld = held}
