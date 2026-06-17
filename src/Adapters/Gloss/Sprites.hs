@@ -154,7 +154,7 @@ enemySprite catalog renderFrame enemy =
  where
   moving = abs (velX (enemyVel enemy)) > movingEpsilon
   alternating idle movingSprite =
-    if (renderFrame `div` enemyAnimationStride) `mod` 2 == 0
+    if even (renderFrame `div` enemyAnimationStride)
       then movingSprite <|> idle
       else idle <|> movingSprite
 
