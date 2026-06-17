@@ -21,6 +21,7 @@ import Domain.Logic.EntityBehaviours (defaultProgramForKind)
 import Domain.Logic.Step (step)
 import Domain.Model.Enemy (spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind)
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (
@@ -60,6 +61,7 @@ floorWorld =
     , worldSpawnPoint = testSpawn
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 -- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
@@ -99,6 +101,7 @@ worldWithCeiling =
     , worldSpawnPoint = position 0 25
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -115,6 +118,7 @@ worldWithWall =
     , worldSpawnPoint = position 33 8
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).

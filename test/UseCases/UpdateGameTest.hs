@@ -3,11 +3,12 @@ política de frame congelado (@dt = 0@) y bucle multi-frame ('runFrames').
 -}
 module UseCases.UpdateGameTest where
 
-import Domain.DemoLevels (demoWorld)
 import Domain.Fixtures (dtFrame, mkTestPickup, worldWithPickups)
+import Domain.LevelLoadTest (demoWorld)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAttackFrames, spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth, worldPickups, worldPlayer)
@@ -59,6 +60,7 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldSpawnPoint = position 0 0
       , worldPickups = []
       , worldMinScore = 0
+      , worldExit = defaultExitZone
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -73,6 +75,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldSpawnPoint = position 0 0
           , worldPickups = []
           , worldMinScore = 0
+          , worldExit = defaultExitZone
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0

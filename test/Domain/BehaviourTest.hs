@@ -16,6 +16,7 @@ import Domain.Model.EntityBehaviour (
   waitFramesRemaining,
   waitThen,
  )
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.Input (noInput)
@@ -33,6 +34,7 @@ minimalWorld =
     , worldSpawnPoint = position 0 0
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 worldWithEnemy :: Enemy -> World

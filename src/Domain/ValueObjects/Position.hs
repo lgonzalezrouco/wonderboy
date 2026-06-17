@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 {- | Coordenada 2D en el espacio del juego.
 
 Representa un punto (x, y) en píxeles lógicos.
@@ -11,6 +13,7 @@ module Domain.ValueObjects.Position (
 )
 where
 
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import GHC.Generics (Generic)
 
 -- `Generic` viene de `GHC.Generics` (parte de `base`).
@@ -72,3 +75,14 @@ posX (Position (x, _)) = x
 -- | Componente vertical de la posición.
 posY :: Position -> Float
 posY (Position (_, y)) = y
+
+instance FromJSON Position where
+  parseJSON = withObject "Position" $ \o ->
+    position <$> o .: "x" <*> o .: "y"
+
+instance ToJSON Position where
+  toJSON (Position (x, y)) =
+    object
+      [ "x" .= x
+      , "y" .= y
+      ]

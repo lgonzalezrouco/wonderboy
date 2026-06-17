@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- | Bucle de juego Gloss: orquesta adaptadores y 'updateGame' (M8).
 module Frameworks.Gloss.GameLoop (
   runGame,
@@ -8,7 +10,8 @@ import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Time (capDeltaTime)
-import Domain.DemoLevels (demoWorld)
+import Adapters.LevelFile (readLevelFile)
+import Domain.Model.World (World)
 import Domain.ValueObjects.DeltaTime (isFrozen)
 import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
@@ -18,9 +21,11 @@ import Graphics.Gloss.Interface.IO.Game (
   playIO,
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
+import Paths_wonderboy_hs (getDataFileName)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStrLn, stderr)
-import UseCases.GameMonad (GameState, defaultConfig, gameViewFromState, initialGameState, runGameM)
+import UseCases.GameMonad (GameError (..), GameState, defaultConfig, gameViewFromState, initialGameState, runGameM)
+import UseCases.LoadLevel (loadLevelFromText)
 import UseCases.UpdateGame (updateGame)
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
@@ -31,27 +36,41 @@ data AppState = AppState
   , appAttackPrev :: Bool
   }
 
--- | Estado inicial: demo con teclas sueltas y sin salto previo.
-initialAppState :: AppState
-initialAppState =
-  AppState
-    { appGameState = initialGameState defaultConfig demoWorld
-    , appKeysHeld = noKeys
-    , appJumpPrev = False
-    , appAttackPrev = False
-    }
-
 -- | Arranca la ventana Gloss y el bucle de juego.
 runGame :: IO ()
-runGame =
+runGame = do
+  path <- getDataFileName "levels/demo.json"
+  world <- loadWorld path
   playIO
     (InWindow "Wonder Boy" (windowWidth, windowHeight) (100, 100))
     backgroundColor
     60
-    initialAppState
+    (initialAppState world)
     drawFrame
     handleEvent
     advanceFrame
+
+-- | Lee y construye el mundo desde un archivo de nivel JSON.
+loadWorld :: FilePath -> IO World
+loadWorld path =
+  readLevelFile path >>= \case
+    Left err -> exitWithError err
+    Right txt ->
+      case loadLevelFromText txt of
+        Left (GameError err) -> exitWithError err
+        Right world -> pure world
+ where
+  exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
+
+-- | Estado inicial a partir de un mundo cargado.
+initialAppState :: World -> AppState
+initialAppState world =
+  AppState
+    { appGameState = initialGameState defaultConfig world
+    , appKeysHeld = noKeys
+    , appJumpPrev = False
+    , appAttackPrev = False
+    }
 
 drawFrame :: AppState -> IO Picture
 drawFrame state = pure (renderFrame (gameViewFromState defaultConfig (appGameState state)))
@@ -72,8 +91,6 @@ advanceFrame dt state = do
       hPutStrLn stderr ("Error: " ++ show err)
       exitFailure
     Right (_, gs') ->
-      -- En un frame congelado no se simula nada, así que no avanzamos los flags de
-      -- flanco: una pulsación de salto/ataque encolada sobrevive al próximo frame vivo.
       pure
         state
           { appGameState = gs'

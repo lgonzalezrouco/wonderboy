@@ -4,6 +4,7 @@ module Domain.CombatTest where
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (mkEnemy)
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.Platform (platform)
 import Domain.Model.Player (
   Player (..),
@@ -35,6 +36,7 @@ floorWorld =
     , worldSpawnPoint = testSpawn
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 unit_attackEdgeStartsWindow :: Assertion

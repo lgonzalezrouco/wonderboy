@@ -19,6 +19,7 @@ where
 import GHC.Generics (Generic)
 
 import Domain.Model.Enemy (Enemy)
+import Domain.Model.ExitZone (ExitZone, defaultExitZone)
 import Domain.Model.MovingPlatform (MovingPlatform)
 import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
@@ -38,6 +39,7 @@ data World = World
   , worldSpawnPoint :: Position
   , worldPickups :: [Pickup]
   , worldMinScore :: Int
+  , worldExit :: ExitZone
   }
   deriving (Eq, Show, Generic)
 
@@ -61,4 +63,5 @@ initialWorld =
         , worldSpawnPoint = spawn
         , worldPickups = []
         , worldMinScore = 0
+        , worldExit = defaultExitZone
         }

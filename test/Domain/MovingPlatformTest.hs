@@ -8,6 +8,7 @@ import Domain.Logic.MovingPlatforms (
   mpaPlatform,
  )
 import Domain.Logic.Step (step)
+import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.MovingPlatform (MovingPlatform (..), mkMovingPlatform, movingPlatformPos)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (
@@ -81,6 +82,7 @@ worldWithShuttle mp p =
     , worldSpawnPoint = playerPos p
     , worldPickups = []
     , worldMinScore = 0
+    , worldExit = defaultExitZone
     }
 
 unit_mkMovingPlatformRejectsInvalid :: Assertion
@@ -177,6 +179,7 @@ unit_jumpIntoSideDoesNotTeleport =
           , worldSpawnPoint = position 20 8
           , worldPickups = []
           , worldMinScore = 0
+          , worldExit = defaultExitZone
           }
       w1 = step testParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
       px = posX (playerPos (worldPlayer w1))
@@ -220,6 +223,7 @@ unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways =
           , worldSpawnPoint = pos
           , worldPickups = []
           , worldMinScore = 0
+          , worldExit = defaultExitZone
           }
       w1 = step testParams dtFrame noInput w0
       p1 = worldPlayer w1
@@ -243,6 +247,7 @@ unit_landingOnMovingPlatformSetsOnGround =
           , worldSpawnPoint = position 60 56
           , worldPickups = []
           , worldMinScore = 0
+          , worldExit = defaultExitZone
           }
       w1 = foldl (\w _ -> step testParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
    in playerOnGround (worldPlayer w1) @?= True
