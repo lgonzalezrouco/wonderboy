@@ -21,10 +21,12 @@ where
 
 import GHC.Generics (Generic)
 
+import Domain.Model.BossPhase (BossPhaseIndex, bossPhaseIndex)
 import Domain.Model.EnemyKind (
   EnemyKind (..),
   EnemyKindStats (..),
   enemyKindStats,
+  isBossKind,
  )
 import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
@@ -55,17 +57,21 @@ data Enemy = Enemy
   -- ^ Velocidad actual (px/s). La fija el intérprete del DSL antes de integrar.
   , enemyHealth :: Health
   -- ^ Salud actual; al llegar a 0 el enemigo es derrotado.
+  , enemyMaxHealth :: Health
+  -- ^ Salud máxima de esta instancia (umbrales de jefe y barra HUD).
   , enemySpawnPos :: Position
   -- ^ Spawn anchor para FSM de retorno.
   , enemyFacing :: Facing
   -- ^ Orientación horizontal (render y persecución).
   , enemyProgram :: BehaviourProgram
   -- ^ Programa de comportamiento (descripción, no ejecución).
+  , enemyBossPhase :: Maybe BossPhaseIndex
+  -- ^ Fase actual del jefe; 'Nothing' para enemigos regulares.
   }
   deriving (Show, Generic)
 
 {- | Igualdad por __estado observable__: identidad, clase, posición, velocidad,
-salud y facing.
+salud, facing y fase de jefe.
 
 No se compara 'enemyProgram' ni 'enemySpawnPos'.
 -}
@@ -77,6 +83,7 @@ instance Eq Enemy where
       && enemyVel a == enemyVel b
       && enemyHealth a == enemyHealth b
       && enemyFacing a == enemyFacing b
+      && enemyBossPhase a == enemyBossPhase b
 
 enemyStats :: Enemy -> EnemyKindStats
 enemyStats = enemyKindStats . enemyKind
@@ -98,15 +105,21 @@ enemyAabb e =
 spawnEnemy :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
 spawnEnemy eid kind pos prog =
   let stats = enemyKindStats kind
+      bossPhase =
+        if isBossKind kind
+          then Just (bossPhaseIndex 0)
+          else Nothing
    in Enemy
         { enemyId = eid
         , enemyKind = kind
         , enemyPos = pos
         , enemyVel = velocity 0 0
         , enemyHealth = eksMaxHealth stats
+        , enemyMaxHealth = eksMaxHealth stats
         , enemySpawnPos = pos
         , enemyFacing = FacingRight
         , enemyProgram = prog
+        , enemyBossPhase = bossPhase
         }
 
 -- | Crea un enemigo Snail para tests con programa explícito.

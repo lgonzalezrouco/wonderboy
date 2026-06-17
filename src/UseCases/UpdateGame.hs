@@ -18,6 +18,7 @@ where
 import Control.Monad.Reader (MonadReader, ask)
 import Control.Monad.State (MonadState, get, modify)
 
+import Domain.Logic.BossPhase (resolveBossPhases)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.Pickups (resolvePickups)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
@@ -62,9 +63,11 @@ updateGame dt input = do
           let params = physicsParamsFromConfig cfg
               life = lifeParamsFromConfig cfg
               combat = combatParamsFromConfig cfg
-              wAfterFrame = advanceFrame params dt input (gsWorld st)
+              wBefore = gsWorld st
+              wAfterFrame = advanceFrame params dt input wBefore
               wAfterCombat = resolveCombat combat input wAfterFrame
-              (wAfterPickups, scoreDelta) = resolvePickups wAfterCombat
+              wAfterBoss = resolveBossPhases combat wBefore wAfterCombat
+              (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
               (wFinal, lives', phase') =
                 resolveHazardsAndDeath life (gsLives st) Playing wAfterPickups
           modify

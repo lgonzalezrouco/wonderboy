@@ -7,11 +7,18 @@ module Domain.Model.EnemyKind (
   EnemyMotionStats (..),
   EnemyKindStats (..),
   enemyKindStats,
+  isBossKind,
 )
 where
 
 import GHC.Generics (Generic)
 
+import Domain.Model.BossKindStats (
+  BossBatStats (..),
+  BossGolemStats (..),
+  bossBatStats,
+  bossGolemStats,
+ )
 import Domain.ValueObjects.Frames (Frames, frames)
 import Domain.ValueObjects.Health (Health, health)
 
@@ -20,7 +27,13 @@ data EnemyKind
   = SnailKind
   | BatKind
   | GolemKind
+  | BossGolemKind
+  | BossBatKind
   deriving (Eq, Show, Generic)
+
+-- | Verdadero para clases de jefe (comportamiento vía catálogo de jefes).
+isBossKind :: EnemyKind -> Bool
+isBossKind kind = kind `elem` [BossGolemKind, BossBatKind]
 
 {- | Parámetros de movimiento según el arquetipo natural de la clase.
 
@@ -71,3 +84,19 @@ enemyKindStats kind = case kind of
       , eksMaxHealth = health 2
       , eksMotion = ReactiveMotion 25 25 100 12
       }
+  BossGolemKind ->
+    let s = bossGolemStats
+     in EnemyKindStats
+          { eksWidth = bgsWidth s
+          , eksHeight = bgsHeight s
+          , eksMaxHealth = bgsMaxHealth s
+          , eksMotion = PatrolMotion 20 (frames 120)
+          }
+  BossBatKind ->
+    let s = bossBatStats
+     in EnemyKindStats
+          { eksWidth = bbsWidth s
+          , eksHeight = bbsHeight s
+          , eksMaxHealth = bbsMaxHealth s
+          , eksMotion = PatrolMotion 40 (frames 60)
+          }

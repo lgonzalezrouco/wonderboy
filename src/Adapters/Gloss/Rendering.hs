@@ -11,6 +11,8 @@ import Adapters.Gloss.Config (
   cameraY,
   enemyColorForKind,
   hudAttackColor,
+  hudBossColor,
+  hudBossEmptyColor,
   hudHealthColor,
   hudHealthEmptyColor,
   hudLifeColor,
@@ -34,6 +36,7 @@ import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
+import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
@@ -133,12 +136,26 @@ hudGameOverOffsetY = 24
 hudGameOverHintOffsetY :: Float
 hudGameOverHintOffsetY = -18
 
+-- | Barra de salud del jefe (centro superior).
+bossBarWidth :: Float
+bossBarWidth = 220
+
+bossBarHeight :: Float
+bossBarHeight = 14
+
+bossBarTopOffset :: Float
+bossBarTopOffset = 28
+
+bossBarLabelOffsetY :: Float
+bossBarLabelOffsetY = 22
+
 -- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
 renderFrame :: GameView -> Picture
 renderFrame gv =
   pictures
     [ renderWorldLayer (gvWorld gv)
     , renderHud gv
+    , renderBossBar gv
     , renderGameOverOverlay gv
     ]
 
@@ -189,6 +206,31 @@ renderHud gv =
         , renderAttackRow contentX row4Y p
         , hudHint contentX row5Y "Space - attack"
         ]
+
+-- | Barra superior centrada con la salud del jefe.
+renderBossBar :: GameView -> Picture
+renderBossBar gv =
+  case gvBossHealth gv of
+    Nothing -> Blank
+    Just bh ->
+      let halfH = fromIntegral windowHeight / 2
+          barY = halfH - bossBarTopOffset
+          maxPoints = healthPoints (bossHealthMax bh)
+          curPoints = healthPoints (bossHealthCurrent bh)
+          fillRatio =
+            if maxPoints <= 0
+              then 0
+              else fromIntegral curPoints / fromIntegral maxPoints
+          fillW = bossBarWidth * fillRatio
+       in pictures
+            [ Translate 0 barY $
+                Color hudBossEmptyColor (rectangleSolid bossBarWidth bossBarHeight)
+            , Translate (-(bossBarWidth / 2) + fillW / 2) barY $
+                Color hudBossColor (rectangleSolid fillW bossBarHeight)
+            , Translate 0 (barY + bossBarLabelOffsetY) $
+                Scale hudLabelScale hudLabelScale $
+                  Color hudTextColor (text "BOSS")
+            ]
 
 renderGameOverOverlay :: GameView -> Picture
 renderGameOverOverlay gv

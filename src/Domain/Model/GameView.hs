@@ -10,6 +10,7 @@ where
 
 import Domain.Model.GamePhase (GamePhase)
 import Domain.Model.World (World)
+import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Lives (Lives)
 import Domain.ValueObjects.Score (Score)
@@ -25,5 +26,7 @@ data GameView = GameView
   -- ^ Vidas iniciales (run-wide, derivada de config): cuántos iconos dibuja el HUD.
   , gvScore :: Score
   -- ^ Puntuación del nivel actual (run-state, proyectada desde 'GameState').
+  , gvBossHealth :: Maybe BossHealth
+  -- ^ Salud del jefe vivo, si hay uno en el nivel.
   }
   deriving (Eq, Show)
