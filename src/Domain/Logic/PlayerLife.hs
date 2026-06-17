@@ -20,13 +20,16 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..))
+import Domain.ValueObjects.Damage (Damage)
+import Domain.ValueObjects.Health (health, isDepleted, reduceHealth)
 import Domain.ValueObjects.LifeParams (LifeParams (..))
+import Domain.ValueObjects.Lives (Lives, livesCount, loseLife, noLives)
 import Domain.ValueObjects.Position (Position, posY)
 
--- | Resta @amount@ a la salud del jugador, con piso en 0.
-applyDamage :: Int -> Player -> Player
+-- | Aplica @amount@ de daño a la salud del jugador (satura en 0).
+applyDamage :: Damage -> Player -> Player
 applyDamage amount p =
-  p{playerHealth = max 0 (playerHealth p - amount)}
+  p{playerHealth = reduceHealth amount (playerHealth p)}
 
 -- | Coordenada Y del borde inferior de la plataforma más baja (0 si no hay plataformas).
 lowestPlatformBottomY :: World -> Float
@@ -55,28 +58,28 @@ respawnPlayerAt lp spawn w =
         }
 
 -- | Resuelve muerte cuando la salud ya es 0.
-resolveDeath :: LifeParams -> Int -> World -> (World, Int, GamePhase)
+resolveDeath :: LifeParams -> Lives -> World -> (World, Lives, GamePhase)
 resolveDeath lp lives w
-  | lives > 1 =
+  | livesCount lives > 1 =
       ( respawnPlayerAt lp (worldSpawnPoint w) w
-      , lives - 1
+      , loseLife lives
       , Playing
       )
-  | otherwise = (w, 0, GameOver)
+  | otherwise = (w, noLives, GameOver)
 
 -- | Out-of-bounds y muerte tras un paso de física (solo en 'Playing').
 resolveHazardsAndDeath ::
   LifeParams ->
-  Int ->
+  Lives ->
   GamePhase ->
   World ->
-  (World, Int, GamePhase)
+  (World, Lives, GamePhase)
 resolveHazardsAndDeath _ lives GameOver w = (w, lives, GameOver)
 resolveHazardsAndDeath lp lives Playing w =
   let w'
         | isPlayerOutOfBounds lp w =
-            w{worldPlayer = (worldPlayer w){playerHealth = 0}}
+            w{worldPlayer = (worldPlayer w){playerHealth = health 0}}
         | otherwise = w
-   in case playerHealth (worldPlayer w') of
-        0 -> resolveDeath lp lives w'
-        _ -> (w', lives, Playing)
+   in if isDepleted (playerHealth (worldPlayer w'))
+        then resolveDeath lp lives w'
+        else (w', lives, Playing)

@@ -1,7 +1,7 @@
 {- | Tiempo transcurrido entre dos frames consecutivos, en segundos.
 
 Este value object encapsula el intervalo de tiempo que usa el motor
-en cada tick de simulación. A diferencia de 'Position' y 'Velocity',
+en cada frame de simulación. A diferencia de 'Position' y 'Velocity',
 aquí sí hay un __invariante__: el tiempo no puede ser negativo.
 Por eso el constructor de datos está oculto y sólo se exporta el
 smart constructor 'deltaTime', que garantiza el invariante.

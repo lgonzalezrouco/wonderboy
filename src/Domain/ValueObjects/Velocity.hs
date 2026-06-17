@@ -25,7 +25,7 @@ Convención de signos (se establece aquí para consistencia en `Domain.Logic`):
 
   * vx > 0 → movimiento hacia la derecha.
   * vy > 0 → movimiento hacia arriba (eje Y positivo hacia arriba, como en matemáticas).
-  * La gravedad restará de vy en cada tick de física.
+  * La gravedad restará de vy en cada frame de física.
 -}
 newtype Velocity = Velocity (Float, Float)
   deriving (Eq, Show, Generic)

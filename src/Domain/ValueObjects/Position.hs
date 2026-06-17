@@ -10,6 +10,7 @@ module Domain.ValueObjects.Position (
   position,
   posX,
   posY,
+  translate,
 )
 where
 
@@ -75,6 +76,15 @@ posX (Position (x, _)) = x
 -- | Componente vertical de la posición.
 posY :: Position -> Float
 posY (Position (_, y)) = y
+
+{- | Desplaza una posición sumando @(dx, dy)@ a sus componentes.
+
+Operación derivada del value object: única forma de "mover" una 'Position' por un
+offset, reutilizada por la integración cinemática, el carry de plataformas móviles
+y la resolución de colisión (en lugar de desestructurar y reconstruir en cada sitio).
+-}
+translate :: Float -> Float -> Position -> Position
+translate dx dy (Position (x, y)) = position (x + dx) (y + dy)
 
 instance FromJSON Position where
   parseJSON = withObject "Position" $ \o ->

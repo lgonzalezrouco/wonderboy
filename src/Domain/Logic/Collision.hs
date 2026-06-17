@@ -4,7 +4,6 @@ module Domain.Logic.Collision (
   playerOverlapsAnyPlatform,
   playerRestingOnPlatformTop,
   playerRidingPlatformTop,
-  landEpsilon,
 )
 where
 
@@ -21,11 +20,9 @@ import Domain.ValueObjects.Aabb (
   aabbMinY,
   aabbOverlaps,
  )
-import Domain.ValueObjects.Position (posX, posY, position)
+import Domain.ValueObjects.Position (posX, translate)
+import Domain.ValueObjects.Tolerance (epsilon, nearZero)
 import Domain.ValueObjects.Velocity (velX, velY, velocity)
-
-landEpsilon :: Float
-landEpsilon = 1e-3
 
 maxResolvePasses :: Int
 maxResolvePasses = 8
@@ -89,24 +86,21 @@ resolveOverlap vyBefore p box solid =
 resolveAxisY :: Float -> Player -> Aabb -> Aabb -> Player
 resolveAxisY vyBefore p box solid
   | vyBefore <= 0
-  , pushUp > landEpsilon
-  , pushUp <= pushDown + landEpsilon =
+  , pushUp > epsilon
+  , pushUp <= pushDown + epsilon =
       landOnTop pushUp p
   | vyBefore <= 0
   , nearZero pushUp
   , restingOnTop box solid =
       landOnTop 0 p
   | vyBefore > 0
-  , pushDown > landEpsilon
+  , pushDown > epsilon
   , pushDown < pushUp =
       bumpCeiling pushDown p
   | otherwise =
       p
  where
   (pushUp, pushDown) = separationsY box solid
-
-nearZero :: Float -> Bool
-nearZero x = abs x <= landEpsilon
 
 landOnTop :: Float -> Player -> Player
 landOnTop pushUp p =
@@ -145,11 +139,11 @@ resolveAxisX p box solid =
 
 horizontalNudge :: (Float, Float) -> Float -> Maybe Float
 horizontalNudge (pushLeft, pushRight) vx
-  | pushLeft <= landEpsilon || pushRight <= landEpsilon = Nothing
+  | pushLeft <= epsilon || pushRight <= epsilon = Nothing
   | vx > 0 = Just (-pushLeft)
   | vx < 0 = Just pushRight
-  | pushLeft < pushRight - landEpsilon = Just (-pushLeft)
-  | pushRight < pushLeft - landEpsilon = Just pushRight
+  | pushLeft < pushRight - epsilon = Just (-pushLeft)
+  | pushRight < pushLeft - epsilon = Just pushRight
   | otherwise = Just (-pushLeft)
 
 separationsY :: Aabb -> Aabb -> (Float, Float)
@@ -165,8 +159,8 @@ zeroVy p = p{playerVel = velocity (velX (playerVel p)) 0}
 
 nudgeX :: Float -> Player -> Player
 nudgeX dx p =
-  p{playerPos = position (posX (playerPos p) + dx) (posY (playerPos p))}
+  p{playerPos = translate dx 0 (playerPos p)}
 
 nudgeY :: Float -> Player -> Player
 nudgeY dy p =
-  p{playerPos = position (posX (playerPos p)) (posY (playerPos p) + dy)}
+  p{playerPos = translate 0 dy (playerPos p)}

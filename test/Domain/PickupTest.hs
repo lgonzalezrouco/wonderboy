@@ -6,6 +6,7 @@ import Domain.Logic.Pickups (resolvePickups)
 import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.World (worldPickups)
 import Domain.ValueObjects.Position (Position, position)
+import Domain.ValueObjects.Score (Score, score)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 overlapPos :: Position
@@ -14,7 +15,7 @@ overlapPos = position 0 8
 adjacentPlayerPos :: Position
 adjacentPlayerPos = position 50 8
 
-resolveAt :: Position -> [Pickup] -> ([Pickup], Int)
+resolveAt :: Position -> [Pickup] -> ([Pickup], Score)
 resolveAt playerPos pickups =
   let (w', scoreDelta) = resolvePickups (worldWithPickups playerPos pickups)
    in (worldPickups w', scoreDelta)
@@ -25,7 +26,7 @@ unit_overlapCollectsPickup =
       (remaining, delta) = resolveAt overlapPos [pickup]
    in do
         remaining @?= []
-        delta @?= 100
+        delta @?= score 100
 
 unit_noOverlapLeavesPickup :: Assertion
 unit_noOverlapLeavesPickup =
@@ -33,7 +34,7 @@ unit_noOverlapLeavesPickup =
       (remaining, delta) = resolveAt adjacentPlayerPos [pickup]
    in do
         remaining @?= [pickup]
-        delta @?= 0
+        delta @?= score 0
 
 unit_multiplePickupsSameFrame :: Assertion
 unit_multiplePickupsSameFrame =
@@ -42,7 +43,7 @@ unit_multiplePickupsSameFrame =
       (remaining, delta) = resolveAt overlapPos [p1, p2]
    in do
         remaining @?= []
-        delta @?= 150
+        delta @?= score 150
 
 unit_partialOverlapCollectsOne :: Assertion
 unit_partialOverlapCollectsOne =
@@ -51,7 +52,7 @@ unit_partialOverlapCollectsOne =
       (remaining, delta) = resolveAt overlapPos [near, far]
    in do
         remaining @?= [far]
-        delta @?= 75
+        delta @?= score 75
 
 unit_mkPickupRejectsNegative :: Assertion
 unit_mkPickupRejectsNegative =
@@ -63,4 +64,4 @@ unit_zeroValuePickupCollects =
       (remaining, delta) = resolveAt overlapPos [pickup]
    in do
         remaining @?= []
-        delta @?= 0
+        delta @?= score 0

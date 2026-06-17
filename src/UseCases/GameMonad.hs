@@ -47,10 +47,15 @@ import Control.Monad.State (MonadState, StateT, runStateT)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.Player (spawnPlayer)
-import Domain.Model.World (World (..))
+import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
+import Domain.ValueObjects.Damage (Damage, damage)
+import Domain.ValueObjects.Frames (Frames, frames)
+import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
+import Domain.ValueObjects.Lives (Lives, lives)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
+import Domain.ValueObjects.Score (Score, score)
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la pila
@@ -74,20 +79,22 @@ data GameConfig = GameConfig
   --   @Domain.Logic.Step@ la recibe vía 'PhysicsParams'.
   , gcJumpSpeed :: Float
   -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
-  , gcStartingLives :: Int
+  , gcStartingLives :: Lives
   -- ^ Vidas al iniciar una partida nueva (run-wide; no por nivel).
-  , gcMaxHealth :: Int
+  , gcMaxHealth :: Health
   -- ^ Salud tras spawn o respawn.
   , gcDeathMargin :: Float
   -- ^ Margen bajo la plataforma más baja para out-of-bounds (px).
-  , gcAttackDuration :: Int
+  , gcAttackDuration :: Frames
   -- ^ Frames de ventana activa de melee (M10).
-  , gcInvincibilityDuration :: Int
-  -- ^ I-frames tras contacto enemigo o respawn (M10).
-  , gcContactDamage :: Int
-  -- ^ Daño por tick de contacto enemigo (M10).
+  , gcInvincibilityDuration :: Frames
+  -- ^ Frames de invencibilidad tras contacto enemigo o respawn (M10).
+  , gcContactDamage :: Damage
+  -- ^ Daño por frame de contacto enemigo (M10).
   , gcMeleeReach :: Float
   -- ^ Alcance horizontal del melee en px lógicos (M10).
+  , gcMeleeDamage :: Damage
+  -- ^ Daño infligido a un enemigo por un melee que conecta (M10).
   }
   deriving (Eq, Show, Generic)
 
@@ -101,13 +108,14 @@ defaultConfig =
     { gcGravity = 980.0 -- aprox. 1g a escala de píxeles (px/s²)
     , gcMoveSpeed = 200.0 -- 200 px/s de movimiento horizontal
     , gcJumpSpeed = 400.0 -- impulso de salto (px/s)
-    , gcStartingLives = 3
-    , gcMaxHealth = 3
+    , gcStartingLives = lives 3
+    , gcMaxHealth = defaultMaxHealth
     , gcDeathMargin = 64.0
-    , gcAttackDuration = 6
-    , gcInvincibilityDuration = 60
-    , gcContactDamage = 1
+    , gcAttackDuration = frames 6
+    , gcInvincibilityDuration = frames 60
+    , gcContactDamage = damage 1
     , gcMeleeReach = 20.0
+    , gcMeleeDamage = damage 1
     }
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
@@ -120,8 +128,8 @@ physicsParamsFromConfig cfg =
 
 {- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
 
-Los i-frames de respawn usan 'gcInvincibilityDuration', el __mismo__ campo que los
-i-frames de contacto (ver 'combatParamsFromConfig'): hoy comparten valor a propósito.
+Los frames de invencibilidad de respawn usan 'gcInvincibilityDuration', el __mismo__ campo
+que los de contacto (ver 'combatParamsFromConfig'): hoy comparten valor a propósito.
 Si en el futuro hace falta tunearlos por separado, se añade un campo dedicado a 'GameConfig'.
 -}
 lifeParamsFromConfig :: GameConfig -> LifeParams
@@ -133,8 +141,8 @@ lifeParamsFromConfig cfg =
 
 {- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Combat'.
 
-Los i-frames de contacto usan 'gcInvincibilityDuration', el mismo campo que los de
-respawn (ver 'lifeParamsFromConfig'); el acoplamiento es intencional por ahora.
+Los frames de invencibilidad de contacto usan 'gcInvincibilityDuration', el mismo campo
+que los de respawn (ver 'lifeParamsFromConfig'); el acoplamiento es intencional por ahora.
 -}
 combatParamsFromConfig :: GameConfig -> CombatParams
 combatParamsFromConfig cfg =
@@ -143,6 +151,7 @@ combatParamsFromConfig cfg =
     (gcInvincibilityDuration cfg)
     (gcContactDamage cfg)
     (gcMeleeReach cfg)
+    (gcMeleeDamage cfg)
 
 {- | Errores recuperables del motor.
 
@@ -164,9 +173,9 @@ Ver @docs\/adr\/0012-gamestate-run-snapshot.md@.
 -}
 data GameState = GameState
   { gsWorld :: World
-  , gsLives :: Int
+  , gsLives :: Lives
   , gsPhase :: GamePhase
-  , gsScore :: Int
+  , gsScore :: Score
   -- ^ Puntuación del nivel actual; se reinicia al cargar un nivel (M18).
   }
   deriving (Eq, Show, Generic)
@@ -178,7 +187,7 @@ initialGameState cfg w =
     { gsWorld = w{worldPlayer = spawnPlayer (gcMaxHealth cfg) (worldSpawnPoint w)}
     , gsLives = gcStartingLives cfg
     , gsPhase = Playing
-    , gsScore = 0
+    , gsScore = score 0
     }
 
 {- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).

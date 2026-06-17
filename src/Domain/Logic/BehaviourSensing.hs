@@ -5,14 +5,12 @@ module Domain.Logic.BehaviourSensing (
   spawnHorizontalDelta,
   nearSpawnHorizontally,
   horizontalSign,
-  facingTowardHorizontal,
 )
 where
 
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.Player (playerPos)
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Position (posX)
 
 -- | Desplazamiento horizontal jugador − enemigo (positivo = jugador a la derecha).
@@ -38,10 +36,3 @@ horizontalSign x
   | x > 0 = 1
   | x < 0 = -1
   | otherwise = 0
-
--- | Facing hacia un desplazamiento horizontal (mantiene facing si @dx == 0@).
-facingTowardHorizontal :: Facing -> Float -> Facing
-facingTowardHorizontal current dx = case horizontalSign dx of
-  1 -> FacingRight
-  (-1) -> FacingLeft
-  _ -> current

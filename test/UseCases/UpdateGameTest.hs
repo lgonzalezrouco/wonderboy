@@ -3,8 +3,7 @@ política de frame congelado (@dt = 0@) y bucle multi-frame ('runFrames').
 -}
 module UseCases.UpdateGameTest where
 
-import Domain.Fixtures (dtFrame, mkTestPickup, worldWithPickups)
-import Domain.LevelLoadTest (demoWorld)
+import Domain.Fixtures (demoWorld, dtFrame, mkTestPickup, worldWithPickups)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
@@ -13,8 +12,11 @@ import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAttackFrames, spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth, worldPickups, worldPlayer)
 import Domain.ValueObjects.DeltaTime (deltaTime)
+import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Input (noInput)
+import Domain.ValueObjects.Lives (lives)
 import Domain.ValueObjects.Position (posX, position)
+import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velX)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
 import UseCases.GameMonad (
@@ -32,16 +34,16 @@ playingState w =
     { gsWorld = w
     , gsLives = gcStartingLives defaultConfig
     , gsPhase = Playing
-    , gsScore = 0
+    , gsScore = score 0
     }
 
 gameOverState :: World -> GameState
 gameOverState w =
   GameState
     { gsWorld = w
-    , gsLives = 0
+    , gsLives = lives 0
     , gsPhase = GameOver
-    , gsScore = 0
+    , gsScore = score 0
     }
 
 unit_updateGameDtZeroSkipsBehaviour :: Assertion
@@ -54,18 +56,18 @@ unit_updateGameDtZeroSkipsBehaviour =
   worldWithWait =
     World
       { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
-      , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames 5)]
+      , worldEnemies = [mkEnemy 1 (position 50 8) (waitFrames (frames 5))]
       , worldPlatforms = []
       , worldMovingPlatforms = []
       , worldSpawnPoint = position 0 0
       , worldPickups = []
-      , worldMinScore = 0
+      , worldMinScore = score 0
       , worldExit = defaultExitZone
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
 unit_updateGamePatrolReversesVelocity =
-  let patrol = patrolHorizontal 40 2
+  let patrol = patrolHorizontal 40 (frames 2)
       w0 =
         World
           { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
@@ -74,7 +76,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldMovingPlatforms = []
           , worldSpawnPoint = position 0 0
           , worldPickups = []
-          , worldMinScore = 0
+          , worldMinScore = score 0
           , worldExit = defaultExitZone
           }
       gs0 = initialGameState defaultConfig w0
@@ -108,14 +110,14 @@ unit_updateGameDtZeroSkipsCombat =
         demoWorld
           { worldPlayer =
               (spawnPlayer defaultMaxHealth (position 0 80))
-                { playerAttackFrames = 3
+                { playerAttackFrames = frames 3
                 }
           }
       gs0 = playingState w
    in case runGameM defaultConfig gs0 (updateGame (deltaTime 0) noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') ->
-          playerAttackFrames (worldPlayer (gsWorld gs')) @?= 3
+          playerAttackFrames (worldPlayer (gsWorld gs')) @?= frames 3
 
 unit_updateGameCollectsPickup :: Assertion
 unit_updateGameCollectsPickup =
@@ -125,7 +127,7 @@ unit_updateGameCollectsPickup =
    in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') -> do
-          gsScore gs' @?= 100
+          gsScore gs' @?= score 100
           worldPickups (gsWorld gs') @?= []
 
 unit_gameOverSkipsPickup :: Assertion
@@ -136,7 +138,7 @@ unit_gameOverSkipsPickup =
    in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
         Left err -> assertFailure (show err)
         Right ((), gs') -> do
-          gsScore gs' @?= 0
+          gsScore gs' @?= score 0
           worldPickups (gsWorld gs') @?= [pickup]
 
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.

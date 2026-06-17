@@ -6,7 +6,6 @@ module Adapters.Gloss.Config (
   cameraY,
   maxDeltaSeconds,
   playerColor,
-  enemyColor,
   enemyColorForKind,
   pickupColor,
   platformColor,
@@ -49,10 +48,6 @@ maxDeltaSeconds = 0.05
 -- | Color del rectángulo del jugador.
 playerColor :: Color
 playerColor = makeColor 0.2 0.5 1.0 1.0
-
--- | Color del rectángulo de enemigos (fallback genérico).
-enemyColor :: Color
-enemyColor = makeColor 1.0 0.3 0.3 1.0
 
 -- | Color por clase de enemigo (placeholders hasta M17 sprites).
 enemyColorForKind :: EnemyKind -> Color

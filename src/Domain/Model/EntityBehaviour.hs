@@ -30,6 +30,7 @@ where
 import Control.Monad.Free (Free (..))
 import GHC.Generics (Generic)
 
+import Domain.ValueObjects.Frames (Frames, frameCount, hasFramesLeft)
 import Domain.ValueObjects.Velocity (Velocity)
 
 -- | Instrucciones del DSL (functor para 'Free').
@@ -37,7 +38,7 @@ data EntityAction next
   = -- | Fija la velocidad del enemigo hasta la siguiente instrucción.
     SetVelocity Velocity next
   | -- | Mantiene la velocidad actual durante @n@ frames (un frame por behaviour step).
-    WaitFrames Int next
+    WaitFrames Frames next
   | -- | Continúa con @thenBranch@ o @elseBranch@ según distancia horizontal al jugador.
     IfPlayerWithinRange Float BehaviourProgram BehaviourProgram next
   | -- | Continúa según proximidad horizontal al spawn anchor del enemigo.
@@ -70,7 +71,7 @@ instance Show BehaviourProgram where
   show (BehaviourProgram prog) = case prog of
     Pure () -> "BehaviourProgram <done>"
     Free (SetVelocity _ _) -> "BehaviourProgram <setVelocity …>"
-    Free (WaitFrames n _) -> "BehaviourProgram <waitFrames " ++ show n ++ ">"
+    Free (WaitFrames n _) -> "BehaviourProgram <waitFrames " ++ show (frameCount n) ++ ">"
     Free (IfPlayerWithinRange{}) -> "BehaviourProgram <ifPlayerWithinRange …>"
     Free (IfNearSpawn{}) -> "BehaviourProgram <ifNearSpawn …>"
     Free (MoveTowardPlayer _ _) -> "BehaviourProgram <moveTowardPlayer …>"
@@ -93,15 +94,15 @@ setVelocity vel =
   BehaviourProgram (Free (SetVelocity vel (Pure ())))
 
 -- | Espera @n@ frames sin cambiar velocidad (@n <= 0@ no espera).
-waitFrames :: Int -> BehaviourProgram
+waitFrames :: Frames -> BehaviourProgram
 waitFrames n
-  | n > 0 = BehaviourProgram (Free (WaitFrames n (Pure ())))
+  | hasFramesLeft n = BehaviourProgram (Free (WaitFrames n (Pure ())))
   | otherwise = idleProgram
 
 -- | Ejecuta @prog@ tras esperar @n@ frames (@n > 0@).
-waitThen :: Int -> BehaviourProgram -> BehaviourProgram
+waitThen :: Frames -> BehaviourProgram -> BehaviourProgram
 waitThen n prog
-  | n > 0 = waitFrames n >>> prog
+  | hasFramesLeft n = waitFrames n >>> prog
   | otherwise = prog
 
 -- | Rama por distancia horizontal al jugador (un behaviour step de decisión).
@@ -133,7 +134,7 @@ facePlayer :: BehaviourProgram
 facePlayer = BehaviourProgram (Free (FacePlayer (Pure ())))
 
 -- | Contador de espera en la instrucción activa, si aplica.
-waitFramesRemaining :: BehaviourProgram -> Maybe Int
+waitFramesRemaining :: BehaviourProgram -> Maybe Frames
 waitFramesRemaining (BehaviourProgram prog) = case prog of
   Free (WaitFrames n _) -> Just n
   _ -> Nothing

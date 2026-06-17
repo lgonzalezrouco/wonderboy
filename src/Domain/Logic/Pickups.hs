@@ -14,12 +14,13 @@ import Domain.Model.Pickup (pickupAabb, pickupValue)
 import Domain.Model.Player (playerAabb)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (aabbOverlaps)
+import Domain.ValueObjects.Score (Score)
 
 -- | Particiona pickups superpuestos con el jugador; devuelve mundo actualizado y delta de puntos.
-resolvePickups :: World -> (World, Int)
+resolvePickups :: World -> (World, Score)
 resolvePickups w =
   let playerBox = playerAabb (worldPlayer w)
       (collected, remaining) =
         partition (aabbOverlaps playerBox . pickupAabb) (worldPickups w)
-      delta = sum (pickupValue <$> collected)
+      delta = foldMap pickupValue collected
    in (w{worldPickups = remaining}, delta)

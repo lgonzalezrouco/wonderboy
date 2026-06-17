@@ -7,15 +7,17 @@ module Domain.Logic.MovingPlatforms (
 )
 where
 
-import Domain.Logic.Collision (landEpsilon, playerRidingPlatformTop)
+import Domain.Logic.Collision (playerRidingPlatformTop)
 import Domain.Model.MovingPlatform (
   MovingPlatform (..),
   movingPlatformAsPlatform,
+  movingPlatformIsHorizontal,
  )
 import Domain.Model.Platform (Platform)
 import Domain.Model.Player (Player (..), playerOnGround, playerPos)
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
-import Domain.ValueObjects.Position (Position, posX, posY, position)
+import Domain.ValueObjects.Position (Position, posX, posY, position, translate)
+import Domain.ValueObjects.Tolerance (epsilon)
 
 -- | Resultado de avanzar una plataforma movil un frame.
 data MovingPlatformAdvance = MovingPlatformAdvance
@@ -45,7 +47,7 @@ advanceBy dist mp =
   let pos = movingPlatformPos mp
       target = currentTarget mp
       (newPos, reached) =
-        if isHorizontal mp
+        if movingPlatformIsHorizontal mp
           then
             let (newX, hit) = moveAlongAxis (posX pos) (posX target) dist
              in (position newX (posY pos), hit)
@@ -67,19 +69,12 @@ flipTowardIfReached :: MovingPlatform -> Bool -> Bool
 flipTowardIfReached mp reached =
   if reached then not (movingPlatformTowardB mp) else movingPlatformTowardB mp
 
-isHorizontal :: MovingPlatform -> Bool
-isHorizontal mp =
-  near (posY (movingPlatformEndA mp)) (posY (movingPlatformEndB mp))
-
 moveAlongAxis :: Float -> Float -> Float -> (Float, Bool)
 moveAlongAxis cur target dist
-  | abs (target - cur) <= dist + landEpsilon = (target, True)
+  | abs (target - cur) <= dist + epsilon = (target, True)
   | otherwise =
       let dir = signum (target - cur)
        in (cur + dir * dist, False)
-
-near :: Float -> Float -> Bool
-near x y = abs (x - y) <= landEpsilon
 
 -- | Plataformas estaticas mas instantaneas de las moviles para colision del jugador.
 allCollisionPlatforms :: [Platform] -> [MovingPlatform] -> [Platform]
@@ -104,13 +99,11 @@ applyPrePhysicsCarry =
 movingPlatformBeforeAdvance :: MovingPlatformAdvance -> MovingPlatform
 movingPlatformBeforeAdvance adv =
   let mp = mpaPlatform adv
-      pos = movingPlatformPos mp
    in mp
         { movingPlatformPos =
-            position (posX pos - mpaDeltaX adv) (posY pos - mpaDeltaY adv)
+            translate (-(mpaDeltaX adv)) (-(mpaDeltaY adv)) (movingPlatformPos mp)
         }
 
 nudgePlayer :: Float -> Float -> Player -> Player
 nudgePlayer dx dy p =
-  let pos = playerPos p
-   in p{playerPos = position (posX pos + dx) (posY pos + dy)}
+  p{playerPos = translate dx dy (playerPos p)}

@@ -22,6 +22,7 @@ import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
 import Domain.ValueObjects.Position (Position, posX, posY, position)
+import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velX, velocity)
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
@@ -81,7 +82,7 @@ worldWithShuttle mp p =
     , worldMovingPlatforms = [mp]
     , worldSpawnPoint = playerPos p
     , worldPickups = []
-    , worldMinScore = 0
+    , worldMinScore = score 0
     , worldExit = defaultExitZone
     }
 
@@ -178,7 +179,7 @@ unit_jumpIntoSideDoesNotTeleport =
           , worldMovingPlatforms = [horizontalShuttle]
           , worldSpawnPoint = position 20 8
           , worldPickups = []
-          , worldMinScore = 0
+          , worldMinScore = score 0
           , worldExit = defaultExitZone
           }
       w1 = step testParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
@@ -222,7 +223,7 @@ unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways =
               ]
           , worldSpawnPoint = pos
           , worldPickups = []
-          , worldMinScore = 0
+          , worldMinScore = score 0
           , worldExit = defaultExitZone
           }
       w1 = step testParams dtFrame noInput w0
@@ -246,7 +247,7 @@ unit_landingOnMovingPlatformSetsOnGround =
           , worldMovingPlatforms = [mp]
           , worldSpawnPoint = position 60 56
           , worldPickups = []
-          , worldMinScore = 0
+          , worldMinScore = score 0
           , worldExit = defaultExitZone
           }
       w1 = foldl (\w _ -> step testParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
