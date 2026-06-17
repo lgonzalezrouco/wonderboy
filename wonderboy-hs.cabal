@@ -85,6 +85,12 @@ library
       , Domain.ValueObjects.LifeParams
       , Domain.ValueObjects.Facing
       , Domain.ValueObjects.CombatParams
+      , Domain.ValueObjects.Tolerance
+      , Domain.ValueObjects.Damage
+      , Domain.ValueObjects.Health
+      , Domain.ValueObjects.Lives
+      , Domain.ValueObjects.Score
+      , Domain.ValueObjects.Frames
       , Domain.Logic.Collision
       , Domain.Logic.Combat
       , Domain.Logic.EntityBehaviours
@@ -110,9 +116,6 @@ library
       , Domain.Logic.BuildWorld
       , UseCases.LoadLevel
       , UseCases.GameMonad
-      , UseCases.Ports.InputPort
-      , UseCases.Ports.RenderPort
-      , UseCases.Ports.TimePort
       , UseCases.UpdateGame
       , Frameworks.Gloss.GameLoop
     other-modules:
@@ -170,6 +173,7 @@ test-suite wonderboy-hs-test
       , Domain.StepTest
       , Domain.LevelLoadTest
       , UseCases.UpdateGameTest
+      , UseCases.LoadLevelTest
 
     type:             exitcode-stdio-1.0
 

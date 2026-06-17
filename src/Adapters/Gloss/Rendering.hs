@@ -34,7 +34,11 @@ import Domain.Model.Platform (platformAabb)
 import Domain.Model.Player (Player, playerAabb, playerAttackFrames, playerHealth, playerPos)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
+import Domain.ValueObjects.Frames (hasFramesLeft)
+import Domain.ValueObjects.Health (healthPoints)
+import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (posX)
+import Domain.ValueObjects.Score (scorePoints)
 
 hudMargin :: Float
 hudMargin = 14
@@ -176,12 +180,12 @@ renderHud gv =
             Color hudPanelBg (rectangleSolid hudPanelWidth hudPanelHeight)
         , hudLabel contentX row1Y "LIVES"
         , Translate valueX (row1Y + hudValueCenterLift) $
-            renderLifeIcons (gvLives gv) (gvStartingLives gv)
+            renderLifeIcons (livesCount (gvLives gv)) (livesCount (gvStartingLives gv))
         , hudLabel contentX row2Y "HEALTH"
         , Translate valueX (row2Y + hudValueCenterLift) $
-            renderHealthPips (playerHealth p) (gvMaxHealth gv)
+            renderHealthPips (healthPoints (playerHealth p)) (healthPoints (gvMaxHealth gv))
         , hudLabel contentX row3Y "SCORE"
-        , hudLabel valueX row3Y (show (gvScore gv))
+        , hudLabel valueX row3Y (show (scorePoints (gvScore gv)))
         , renderAttackRow contentX row4Y p
         , hudHint contentX row5Y "Space - attack"
         ]
@@ -203,7 +207,7 @@ renderGameOverOverlay gv
 
 renderAttackRow :: Float -> Float -> Player -> Picture
 renderAttackRow x y p
-  | playerAttackFrames p <= 0 = Blank
+  | not (hasFramesLeft (playerAttackFrames p)) = Blank
   | otherwise =
       let valueX = x + hudLabelColumnWidth
        in pictures

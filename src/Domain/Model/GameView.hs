@@ -10,17 +10,20 @@ where
 
 import Domain.Model.GamePhase (GamePhase)
 import Domain.Model.World (World)
+import Domain.ValueObjects.Health (Health)
+import Domain.ValueObjects.Lives (Lives)
+import Domain.ValueObjects.Score (Score)
 
 -- | Snapshot para HUD y capa de mundo en un frame.
 data GameView = GameView
   { gvWorld :: World
-  , gvLives :: Int
+  , gvLives :: Lives
   , gvPhase :: GamePhase
-  , gvMaxHealth :: Int
+  , gvMaxHealth :: Health
   -- ^ Salud máxima (run-wide, derivada de config): cuántos pips dibuja el HUD.
-  , gvStartingLives :: Int
+  , gvStartingLives :: Lives
   -- ^ Vidas iniciales (run-wide, derivada de config): cuántos iconos dibuja el HUD.
-  , gvScore :: Int
+  , gvScore :: Score
   -- ^ Puntuación del nivel actual (run-state, proyectada desde 'GameState').
   }
   deriving (Eq, Show)

@@ -1,13 +1,13 @@
 {- | Modelo de un pickup coleccionable dentro del mundo del juego.
 
 Un pickup es una entidad no sólida: el jugador pasa a través de ella
-kinemáticamente y la recoge por superposición de AABB con su hitbox.
+kinemáticamente y la recoge por superposición de su caja de colisión.
 -}
 module Domain.Model.Pickup (
   -- * Tipo
   Pickup (..),
 
-  -- * Hitbox
+  -- * Caja de colisión
   pickupWidth,
   pickupHeight,
   pickupAabb,
@@ -21,6 +21,7 @@ import GHC.Generics (Generic)
 
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Position (Position)
+import Domain.ValueObjects.Score (Score, score)
 
 {- | Estado de un pickup en un frame dado.
 
@@ -32,16 +33,16 @@ data Pickup = Pickup
   -- ^ Identificador único del pickup en el nivel.
   , pickupPos :: Position
   -- ^ Posición actual (pies, centro inferior).
-  , pickupValue :: Int
+  , pickupValue :: Score
   -- ^ Puntos al recoger; debe ser ≥ 0 (validado por 'mkPickup').
   }
   deriving (Eq, Show, Generic)
 
--- | Ancho del hitbox del pickup en píxeles lógicos.
+-- | Ancho de la caja de colisión del pickup en píxeles lógicos.
 pickupWidth :: Float
 pickupWidth = 16.0
 
--- | Alto del hitbox del pickup en píxeles lógicos.
+-- | Alto de la caja de colisión del pickup en píxeles lógicos.
 pickupHeight :: Float
 pickupHeight = 16.0
 
@@ -58,4 +59,4 @@ mkPickup :: Int -> Position -> Int -> Maybe Pickup
 mkPickup pid pos value
   | value < 0 = Nothing
   | otherwise =
-      Just Pickup{pickupId = pid, pickupPos = pos, pickupValue = value}
+      Just Pickup{pickupId = pid, pickupPos = pos, pickupValue = score value}

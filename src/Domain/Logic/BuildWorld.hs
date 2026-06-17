@@ -32,6 +32,7 @@ import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.Score (score)
 
 -- | Construye el mundo inicial del nivel a partir de la definición autoral.
 buildWorld :: LevelDefinition -> Either LevelBuildError World
@@ -52,7 +53,7 @@ buildWorld lvl = do
       , worldMovingPlatforms = movingPlats
       , worldSpawnPoint = spawn
       , worldPickups = pickups
-      , worldMinScore = levelMinScore lvl
+      , worldMinScore = score (levelMinScore lvl)
       , worldExit = buildExit (levelExit lvl)
       }
 

@@ -10,7 +10,7 @@ import Domain.Fixtures (
   worldWithWall,
  )
 import Domain.Logic.Step (step)
-import Domain.Model.Platform (platformAabb)
+import Domain.Model.Platform (platform, platformAabb)
 import Domain.Model.Player (
   playerAabb,
   playerOnGround,
@@ -24,7 +24,7 @@ import Domain.ValueObjects.Aabb (aabbMaxY, aabbMinX, aabbMinY)
 import Domain.ValueObjects.DeltaTime (deltaTime)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.PhysicsParams (ppJumpSpeed, ppMoveSpeed)
-import Domain.ValueObjects.Position (posX, position)
+import Domain.ValueObjects.Position (posX, posY, position)
 import Domain.ValueObjects.Velocity (velX, velY, velocity)
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
@@ -113,3 +113,27 @@ unit_wallBlockNoPenetration = do
   assertBool
     "player does not pass wall inner face"
     (posX (playerPos p1) <= maxFootX + 1e-3)
+
+{- | A downward velocity large enough to clear a thin platform in one coarse step
+  (@|vy| * dt ≈ 64 px ≫ 8 px@) must still land on it: the sub-stepping prevents tunneling.
+-}
+unit_substepPreventsTunnelingThroughThinPlatform :: Assertion
+unit_substepPreventsTunnelingThroughThinPlatform = do
+  let thinPlatform = platform (position (-100) 0) 200 8 -- borde superior en y = 8
+      faller =
+        (spawnPlayer defaultMaxHealth (position 0 12))
+          { playerVel = velocity 0 (-4000)
+          , playerOnGround = False
+          }
+      w0 =
+        initialWorld
+          { worldPlayer = faller
+          , worldPlatforms = [thinPlatform]
+          , worldMovingPlatforms = []
+          }
+      p1 = worldPlayer (step testParams dtFrame noInput w0)
+      platTop = aabbMaxY (platformAabb thinPlatform)
+  assertBool "player lands on the thin platform instead of tunneling through it" (playerOnGround p1)
+  assertBool
+    "player foot rests on the platform top, not below it"
+    (abs (posY (playerPos p1) - platTop) <= 1e-3)

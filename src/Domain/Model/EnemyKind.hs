@@ -1,15 +1,19 @@
-{- | Catálogo de clases de enemigo (stats y tamaño de hitbox).
+{- | Catálogo de clases de enemigo (stats y tamaño de la caja de colisión).
 
 El arquetipo de comportamiento por defecto vive en @Domain.Logic.EntityBehaviours@.
 -}
 module Domain.Model.EnemyKind (
   EnemyKind (..),
+  EnemyMotionStats (..),
   EnemyKindStats (..),
   enemyKindStats,
 )
 where
 
 import GHC.Generics (Generic)
+
+import Domain.ValueObjects.Frames (Frames, frames)
+import Domain.ValueObjects.Health (Health, health)
 
 -- | Clase de enemigo con stats compartidos por tipo.
 data EnemyKind
@@ -18,26 +22,28 @@ data EnemyKind
   | GolemKind
   deriving (Eq, Show, Generic)
 
+{- | Parámetros de movimiento según el arquetipo natural de la clase.
+
+Una clase patrulla /o/ reacciona: el tipo suma hace inrepresentable mezclar
+parámetros de ambos (antes coexistían en un record plano con la mitad en cero).
+-}
+data EnemyMotionStats
+  = -- | Patrulla horizontal: velocidad (px/s) y frames de espera por tramo (Snail).
+    PatrolMotion Float Frames
+  | -- | FSM reactivo: chaseSpeed, returnSpeed, chaseRange, spawnRadius (Bat, Golem).
+    ReactiveMotion Float Float Float Float
+  deriving (Eq, Show, Generic)
+
 -- | Parámetros fijos por clase (píxeles lógicos y px/s).
 data EnemyKindStats = EnemyKindStats
   { eksWidth :: Float
-  -- ^ Ancho del collision box.
+  -- ^ Ancho de la caja de colisión.
   , eksHeight :: Float
-  -- ^ Alto del collision box.
-  , eksMaxHealth :: Int
+  -- ^ Alto de la caja de colisión.
+  , eksMaxHealth :: Health
   -- ^ Salud inicial al spawnear.
-  , eksPatrolSpeed :: Float
-  -- ^ Velocidad de patrulla horizontal (Snail).
-  , eksPatrolFrames :: Int
-  -- ^ Frames de espera por tramo de patrulla.
-  , eksChaseSpeed :: Float
-  -- ^ Velocidad al perseguir al jugador.
-  , eksReturnSpeed :: Float
-  -- ^ Velocidad al volver al spawn anchor.
-  , eksChaseRange :: Float
-  -- ^ Umbral horizontal de chase (abs Δx entre pies).
-  , eksSpawnRadius :: Float
-  -- ^ Radio horizontal para considerar “en spawn”.
+  , eksMotion :: EnemyMotionStats
+  -- ^ Parámetros del arquetipo de movimiento de la clase.
   }
   deriving (Eq, Show, Generic)
 
@@ -48,35 +54,20 @@ enemyKindStats kind = case kind of
     EnemyKindStats
       { eksWidth = 24
       , eksHeight = 24
-      , eksMaxHealth = 1
-      , eksPatrolSpeed = 30
-      , eksPatrolFrames = 90
-      , eksChaseSpeed = 0
-      , eksReturnSpeed = 0
-      , eksChaseRange = 0
-      , eksSpawnRadius = 0
+      , eksMaxHealth = health 1
+      , eksMotion = PatrolMotion 30 (frames 90)
       }
   BatKind ->
     EnemyKindStats
       { eksWidth = 18
       , eksHeight = 18
-      , eksMaxHealth = 1
-      , eksPatrolSpeed = 0
-      , eksPatrolFrames = 0
-      , eksChaseSpeed = 80
-      , eksReturnSpeed = 40
-      , eksChaseRange = 120
-      , eksSpawnRadius = 8
+      , eksMaxHealth = health 1
+      , eksMotion = ReactiveMotion 80 40 120 8
       }
   GolemKind ->
     EnemyKindStats
       { eksWidth = 32
       , eksHeight = 32
-      , eksMaxHealth = 2
-      , eksPatrolSpeed = 0
-      , eksPatrolFrames = 0
-      , eksChaseSpeed = 25
-      , eksReturnSpeed = 25
-      , eksChaseRange = 100
-      , eksSpawnRadius = 12
+      , eksMaxHealth = health 2
+      , eksMotion = ReactiveMotion 25 25 100 12
       }

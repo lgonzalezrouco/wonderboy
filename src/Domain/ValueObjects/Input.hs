@@ -10,6 +10,9 @@ module Domain.ValueObjects.Input (
   -- * Tipo
   Input (..),
 
+  -- * Intención derivada
+  inputHorizontalSign,
+
   -- * Valor neutro
   noInput,
 )
@@ -58,6 +61,19 @@ data Input = Input
 
 -- `data` en lugar de `newtype` porque tenemos tres campos independientes.
 -- `deriving` sin estrategia explícita: GHC deduce `stock` para `Eq`/`Show`/`Generic`.
+
+{- | Signo de la intención horizontal del frame: @-1@ izquierda, @1@ derecha, @0@ sin
+intención neta (ninguna o ambas teclas).
+
+Única lectura del par @(inputLeft, inputRight)@: la física la escala por la velocidad
+de movimiento y el combate la usa para orientar el facing, en vez de repetir el análisis
+del par en cada sitio.
+-}
+inputHorizontalSign :: Input -> Float
+inputHorizontalSign input = case (inputLeft input, inputRight input) of
+  (True, False) -> -1
+  (False, True) -> 1
+  _ -> 0
 
 {- | Frame sin ninguna acción activa.
 

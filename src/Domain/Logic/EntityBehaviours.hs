@@ -5,8 +5,6 @@ Construidos con los primitivos de @Domain.Model.EntityBehaviour@.
 module Domain.Logic.EntityBehaviours (
   patrolHorizontal,
   reactiveFsm,
-  reactiveChase,
-  reactiveGuard,
   defaultProgramForKind,
   programForArchetype,
 )
@@ -14,7 +12,12 @@ where
 
 import Data.Function (fix)
 
-import Domain.Model.EnemyKind (EnemyKind (..), EnemyKindStats (..), enemyKindStats)
+import Domain.Model.EnemyKind (
+  EnemyKind,
+  EnemyKindStats (eksMotion),
+  EnemyMotionStats (..),
+  enemyKindStats,
+ )
 import Domain.Model.EntityBehaviour (
   BehaviourProgram,
   facePlayer,
@@ -28,6 +31,7 @@ import Domain.Model.EntityBehaviour (
   (>>>),
  )
 import Domain.Model.LevelDefinition (BehaviourArchetype (..))
+import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft)
 import Domain.ValueObjects.Velocity (velocity)
 
 {- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
@@ -35,14 +39,14 @@ import Domain.ValueObjects.Velocity (velocity)
   behaviour step propio (fija la velocidad) y luego 'waitFrames' la mantiene @frames@
   frames más. Sobre suelo plano, cinemática M6. Requiere @speed > 0@ y @frames > 0@.
 -}
-patrolHorizontal :: Float -> Int -> BehaviourProgram
-patrolHorizontal speed frames
-  | speed > 0 && frames > 0 =
+patrolHorizontal :: Float -> Frames -> BehaviourProgram
+patrolHorizontal speed legFrames
+  | speed > 0 && hasFramesLeft legFrames =
       fix $ \p ->
         setVelocity (velocity (-speed) 0)
-          >>> waitFrames frames
+          >>> waitFrames legFrames
           >>> setVelocity (velocity speed 0)
-          >>> waitFrames frames
+          >>> waitFrames legFrames
           >>> p
   | otherwise = idleProgram
 
@@ -61,42 +65,39 @@ reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
       fix $ \loop ->
         ifPlayerWithinRange
           chaseRange
-          (moveTowardPlayer chaseSpeed >>> waitFrames 1 >>> loop)
+          (moveTowardPlayer chaseSpeed >>> waitFrames (frames 1) >>> loop)
           ( ifNearSpawn
               spawnRadius
-              (facePlayer >>> waitFrames 1 >>> loop)
-              (moveTowardSpawn returnSpeed >>> waitFrames 1 >>> loop)
+              (facePlayer >>> waitFrames (frames 1) >>> loop)
+              (moveTowardSpawn returnSpeed >>> waitFrames (frames 1) >>> loop)
           )
   | otherwise = idleProgram
 
--- | Preset chase (Bat): alias de 'reactiveFsm' con stats del kind.
-reactiveChase :: EnemyKindStats -> BehaviourProgram
-reactiveChase stats =
-  reactiveFsm
-    (eksChaseRange stats)
-    (eksChaseSpeed stats)
-    (eksReturnSpeed stats)
-    (eksSpawnRadius stats)
+{- | Programa de comportamiento para una variante de movimiento.
 
--- | Preset guard (Golem): misma máquina; idle en spawn es guardar + mirar.
-reactiveGuard :: EnemyKindStats -> BehaviourProgram
-reactiveGuard = reactiveChase
+El arquetipo chase y el arquetipo guard comparten la misma máquina reactiva
+('reactiveFsm'), que en su rama de spawn ya mira al jugador; hoy no se distinguen
+en comportamiento (la diferencia real vive en los stats por clase).
+-}
+programForMotion :: EnemyMotionStats -> BehaviourProgram
+programForMotion (PatrolMotion speed legFrames) = patrolHorizontal speed legFrames
+programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) =
+  reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
 
--- | Programa por defecto según clase de enemigo.
+-- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
-defaultProgramForKind kind =
-  let stats = enemyKindStats kind
-   in case kind of
-        SnailKind ->
-          patrolHorizontal (eksPatrolSpeed stats) (eksPatrolFrames stats)
-        _ -> reactiveChase stats
+defaultProgramForKind = programForMotion . eksMotion . enemyKindStats
 
--- | Programa según arquetipo explícito y stats de la clase.
+{- | Programa según arquetipo explícito y clase.
+
+Si el arquetipo autorado no corresponde a la variante de movimiento de la clase
+(p. ej. patrulla sobre una clase reactiva), degrada a 'idleProgram' — el mismo
+resultado que antes producían los stats inaplicables en cero a través de las guardas.
+-}
 programForArchetype :: EnemyKind -> BehaviourArchetype -> BehaviourProgram
 programForArchetype kind archetype =
-  let stats = enemyKindStats kind
-   in case archetype of
-        PatrolArchetype ->
-          patrolHorizontal (eksPatrolSpeed stats) (eksPatrolFrames stats)
-        ChaseArchetype -> reactiveChase stats
-        GuardArchetype -> reactiveGuard stats
+  case (archetype, eksMotion (enemyKindStats kind)) of
+    (PatrolArchetype, motion@PatrolMotion{}) -> programForMotion motion
+    (ChaseArchetype, motion@ReactiveMotion{}) -> programForMotion motion
+    (GuardArchetype, motion@ReactiveMotion{}) -> programForMotion motion
+    _ -> idleProgram

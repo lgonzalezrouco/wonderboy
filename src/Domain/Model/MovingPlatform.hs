@@ -14,15 +14,14 @@ module Domain.Model.MovingPlatform (
   -- * Geometría
   movingPlatformAabb,
   movingPlatformAsPlatform,
+  movingPlatformIsHorizontal,
 )
 where
 
 import Domain.Model.Platform (Platform, platform)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomLeft)
 import Domain.ValueObjects.Position (Position, posX, posY)
-
-segmentEpsilon :: Float
-segmentEpsilon = 1e-3
+import Domain.ValueObjects.Tolerance (epsilon, near)
 
 {- | Plataforma con movimiento ping-pong entre @movingPlatformEndA@ y @EndB@.
 
@@ -77,9 +76,6 @@ isVertical :: Position -> Position -> Bool
 isVertical a b =
   near (posX a) (posX b) && not (near (posY a) (posY b))
 
-near :: Float -> Float -> Bool
-near x y = abs (x - y) <= segmentEpsilon
-
 onSegment :: Position -> Position -> Position -> Bool
 onSegment pos endA endB
   | isHorizontal endA endB =
@@ -94,7 +90,17 @@ inRange :: Float -> Float -> Float -> Bool
 inRange v a b =
   let lo = min a b
       hi = max a b
-   in v >= lo - segmentEpsilon && v <= hi + segmentEpsilon
+   in v >= lo - epsilon && v <= hi + epsilon
+
+{- | 'True' si la plataforma recorre el eje horizontal.
+
+Única clasificación de eje del tipo: la calcula sobre los extremos ya validados
+(alineados a un eje, no degenerados) por 'mkMovingPlatform', de modo que el avance
+por frame en @Domain.Logic.MovingPlatforms@ no re-deriva la pregunta con otra regla.
+-}
+movingPlatformIsHorizontal :: MovingPlatform -> Bool
+movingPlatformIsHorizontal mp =
+  isHorizontal (movingPlatformEndA mp) (movingPlatformEndB mp)
 
 -- | Caja de colisión (bottom-left anchor).
 movingPlatformAabb :: MovingPlatform -> Aabb

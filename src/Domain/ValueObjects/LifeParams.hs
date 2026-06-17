@@ -11,22 +11,25 @@ where
 
 import GHC.Generics (Generic)
 
+import Domain.ValueObjects.Frames (Frames)
+import Domain.ValueObjects.Health (Health)
+
 -- | Constantes de vida para un frame (salud máxima, margen de caída).
 data LifeParams = LifeParams
-  { lpMaxHealth :: Int
+  { lpMaxHealth :: Health
   -- ^ Salud tras spawn o respawn.
   , lpDeathMargin :: Float
   -- ^ Píxeles bajo la plataforma más baja antes de out-of-bounds.
-  , lpRespawnInvincibilityFrames :: Int
-  -- ^ I-frames otorgados al respawn tras perder una vida (M10).
+  , lpRespawnInvincibilityFrames :: Frames
+  -- ^ Frames de invencibilidad otorgados al respawn tras perder una vida (M10).
   }
   deriving (Eq, Show, Generic)
 
 -- | Construye 'LifeParams' desde componentes sueltos.
-lifeParams :: Int -> Float -> Int -> LifeParams
-lifeParams health margin respawnInvincibility =
+lifeParams :: Health -> Float -> Frames -> LifeParams
+lifeParams maxHealth margin respawnInvincibility =
   LifeParams
-    { lpMaxHealth = health
+    { lpMaxHealth = maxHealth
     , lpDeathMargin = margin
     , lpRespawnInvincibilityFrames = respawnInvincibility
     }

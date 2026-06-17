@@ -25,15 +25,17 @@ import Domain.ValueObjects.Aabb (
   aabbOverlaps,
  )
 import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Input (Input (..))
+import Domain.ValueObjects.Facing (Facing (..), facingTowardHorizontal)
+import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
+import Domain.ValueObjects.Health (isDepleted, reduceHealth)
+import Domain.ValueObjects.Input (Input (..), inputHorizontalSign)
 
--- | Facing, ataque, i-frames, melee y contacto en un solo paso puro.
+-- | Facing, ataque, frames de invencibilidad, melee y contacto en un solo paso puro.
 resolveCombat :: CombatParams -> Input -> World -> World
 resolveCombat cp input w =
   let p0 = worldPlayer w
       p1 = updateFacing input p0
-      attackStarted = inputAttack input && playerAttackFrames p1 == 0
+      attackStarted = inputAttack input && not (hasFramesLeft (playerAttackFrames p1))
       p2 = startAttack cp input p1
       w1 = w{worldPlayer = p2}
       w2 = resolveMelee cp w1
@@ -52,17 +54,14 @@ resto de la ventana no se reorienta, de modo que el swing no se "da vuelta" a mi
 -}
 updateFacing :: Input -> Player -> Player
 updateFacing inp p
-  | playerAttackFrames p > 0 = p
+  | hasFramesLeft (playerAttackFrames p) = p
   | otherwise =
-      case (inputLeft inp, inputRight inp) of
-        (True, False) -> p{playerFacing = FacingLeft}
-        (False, True) -> p{playerFacing = FacingRight}
-        _ -> p
+      p{playerFacing = facingTowardHorizontal (playerFacing p) (inputHorizontalSign inp)}
 
 startAttack :: CombatParams -> Input -> Player -> Player
 startAttack cp inp p
   | inputAttack inp
-  , playerAttackFrames p == 0 =
+  , not (hasFramesLeft (playerAttackFrames p)) =
       p{playerAttackFrames = cpAttackDuration cp}
   | otherwise =
       p
@@ -70,15 +69,15 @@ startAttack cp inp p
 decrementAttack :: Bool -> Player -> Player
 decrementAttack attackStarted p
   | attackStarted = p
-  | playerAttackFrames p > 0 =
-      p{playerAttackFrames = playerAttackFrames p - 1}
+  | hasFramesLeft (playerAttackFrames p) =
+      p{playerAttackFrames = tickFrames (playerAttackFrames p)}
   | otherwise =
       p
 
 tickInvincibility :: Player -> Player
 tickInvincibility p
-  | playerInvincibilityFrames p > 0 =
-      p{playerInvincibilityFrames = playerInvincibilityFrames p - 1}
+  | hasFramesLeft (playerInvincibilityFrames p) =
+      p{playerInvincibilityFrames = tickFrames (playerInvincibilityFrames p)}
   | otherwise =
       p
 
@@ -92,9 +91,9 @@ resolveMelee cp w =
               hitbox = meleeHitbox cp body (playerFacing p)
               hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
               applyMeleeHit e
-                | hitsEnemy e = e{enemyHealth = enemyHealth e - 1}
+                | hitsEnemy e = e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
                 | otherwise = e
-           in w{worldEnemies = filter ((> 0) . enemyHealth) (map applyMeleeHit (worldEnemies w))}
+           in w{worldEnemies = filter (not . isDepleted . enemyHealth) (map applyMeleeHit (worldEnemies w))}
 
 {- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
 
@@ -110,7 +109,7 @@ meleeHitbox cp body facing =
 
 resolveContact :: CombatParams -> World -> World
 resolveContact cp w
-  | playerInvincibilityFrames (worldPlayer w) > 0 = w
+  | hasFramesLeft (playerInvincibilityFrames (worldPlayer w)) = w
   | any (isDamagingContact (worldPlayer w)) (worldEnemies w) =
       let p = worldPlayer w
           p' =

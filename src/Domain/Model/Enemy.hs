@@ -8,7 +8,7 @@ module Domain.Model.Enemy (
   -- * Tipo
   Enemy (..),
 
-  -- * Hitbox
+  -- * Caja de colisión
   enemyWidth,
   enemyHeight,
   enemyAabb,
@@ -16,7 +16,6 @@ module Domain.Model.Enemy (
   -- * Construcción
   spawnEnemy,
   mkEnemy,
-  mkEnemyWithKind,
 )
 where
 
@@ -30,6 +29,7 @@ import Domain.Model.EnemyKind (
 import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -48,12 +48,12 @@ data Enemy = Enemy
   { enemyId :: Int
   -- ^ Identificador único del enemigo en el nivel. Asignado en la carga del nivel.
   , enemyKind :: EnemyKind
-  -- ^ Clase de enemigo (stats y hitbox).
+  -- ^ Clase de enemigo (stats y caja de colisión).
   , enemyPos :: Position
   -- ^ Posición actual del enemigo en el espacio del juego (píxeles lógicos).
   , enemyVel :: Velocity
   -- ^ Velocidad actual (px/s). La fija el intérprete del DSL antes de integrar.
-  , enemyHealth :: Int
+  , enemyHealth :: Health
   -- ^ Salud actual; al llegar a 0 el enemigo es derrotado.
   , enemySpawnPos :: Position
   -- ^ Spawn anchor para FSM de retorno.
@@ -81,11 +81,11 @@ instance Eq Enemy where
 enemyStats :: Enemy -> EnemyKindStats
 enemyStats = enemyKindStats . enemyKind
 
--- | Ancho del hitbox según la clase del enemigo.
+-- | Ancho de la caja de colisión según la clase del enemigo.
 enemyWidth :: Enemy -> Float
 enemyWidth = eksWidth . enemyStats
 
--- | Alto del hitbox según la clase del enemigo.
+-- | Alto de la caja de colisión según la clase del enemigo.
 enemyHeight :: Enemy -> Float
 enemyHeight = eksHeight . enemyStats
 
@@ -112,7 +112,3 @@ spawnEnemy eid kind pos prog =
 -- | Crea un enemigo Snail para tests con programa explícito.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
 mkEnemy eid = spawnEnemy eid SnailKind
-
--- | Crea un enemigo con clase y programa explícito (tests).
-mkEnemyWithKind :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
-mkEnemyWithKind = spawnEnemy

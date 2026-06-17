@@ -10,7 +10,7 @@ module Domain.Model.Player (
   -- * Tipo
   Player (..),
 
-  -- * Hitbox
+  -- * Caja de colisión
   playerWidth,
   playerHeight,
   playerAabb,
@@ -24,6 +24,8 @@ import GHC.Generics (Generic)
 
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Frames (Frames, noFrames)
+import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
@@ -41,7 +43,7 @@ Con campos nombrados:
 
   * El código es autoexplicativo: `playerOnGround p` en lugar de `thirdField p`.
   * GHC genera automáticamente un /selector/ (función de acceso) por campo.
-  * Las actualizaciones son expresivas: `p { playerHealth = playerHealth p - 1 }`.
+  * Las actualizaciones son expresivas: `p { playerOnGround = True }`.
 
 __Por qué `playerOnGround :: Bool`?__
 
@@ -63,22 +65,22 @@ data Player = Player
   , playerOnGround :: Bool
   -- ^ 'True' si el jugador está apoyado sobre una superficie.
   --   Controla si puede iniciar un salto (M3).
-  , playerHealth :: Int
+  , playerHealth :: Health
   -- ^ Puntos de vida. 0 = muerto. Decrece al recibir daño (M2+).
   , playerFacing :: Facing
   -- ^ Orientación horizontal para alcance de melee (M10).
-  , playerAttackFrames :: Int
+  , playerAttackFrames :: Frames
   -- ^ Frames restantes de ventana de melee; 0 = sin ataque activo.
-  , playerInvincibilityFrames :: Int
-  -- ^ I-frames restantes; 0 = vulnerable a contacto enemigo.
+  , playerInvincibilityFrames :: Frames
+  -- ^ Frames de invencibilidad restantes; 0 = vulnerable a contacto enemigo.
   }
   deriving (Eq, Show, Generic)
 
--- | Ancho del hitbox del jugador en píxeles lógicos (constante M3).
+-- | Ancho de la caja de colisión del jugador en píxeles lógicos (constante M3).
 playerWidth :: Float
 playerWidth = 32.0
 
--- | Alto del hitbox del jugador en píxeles lógicos (constante M3).
+-- | Alto de la caja de colisión del jugador en píxeles lógicos (constante M3).
 playerHeight :: Float
 playerHeight = 48.0
 
@@ -95,7 +97,7 @@ recién aparecido en el nivel — velocidad cero, en el aire, vida máxima.
 La posición de spawn varía por nivel; por eso se recibe como argumento en lugar
 de usar una constante.
 -}
-spawnPlayer :: Int -> Position -> Player
+spawnPlayer :: Health -> Position -> Player
 spawnPlayer maxHealth pos =
   Player
     { playerPos = pos
@@ -103,6 +105,6 @@ spawnPlayer maxHealth pos =
     , playerOnGround = False -- empieza en el aire; la gravedad (M3) lo baja
     , playerHealth = maxHealth
     , playerFacing = FacingRight
-    , playerAttackFrames = 0
-    , playerInvincibilityFrames = 0
+    , playerAttackFrames = noFrames
+    , playerInvincibilityFrames = noFrames
     }

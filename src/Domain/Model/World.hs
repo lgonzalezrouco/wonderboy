@@ -24,11 +24,18 @@ import Domain.Model.MovingPlatform (MovingPlatform)
 import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
+import Domain.ValueObjects.Health (Health, health)
 import Domain.ValueObjects.Position (Position, position)
+import Domain.ValueObjects.Score (Score, score)
 
--- | Punto de spawn del jugador en este nivel (respawn tras perder una vida).
-defaultMaxHealth :: Int
-defaultMaxHealth = 3
+{- | Salud máxima por defecto del jugador.
+
+Fuente única del valor de salud inicial: 'initialWorld', los fixtures y la
+configuración por defecto ('UseCases.GameMonad.defaultConfig' vía @gcMaxHealth@)
+la referencian en lugar de repetir el literal.
+-}
+defaultMaxHealth :: Health
+defaultMaxHealth = health 3
 
 -- | Estado completo de la simulación.
 data World = World
@@ -38,7 +45,7 @@ data World = World
   , worldMovingPlatforms :: [MovingPlatform]
   , worldSpawnPoint :: Position
   , worldPickups :: [Pickup]
-  , worldMinScore :: Int
+  , worldMinScore :: Score
   , worldExit :: ExitZone
   }
   deriving (Eq, Show, Generic)
@@ -62,6 +69,6 @@ initialWorld =
         , worldMovingPlatforms = []
         , worldSpawnPoint = spawn
         , worldPickups = []
-        , worldMinScore = 0
+        , worldMinScore = score 0
         , worldExit = defaultExitZone
         }

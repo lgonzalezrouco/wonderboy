@@ -21,7 +21,10 @@ import Domain.Model.Player (
  )
 import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
+import Domain.ValueObjects.Damage (damage)
 import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Frames (frames)
+import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
 import Domain.ValueObjects.Velocity (velX)
@@ -38,7 +41,7 @@ enemyFrom w = case worldEnemies w of
 
 attackingPlayerAt :: Position -> Player
 attackingPlayerAt pos =
-  (spawnPlayer 3 pos){playerAttackFrames = 6, playerFacing = FacingRight}
+  (spawnPlayer (health 3) pos){playerAttackFrames = frames 6, playerFacing = FacingRight}
 
 golemAt :: Position -> Enemy
 golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
@@ -47,7 +50,7 @@ meleeWorld :: Player -> [Enemy] -> World
 meleeWorld p enemies = floorWorld{worldPlayer = p, worldEnemies = enemies}
 
 testCombatParams :: CombatParams
-testCombatParams = combatParams 6 60 1 20.0
+testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 unit_snailPatrolMoves :: Assertion
 unit_snailPatrolMoves =
@@ -113,13 +116,13 @@ unit_golemSurvivesFirstMelee =
       w = meleeWorld (attackingPlayerAt pos) [golemAt pos]
       w' = resolveCombat testCombatParams noInput w
    in case worldEnemies w' of
-        [e] -> enemyHealth e @?= 1
+        [e] -> enemyHealth e @?= health 1
         _ -> assertFailure "golem should survive one hit"
 
 unit_golemDiesOnSecondMelee :: Assertion
 unit_golemDiesOnSecondMelee =
   let pos = position 170 8
-      w = meleeWorld (attackingPlayerAt pos) [(golemAt pos){enemyHealth = 1}]
+      w = meleeWorld (attackingPlayerAt pos) [(golemAt pos){enemyHealth = health 1}]
       w' = resolveCombat testCombatParams noInput w
    in worldEnemies w' @?= []
 
@@ -130,7 +133,7 @@ unit_meleeOneHitPerSwing =
       w1 = resolveCombat testCombatParams noInput w0
       w2 = resolveCombat testCombatParams noInput w1
    in case worldEnemies w2 of
-        [e] -> enemyHealth e @?= 1
+        [e] -> enemyHealth e @?= health 1
         _ -> assertFailure "golem should take only one hit per swing"
 
 unit_snailDiesInOneMelee :: Assertion
@@ -139,6 +142,6 @@ unit_snailDiesInOneMelee =
       w =
         meleeWorld
           (attackingPlayerAt pos)
-          [spawnEnemy 1 SnailKind pos (patrolHorizontal 30 90)]
+          [spawnEnemy 1 SnailKind pos (patrolHorizontal 30 (frames 90))]
       w' = resolveCombat testCombatParams noInput w
    in worldEnemies w' @?= []
