@@ -8,8 +8,10 @@ module Adapters.Gloss.Sprites (
 )
 where
 
-import Control.Exception (IOException, try)
+import Control.Applicative ((<|>))
+import Control.Exception (AsyncException, SomeException, fromException, throwIO, try)
 import Data.Maybe (catMaybes)
+import System.IO (hPutStrLn, stderr)
 
 import Graphics.Gloss (Picture, loadBMP)
 
@@ -106,9 +108,9 @@ loadWalkSprites =
 loadSprite :: FilePath -> Float -> Float -> IO (Maybe Sprite)
 loadSprite relPath width height = do
   path <- getDataFileName relPath
-  loaded <- try (loadBMP path) :: IO (Either IOException Picture)
+  loaded <- try (loadBMP path) :: IO (Either SomeException Picture)
   case loaded of
-    Left _ -> pure Nothing
+    Left err -> spriteLoadFailure relPath err
     Right picture ->
       pure
         ( Just
@@ -118,6 +120,14 @@ loadSprite relPath width height = do
               , spriteHeight = height
               }
         )
+
+spriteLoadFailure :: FilePath -> SomeException -> IO (Maybe Sprite)
+spriteLoadFailure relPath err =
+  case fromException err :: Maybe AsyncException of
+    Just asyncErr -> throwIO asyncErr
+    Nothing -> do
+      hPutStrLn stderr ("Warning: failed to load sprite " <> relPath <> ": " <> show err)
+      pure Nothing
 
 -- | Sprite del jugador según estado visible y contador de render.
 playerSprite :: SpriteCatalog -> Int -> Player -> Maybe Sprite
@@ -178,7 +188,3 @@ playerAnimationStride = 4
 
 enemyAnimationStride :: Int
 enemyAnimationStride = 12
-
-(<|>) :: Maybe a -> Maybe a -> Maybe a
-Nothing <|> fallback = fallback
-value <|> _ = value

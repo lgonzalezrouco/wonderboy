@@ -4,6 +4,7 @@ module Adapters.Gloss.Rendering (
 )
 where
 
+import Control.Applicative ((<|>))
 import Data.Maybe (isNothing)
 
 import Graphics.Gloss.Data.Color (Color)
@@ -236,8 +237,8 @@ renderPickup catalog pickup =
 renderPlatform :: SpriteCatalog -> Platform -> Picture
 renderPlatform catalog platform =
   case (scTileGrassLeft catalog, scTileGrassMid catalog, scTileGrassRight catalog) of
-    (_, Just midSprite, _) ->
-      tileStrip (scTileGrassLeft catalog) midSprite (scTileGrassRight catalog) (platformAabb platform)
+    (leftSprite, Just midSprite, rightSprite) ->
+      tileStrip leftSprite midSprite rightSprite (platformAabb platform)
     _ -> aabbToPicture platformColor (platformAabb platform)
 
 renderMovingPlatform :: SpriteCatalog -> MovingPlatform -> Picture
@@ -251,7 +252,7 @@ renderMovingPlatform catalog platform =
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
   case scExitSign catalog of
-    Nothing -> Blank
+    Nothing -> aabbToPicture hudMutedColor box
     Just sprite -> drawSpriteBottomCenter box sprite
  where
   box = exitAabb exitZone
@@ -490,7 +491,3 @@ tileStrip leftSprite midSprite rightSprite box =
 exitAabb :: ExitZone -> Aabb
 exitAabb exitZone =
   aabbFromBottomLeft (exitPos exitZone) (exitWidth exitZone) (exitHeight exitZone)
-
-(<|>) :: Maybe a -> Maybe a -> Maybe a
-Nothing <|> fallback = fallback
-value <|> _ = value
