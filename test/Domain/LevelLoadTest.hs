@@ -93,3 +93,36 @@ unit_rejectNegativeMinScore =
           case buildWorld lvl of
             Left (LevelBuildError _) -> pure ()
             _ -> assertFailure "expected LevelBuildError for negative minScore"
+
+unit_bossGolemDecode :: Assertion
+unit_bossGolemDecode =
+  let json =
+        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+        Left err -> assertFailure err
+        Right lvl ->
+          case buildWorld lvl of
+            Left (LevelBuildError msg) -> assertFailure (show msg)
+            Right w -> length (worldEnemies w) @?= 1
+
+unit_bossRejectsBehaviourPreset :: Assertion
+unit_bossRejectsBehaviourPreset =
+  let json =
+        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0},\"behaviourPreset\":\"patrol\"}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+        Left err -> assertFailure err
+        Right lvl ->
+          case buildWorld lvl of
+            Left (LevelBuildError _) -> pure ()
+            _ -> assertFailure "expected LevelBuildError for boss behaviourPreset"
+
+unit_bossRejectsDuplicateBoss :: Assertion
+unit_bossRejectsDuplicateBoss =
+  let json =
+        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}},{\"id\":2,\"kind\":\"bossBat\",\"pos\":{\"x\":10,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+        Left err -> assertFailure err
+        Right lvl ->
+          case buildWorld lvl of
+            Left (LevelBuildError _) -> pure ()
+            _ -> assertFailure "expected LevelBuildError for duplicate boss"

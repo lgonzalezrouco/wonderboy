@@ -34,6 +34,7 @@ where
 
 -- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity, runIdentity)
+import Data.List (find)
 import GHC.Generics (Generic)
 
 -- Grupo 2 — terceros (mtl)
@@ -44,14 +45,18 @@ import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.State (MonadState, StateT, runStateT)
 
 -- Grupo 3 — proyecto
+
+import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.BossHealth (BossHealth, bossHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
 import Domain.ValueObjects.Damage (Damage, damage)
 import Domain.ValueObjects.Frames (Frames, frames)
-import Domain.ValueObjects.Health (Health)
+import Domain.ValueObjects.Health (Health, isDepleted)
 import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.Lives (Lives, lives)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
@@ -204,7 +209,16 @@ gameViewFromState cfg gs =
     , gvMaxHealth = gcMaxHealth cfg
     , gvStartingLives = gcStartingLives cfg
     , gvScore = gsScore gs
+    , gvBossHealth = bossHealthFromWorld (gsWorld gs)
     }
+
+-- | Proyecta salud del jefe vivo para el HUD (como máximo un jefe por nivel).
+bossHealthFromWorld :: World -> Maybe BossHealth
+bossHealthFromWorld w = do
+  e <- find isLivingBoss (worldEnemies w)
+  pure (bossHealth (enemyHealth e) (enemyMaxHealth e))
+ where
+  isLivingBoss e = isBossKind (enemyKind e) && not (isDepleted (enemyHealth e))
 
 -- ---------------------------------------------------------------------------
 -- La mónada GameM

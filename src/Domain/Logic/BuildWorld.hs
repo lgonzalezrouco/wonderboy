@@ -14,8 +14,11 @@ import Data.List (nub)
 import Data.Text (Text)
 import Data.Text qualified as T
 
+import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetype)
-import Domain.Model.Enemy (Enemy, spawnEnemy)
+import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHealth, bossPhases, phaseProgram)
+import Domain.Model.Enemy (Enemy, enemyHealth, enemyMaxHealth, spawnEnemy)
+import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.ExitZone (ExitZone (..))
 import Domain.Model.LevelDefinition (
   EnemyDef (..),
@@ -41,6 +44,7 @@ buildWorld lvl = do
   checkUniqueIds (map mpDefId (levelMovingPlatforms lvl)) "moving platform"
   checkUniqueIds (map enemyDefId (levelEnemies lvl)) "enemy"
   checkUniqueIds (map pickupDefId (levelPickups lvl)) "pickup"
+  checkBossCount (levelEnemies lvl)
   movingPlats <- traverse buildMovingPlatform (levelMovingPlatforms lvl)
   enemies <- traverse buildEnemy (levelEnemies lvl)
   pickups <- traverse buildPickup (levelPickups lvl)
@@ -68,6 +72,13 @@ checkMinScore n
   | n >= 0 = Right ()
   | otherwise = Left (levelBuildError "minScore must be >= 0")
 
+checkBossCount :: [EnemyDef] -> Either LevelBuildError ()
+checkBossCount defs
+  | length bossDefs <= 1 = Right ()
+  | otherwise = Left (levelBuildError "at most one boss per level")
+ where
+  bossDefs = filter (isBossKind . enemyDefKind) defs
+
 buildPlatform :: PlatformDef -> Platform
 buildPlatform (PlatformDef rect) =
   platform (rectPos rect) (rectWidth rect) (rectHeight rect)
@@ -87,17 +98,44 @@ buildMovingPlatform mp =
     Just plat -> Right plat
 
 buildEnemy :: EnemyDef -> Either LevelBuildError Enemy
-buildEnemy def =
-  let prog =
-        case enemyDefBehaviourPreset def of
-          Just archetype -> programForArchetype (enemyDefKind def) archetype
-          Nothing -> defaultProgramForKind (enemyDefKind def)
-   in pure $
+buildEnemy def
+  | isBossKind (enemyDefKind def) = buildBossEnemy def
+  | otherwise =
+      pure $
         spawnEnemy
           (enemyDefId def)
           (enemyDefKind def)
           (enemyDefPos def)
-          prog
+          (behaviourProgramFor def)
+ where
+  behaviourProgramFor d =
+    case enemyDefBehaviourPreset d of
+      Just archetype -> programForArchetype (enemyDefKind d) archetype
+      Nothing -> defaultProgramForKind (enemyDefKind d)
+
+buildBossEnemy :: EnemyDef -> Either LevelBuildError Enemy
+buildBossEnemy def
+  | Just _ <- enemyDefBehaviourPreset def =
+      Left (levelBuildError "boss enemies cannot use behaviourPreset")
+  | Just _ <- enemyDefBehaviourHint def =
+      Left (levelBuildError "boss enemies cannot use behaviourHint")
+  | otherwise =
+      case bossDefinitionForKind (enemyDefKind def) of
+        Nothing ->
+          Left (levelBuildError "missing boss catalog entry for kind")
+        Just bossDef ->
+          case bossPhases bossDef of
+            (phase0 : _) ->
+              let spawned =
+                    spawnEnemy
+                      (enemyDefId def)
+                      (enemyDefKind def)
+                      (enemyDefPos def)
+                      (phaseProgram phase0)
+                  maxHp = bossMaxHealth bossDef
+               in pure spawned{enemyHealth = maxHp, enemyMaxHealth = maxHp}
+            [] ->
+              Left (levelBuildError "boss catalog entry has no phases")
 
 buildPickup :: PickupDef -> Either LevelBuildError Pickup
 buildPickup def =

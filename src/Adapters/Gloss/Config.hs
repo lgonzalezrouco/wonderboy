@@ -17,6 +17,8 @@ module Adapters.Gloss.Config (
   hudHealthColor,
   hudHealthEmptyColor,
   hudAttackColor,
+  hudBossColor,
+  hudBossEmptyColor,
   hudOverlayDim,
 )
 where
@@ -55,6 +57,8 @@ enemyColorForKind kind = case kind of
   SnailKind -> makeColor 0.85 0.75 0.2 1.0
   BatKind -> makeColor 0.65 0.35 0.9 1.0
   GolemKind -> makeColor 0.55 0.58 0.62 1.0
+  BossGolemKind -> makeColor 0.75 0.15 0.25 1.0
+  BossBatKind -> makeColor 0.55 0.1 0.45 1.0
 
 -- | Color del rectángulo de pickups (coleccionables).
 pickupColor :: Color
@@ -91,6 +95,14 @@ hudHealthColor = makeColor 0.35 0.9 0.5 1.0
 -- | Color de un icono/pip vacío (vida o salud agotada).
 hudHealthEmptyColor :: Color
 hudHealthEmptyColor = makeColor 0.22 0.25 0.32 1.0
+
+-- | Color del relleno de la barra de salud del jefe.
+hudBossColor :: Color
+hudBossColor = makeColor 0.9 0.25 0.35 1.0
+
+-- | Color del fondo de la barra de salud del jefe.
+hudBossEmptyColor :: Color
+hudBossEmptyColor = makeColor 0.28 0.12 0.16 1.0
 
 -- | Color del indicador de ataque activo.
 hudAttackColor :: Color

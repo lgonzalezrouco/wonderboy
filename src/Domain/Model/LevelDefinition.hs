@@ -201,6 +201,8 @@ enemyKindToText kind = case kind of
   SnailKind -> "snail"
   BatKind -> "bat"
   GolemKind -> "golem"
+  BossGolemKind -> "bossGolem"
+  BossBatKind -> "bossBat"
 
 archetypeToText :: BehaviourArchetype -> Text
 archetypeToText archetype = case archetype of
@@ -214,6 +216,8 @@ parseEnemyKind txt = case txt of
   "snail" -> Right SnailKind
   "bat" -> Right BatKind
   "golem" -> Right GolemKind
+  "bossGolem" -> Right BossGolemKind
+  "bossBat" -> Right BossBatKind
   _ -> Left (levelBuildError ("unknown enemy kind: " <> txt))
 
 -- | Parsea arquetipo desde @behaviourPreset@.

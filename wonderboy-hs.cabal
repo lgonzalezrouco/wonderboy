@@ -88,6 +88,8 @@ library
       , Domain.ValueObjects.Tolerance
       , Domain.ValueObjects.Damage
       , Domain.ValueObjects.Health
+      , Domain.ValueObjects.HealthRatio
+      , Domain.ValueObjects.BossHealth
       , Domain.ValueObjects.Lives
       , Domain.ValueObjects.Score
       , Domain.ValueObjects.Frames
@@ -111,8 +113,12 @@ library
       , Domain.Model.Platform
       , Domain.Model.Player
       , Domain.Model.World
+      , Domain.Model.BossKindStats
+      , Domain.Model.BossPhase
       , Domain.Model.ExitZone
       , Domain.Model.LevelDefinition
+      , Domain.Logic.BossCatalog
+      , Domain.Logic.BossPhase
       , Domain.Logic.BuildWorld
       , UseCases.LoadLevel
       , UseCases.GameMonad
@@ -163,6 +169,8 @@ test-suite wonderboy-hs-test
 
     other-modules:
         Domain.AabbTest
+      , Domain.HealthRatioTest
+      , Domain.BossPhaseTest
       , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.PlayerLifeTest

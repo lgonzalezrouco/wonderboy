@@ -19,9 +19,23 @@
     }
   ],
   "enemies": [
-    { "id": 1, "kind": "snail", "pos": { "x": 40, "y": 8 } },
-    { "id": 2, "kind": "bat", "pos": { "x": 80, "y": 8 } },
-    { "id": 3, "kind": "golem", "pos": { "x": 170, "y": 8 } }
+    {
+      "id": 1,
+      "kind": "snail",
+      "pos": { "x": 40, "y": 8 },
+      "behaviourHint": "patrol back and forth along the ground"
+    },
+    {
+      "id": 2,
+      "kind": "bat",
+      "pos": { "x": 80, "y": 8 },
+      "behaviourHint": "chase the player when they get close, then return to spawn"
+    },
+    {
+      "id": 3,
+      "kind": "bossGolem",
+      "pos": { "x": 170, "y": 8 }
+    }
   ],
   "pickups": [
     { "id": 1, "pos": { "x": -120, "y": 8 }, "value": 100 },
