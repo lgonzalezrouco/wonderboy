@@ -46,13 +46,14 @@ resolvePlayerPlatforms plats vyBefore =
 {- | Resuelve colisión enemigo–plataforma para clases terrestres.
 
 Los enemigos voladores ('isFlyingKind') no colisionan: mantienen su ruta aérea.
-Usa las mismas reglas AABB que el jugador, sin @playerOnGround@.
+@vyBefore@ es la componente vertical tras gravedad y antes de integrar posición
+(igual que el jugador).
 -}
-resolveEnemyPlatforms :: [Platform] -> Enemy -> Enemy
-resolveEnemyPlatforms plats e
+resolveEnemyPlatforms :: [Platform] -> Float -> Enemy -> Enemy
+resolveEnemyPlatforms plats vyBefore e
   | isFlyingKind (enemyKind e) = e
   | otherwise =
-      resolveEnemyPasses maxResolvePasses (velY (enemyVel e)) (sortPlatforms plats) e
+      resolveEnemyPasses maxResolvePasses vyBefore (sortPlatforms plats) e
 
 resolveEnemyPasses :: Int -> Float -> [Platform] -> Enemy -> Enemy
 resolveEnemyPasses 0 _ _ e = e

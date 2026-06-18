@@ -3,13 +3,17 @@ module Domain.StepTest where
 import Domain.Fixtures (
   ceilingPlatform,
   dtFrame,
+  floorWorld,
   testParams,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
   worldWithWall,
  )
+import Domain.Logic.EntityBehaviours (defaultProgramForKind)
 import Domain.Logic.Step (step)
+import Domain.Model.Enemy (enemyPos, spawnEnemy)
+import Domain.Model.EnemyKind (EnemyKind (GolemKind))
 import Domain.Model.Platform (platform, platformAabb)
 import Domain.Model.Player (
   playerAabb,
@@ -137,3 +141,20 @@ unit_substepPreventsTunnelingThroughThinPlatform = do
   assertBool
     "player foot rests on the platform top, not below it"
     (abs (posY (playerPos p1) - platTop) <= 1e-3)
+
+{- | Un enemigo terrestre en el aire cae y apoya sobre la plataforma de abajo. -}
+unit_groundEnemyFallsOntoPlatform :: Assertion
+unit_groundEnemyFallsOntoPlatform = do
+  let ledge = platform (position 0 0) 120 8
+      w0 =
+        floorWorld
+          { worldPlatforms = [ledge]
+          , worldEnemies =
+              [spawnEnemy 1 GolemKind (position 60 40) (defaultProgramForKind GolemKind)]
+          }
+      wN = iterate (step testParams dtFrame noInput) w0 !! 80
+      platTop = aabbMaxY (platformAabb ledge)
+  case worldEnemies wN of
+    e : _ ->
+      assertBool "golem lands on platform top" (abs (posY (enemyPos e) - platTop) <= 1e-2)
+    [] -> assertBool "expected golem to remain in world" False

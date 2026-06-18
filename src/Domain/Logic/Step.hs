@@ -13,12 +13,14 @@ import Domain.Logic.MovingPlatforms (
   mpaPlatform,
  )
 import Domain.Logic.Physics (
+  applyEnemyGravity,
   applyGravity,
   applyHorizontalInput,
   applyJump,
   integrateEnemy,
   integratePlayer,
  )
+import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.Platform (Platform, platformHeight)
@@ -70,7 +72,7 @@ step params dt input w =
       plats = allCollisionPlatforms (worldPlatforms w') moving
       p4 = integrateAndCollide dt p3 plats vyAtCollide
       enemies' =
-        map (integrateAndCollideEnemy dt plats) (worldEnemies w')
+        map (integrateAndCollideEnemy params dt plats) (worldEnemies w')
    in w'
         { worldPlayer = p4
         , worldEnemies = enemies'
@@ -86,9 +88,15 @@ integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
    in runSubsteps n (deltaTimeSub dt n) plats vyBefore p
 
-integrateAndCollideEnemy :: DeltaTime -> [Platform] -> Enemy -> Enemy
-integrateAndCollideEnemy dt plats e =
-  resolveEnemyPlatforms plats (integrateEnemy dt e)
+integrateAndCollideEnemy ::
+  PhysicsParams -> DeltaTime -> [Platform] -> Enemy -> Enemy
+integrateAndCollideEnemy params dt plats e
+  | isFlyingKind (enemyKind e) = integrateEnemy dt e
+  | otherwise =
+      let e1 = applyEnemyGravity params dt e
+          vyBefore = velY (enemyVel e1)
+          e2 = integrateEnemy dt e1
+       in resolveEnemyPlatforms plats vyBefore e2
 
 {- | Aplica integración + colisión @n@ veces de forma /estricta/.
 

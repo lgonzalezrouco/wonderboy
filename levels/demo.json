@@ -34,7 +34,7 @@
     {
       "id": 3,
       "kind": "bossGolem",
-      "pos": { "x": 170, "y": 8 }
+      "pos": { "x": 220, "y": 56 }
     }
   ],
   "pickups": [
