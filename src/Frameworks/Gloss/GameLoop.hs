@@ -77,7 +77,7 @@ initialAppState sprites world =
     , appKeysHeld = noKeys
     , appJumpPrev = False
     , appAttackPrev = False
-    , appShowHitboxes = True
+    , appShowHitboxes = False
     }
 
 drawFrame :: AppState -> IO Picture
