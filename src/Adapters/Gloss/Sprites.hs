@@ -13,7 +13,9 @@ import Control.Exception (AsyncException, SomeException, fromException, throwIO,
 import Data.Maybe (catMaybes)
 import System.IO (hPutStrLn, stderr)
 
-import Graphics.Gloss (Picture, loadBMP)
+import Codec.BMP (readBMP)
+import Graphics.Gloss.Data.Bitmap (bitmapDataOfBMP, bitmapOfBMP, bitmapSize)
+import Graphics.Gloss.Data.Picture (Picture)
 
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
@@ -67,59 +69,65 @@ data SpriteCatalog = SpriteCatalog
 loadSpriteCatalog :: IO SpriteCatalog
 loadSpriteCatalog =
   SpriteCatalog
-    <$> loadSprite "assets/sprites/backgrounds/grasslands.bmp" 1024 512
-    <*> loadSprite "assets/sprites/backgrounds/castle.bmp" 1024 512
-    <*> loadSprite "assets/sprites/player/player-idle.bmp" 66 92
-    <*> loadSprite "assets/sprites/player/player-jump.bmp" 67 94
-    <*> loadSprite "assets/sprites/player/player-hurt.bmp" 69 92
+    <$> loadSprite "assets/sprites/backgrounds/grasslands.bmp"
+    <*> loadSprite "assets/sprites/backgrounds/castle.bmp"
+    <*> loadSprite "assets/sprites/player/player-idle.bmp"
+    <*> loadSprite "assets/sprites/player/player-jump.bmp"
+    <*> loadSprite "assets/sprites/player/player-hurt.bmp"
     <*> loadWalkSprites
-    <*> loadSprite "assets/sprites/pickups/gem-yellow.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-left.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-mid.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-right.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-half-left.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-half-mid.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/grass-half-right.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/bridge.bmp" 70 70
-    <*> loadSprite "assets/sprites/tiles/sign-exit.bmp" 70 70
-    <*> loadSprite "assets/sprites/enemies/snail-idle.bmp" 55 40
-    <*> loadSprite "assets/sprites/enemies/snail-walk.bmp" 60 40
-    <*> loadSprite "assets/sprites/enemies/bat-idle.bmp" 70 47
-    <*> loadSprite "assets/sprites/enemies/bat-fly.bmp" 88 37
-    <*> loadSprite "assets/sprites/enemies/golem-idle.bmp" 71 70
-    <*> loadSprite "assets/sprites/enemies/golem-walk.bmp" 71 70
-    <*> loadSprite "assets/sprites/bosses/boss-golem.bmp" 51 51
-    <*> loadSprite "assets/sprites/bosses/boss-bat.bmp" 88 37
-    <*> loadSprite "assets/sprites/ui/life-p1.bmp" 47 47
-    <*> loadSprite "assets/sprites/ui/life-x.bmp" 30 28
-    <*> loadSprite "assets/sprites/ui/heart-full.bmp" 53 45
-    <*> loadSprite "assets/sprites/ui/heart-half.bmp" 53 45
-    <*> loadSprite "assets/sprites/ui/heart-empty.bmp" 53 45
-    <*> loadSprite "assets/sprites/ui/score-gem-yellow.bmp" 46 36
-    <*> loadSprite "assets/sprites/ui/attack-sword.bmp" 70 70
+    <*> loadSprite "assets/sprites/pickups/gem-yellow.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-left.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-mid.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-right.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-half-left.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-half-mid.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-half-right.bmp"
+    <*> loadSprite "assets/sprites/tiles/bridge.bmp"
+    <*> loadSprite "assets/sprites/tiles/sign-exit.bmp"
+    <*> loadSprite "assets/sprites/enemies/snail-idle.bmp"
+    <*> loadSprite "assets/sprites/enemies/snail-walk.bmp"
+    <*> loadSprite "assets/sprites/enemies/bat-idle.bmp"
+    <*> loadSprite "assets/sprites/enemies/bat-fly.bmp"
+    <*> loadSprite "assets/sprites/enemies/golem-idle.bmp"
+    <*> loadSprite "assets/sprites/enemies/golem-walk.bmp"
+    <*> loadSprite "assets/sprites/bosses/boss-golem.bmp"
+    <*> loadSprite "assets/sprites/bosses/boss-bat.bmp"
+    <*> loadSprite "assets/sprites/ui/life-p1.bmp"
+    <*> loadSprite "assets/sprites/ui/life-x.bmp"
+    <*> loadSprite "assets/sprites/ui/heart-full.bmp"
+    <*> loadSprite "assets/sprites/ui/heart-half.bmp"
+    <*> loadSprite "assets/sprites/ui/heart-empty.bmp"
+    <*> loadSprite "assets/sprites/ui/score-gem-yellow.bmp"
+    <*> loadSprite "assets/sprites/ui/attack-sword.bmp"
 
 loadWalkSprites :: IO [Sprite]
 loadWalkSprites =
   catMaybes
     <$> traverse
-      (\i -> loadSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp") 72 97)
+      (\i -> loadSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp"))
       [1 .. 11 :: Int]
 
-loadSprite :: FilePath -> Float -> Float -> IO (Maybe Sprite)
-loadSprite relPath width height = do
+-- | Lee un BMP y deriva ancho/alto con 'bitmapSize' (sin dimensiones hardcodeadas).
+loadSprite :: FilePath -> IO (Maybe Sprite)
+loadSprite relPath = do
   path <- getDataFileName relPath
-  loaded <- try (loadBMP path) :: IO (Either SomeException Picture)
+  loaded <- try (readBMP path)
   case loaded of
     Left err -> spriteLoadFailure relPath err
-    Right picture ->
-      pure
-        ( Just
-            Sprite
-              { spritePicture = picture
-              , spriteWidth = width
-              , spriteHeight = height
-              }
-        )
+    Right (Left bmpErr) -> do
+      hPutStrLn stderr ("Warning: failed to parse sprite " <> relPath <> ": " <> show bmpErr)
+      pure Nothing
+    Right (Right bmp) ->
+      let bitmapData = bitmapDataOfBMP bmp
+          (width, height) = bitmapSize bitmapData
+       in pure
+            ( Just
+                Sprite
+                  { spritePicture = bitmapOfBMP bmp
+                  , spriteWidth = fromIntegral width
+                  , spriteHeight = fromIntegral height
+                  }
+            )
 
 spriteLoadFailure :: FilePath -> SomeException -> IO (Maybe Sprite)
 spriteLoadFailure relPath err =

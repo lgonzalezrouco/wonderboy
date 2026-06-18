@@ -8,7 +8,7 @@ import Control.Applicative ((<|>))
 import Data.Maybe (isNothing)
 
 import Graphics.Gloss.Data.Color (Color, makeColor)
-import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectangleSolid, text)
+import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectangleSolid, rectangleWire, text)
 
 import Adapters.Gloss.Config (
   cameraY,
@@ -198,9 +198,6 @@ attackCueLift = 24
 damageFlashColor :: Color
 damageFlashColor = makeColor 1.0 0.15 0.1 0.38
 
-hitboxOutlineThickness :: Float
-hitboxOutlineThickness = 2.0
-
 hitboxFootRadius :: Float
 hitboxFootRadius = 3.0
 
@@ -323,25 +320,24 @@ renderHitboxOverlay combatParams w =
       meleeOverlay =
         [ aabbOutline
             hudAttackColor
-            hitboxOutlineThickness
             (meleeHitbox combatParams playerBox (playerFacing p))
         | hasFramesLeft (playerAttackFrames p)
         ]
    in pictures
-        ( [ aabbOutline platformColor hitboxOutlineThickness (platformAabb plat)
+        ( [ aabbOutline platformColor (platformAabb plat)
           | plat <- worldPlatforms w
           ]
-            <> [ aabbOutline movingPlatformColor hitboxOutlineThickness (movingPlatformAabb mp)
+            <> [ aabbOutline movingPlatformColor (movingPlatformAabb mp)
                | mp <- worldMovingPlatforms w
                ]
-            <> [ aabbOutline (enemyColorForKind (enemyKind e)) hitboxOutlineThickness (enemyAabb e)
+            <> [ aabbOutline (enemyColorForKind (enemyKind e)) (enemyAabb e)
                | e <- worldEnemies w
                ]
-            <> [ aabbOutline pickupColor hitboxOutlineThickness (pickupAabb pickup)
+            <> [ aabbOutline pickupColor (pickupAabb pickup)
                | pickup <- worldPickups w
                ]
-            <> [ aabbOutline hudMutedColor hitboxOutlineThickness (exitZoneAabb (worldExit w))
-               , aabbOutline playerColor hitboxOutlineThickness playerBox
+            <> [ aabbOutline hudMutedColor (exitZoneAabb (worldExit w))
+               , aabbOutline playerColor playerBox
                , renderFootAnchor (playerPos p) playerColor
                ]
             <> meleeOverlay
@@ -584,26 +580,13 @@ aabbToPicture color box =
    in Translate cx cy (Color color (rectangleSolid w h))
 
 -- | Contorno de una caja de colisión (solo borde, sin rellenar el interior).
-aabbOutline :: Color -> Float -> Aabb -> Picture
-aabbOutline color thickness box =
-  let minX = aabbMinX box
-      maxX = aabbMaxX box
-      minY = aabbMinY box
-      maxY = aabbMaxY box
-      w = maxX - minX
-      h = maxY - minY
-      cx = (minX + maxX) / 2
-      cy = (minY + maxY) / 2
-      t = thickness
-   in pictures
-        [ edge cx (minY + t / 2) w t
-        , edge cx (maxY - t / 2) w t
-        , edge (minX + t / 2) cy t h
-        , edge (maxX - t / 2) cy t h
-        ]
- where
-  edge x y ew eh =
-    Translate x y (Color color (rectangleSolid ew eh))
+aabbOutline :: Color -> Aabb -> Picture
+aabbOutline color box =
+  let w = aabbMaxX box - aabbMinX box
+      h = aabbMaxY box - aabbMinY box
+      cx = (aabbMinX box + aabbMaxX box) / 2
+      cy = (aabbMinY box + aabbMaxY box) / 2
+   in Translate cx cy (Color color (rectangleWire w h))
 
 -- | Punto en el ancla de pies (centro inferior) de una entidad.
 renderFootAnchor :: Position -> Color -> Picture
