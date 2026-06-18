@@ -5,6 +5,8 @@ Construidos con los primitivos de @Domain.Model.EntityBehaviour@.
 module Domain.Logic.EntityBehaviours (
   patrolHorizontal,
   reactiveFsm,
+  flyingReactiveFsm,
+  hoverFacePlayer,
   defaultProgramForKind,
   programForArchetype,
 )
@@ -25,7 +27,10 @@ import Domain.Model.EntityBehaviour (
   ifNearSpawn,
   ifPlayerWithinRange,
   moveTowardPlayer,
+  moveTowardPlayer2D,
   moveTowardSpawn,
+  moveTowardSpawn2D,
+  setFacingTowardPlayer,
   setVelocity,
   waitFrames,
   (>>>),
@@ -73,6 +78,52 @@ reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
           )
   | otherwise = idleProgram
 
+{- | FSM reactivo volador: persigue y regresa en 2D; en spawn planea mirando al jugador.
+
+Misma lógica de rango que 'reactiveFsm', pero con movimiento vertical y planeo
+en la rama de spawn.
+-}
+flyingReactiveFsm ::
+  Float ->
+  Float ->
+  Float ->
+  Float ->
+  Float ->
+  Frames ->
+  BehaviourProgram
+flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius hoverSpeed hoverLeg
+  | chaseRange > 0
+      && chaseSpeed > 0
+      && returnSpeed > 0
+      && spawnRadius > 0
+      && hoverSpeed > 0
+      && hasFramesLeft hoverLeg =
+      fix $ \loop ->
+        ifPlayerWithinRange
+          chaseRange
+          (moveTowardPlayer2D chaseSpeed >>> waitFrames (frames 1) >>> loop)
+          ( ifNearSpawn
+              spawnRadius
+              (hoverFacePlayer hoverSpeed hoverLeg >>> loop)
+              (moveTowardSpawn2D returnSpeed >>> waitFrames (frames 1) >>> loop)
+          )
+  | otherwise = idleProgram
+
+{- | Planeo vertical en spawn: mira al jugador y oscila arriba/abajo.
+
+@hoverLeg@ controla cuántos frames mantiene cada dirección vertical.
+-}
+hoverFacePlayer :: Float -> Frames -> BehaviourProgram
+hoverFacePlayer hoverSpeed hoverLeg
+  | hoverSpeed > 0 && hasFramesLeft hoverLeg =
+      setFacingTowardPlayer
+        >>> setVelocity (velocity 0 hoverSpeed)
+        >>> waitFrames hoverLeg
+        >>> setFacingTowardPlayer
+        >>> setVelocity (velocity 0 (-hoverSpeed))
+        >>> waitFrames hoverLeg
+  | otherwise = facePlayer
+
 {- | Programa de comportamiento para una variante de movimiento.
 
 El arquetipo chase y el arquetipo guard comparten la misma máquina reactiva
@@ -83,6 +134,8 @@ programForMotion :: EnemyMotionStats -> BehaviourProgram
 programForMotion (PatrolMotion speed legFrames) = patrolHorizontal speed legFrames
 programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) =
   reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
+programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius hoverSpeed hoverLeg) =
+  flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius hoverSpeed hoverLeg
 
 -- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
@@ -99,5 +152,6 @@ programForArchetype kind archetype =
   case (archetype, eksMotion (enemyKindStats kind)) of
     (PatrolArchetype, motion@PatrolMotion{}) -> programForMotion motion
     (ChaseArchetype, motion@ReactiveMotion{}) -> programForMotion motion
+    (ChaseArchetype, motion@FlyingReactiveMotion{}) -> programForMotion motion
     (GuardArchetype, motion@ReactiveMotion{}) -> programForMotion motion
     _ -> idleProgram

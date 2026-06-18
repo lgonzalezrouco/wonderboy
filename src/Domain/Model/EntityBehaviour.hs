@@ -18,8 +18,11 @@ module Domain.Model.EntityBehaviour (
   ifPlayerWithinRange,
   ifNearSpawn,
   moveTowardPlayer,
+  moveTowardPlayer2D,
   moveTowardSpawn,
+  moveTowardSpawn2D,
   facePlayer,
+  setFacingTowardPlayer,
   (>>>),
 
   -- * Observación (tests / depuración)
@@ -45,10 +48,16 @@ data EntityAction next
     IfNearSpawn Float BehaviourProgram BehaviourProgram next
   | -- | Velocidad horizontal hacia el jugador a @speed@ px/s (un behaviour step).
     MoveTowardPlayer Float next
+  | -- | Velocidad en 2D hacia el jugador a @speed@ px/s (enemigos voladores).
+    MoveTowardPlayer2D Float next
   | -- | Velocidad horizontal hacia el spawn anchor a @speed@ px/s.
     MoveTowardSpawn Float next
+  | -- | Velocidad en 2D hacia el spawn anchor a @speed@ px/s.
+    MoveTowardSpawn2D Float next
   | -- | Orienta al enemigo hacia el jugador y fija velocidad cero.
     FacePlayer next
+  | -- | Orienta al enemigo hacia el jugador sin cambiar la velocidad.
+    SetFacingTowardPlayer next
   deriving (Functor, Show, Generic)
 
 {- | Programa de comportamiento de un enemigo.
@@ -75,8 +84,11 @@ instance Show BehaviourProgram where
     Free (IfPlayerWithinRange{}) -> "BehaviourProgram <ifPlayerWithinRange …>"
     Free (IfNearSpawn{}) -> "BehaviourProgram <ifNearSpawn …>"
     Free (MoveTowardPlayer _ _) -> "BehaviourProgram <moveTowardPlayer …>"
+    Free (MoveTowardPlayer2D _ _) -> "BehaviourProgram <moveTowardPlayer2D …>"
     Free (MoveTowardSpawn _ _) -> "BehaviourProgram <moveTowardSpawn …>"
+    Free (MoveTowardSpawn2D _ _) -> "BehaviourProgram <moveTowardSpawn2D …>"
     Free (FacePlayer _) -> "BehaviourProgram <facePlayer>"
+    Free (SetFacingTowardPlayer _) -> "BehaviourProgram <setFacingTowardPlayer>"
 
 -- | Encadena dos programas (monad @Free EntityAction@ con resultado @()@).
 infixl 1 >>>
@@ -124,14 +136,29 @@ moveTowardPlayer :: Float -> BehaviourProgram
 moveTowardPlayer speed =
   BehaviourProgram (Free (MoveTowardPlayer speed (Pure ())))
 
+-- | Un behaviour step de persecución en 2D hacia el jugador.
+moveTowardPlayer2D :: Float -> BehaviourProgram
+moveTowardPlayer2D speed =
+  BehaviourProgram (Free (MoveTowardPlayer2D speed (Pure ())))
+
 -- | Un behaviour step de retorno horizontal hacia el spawn anchor.
 moveTowardSpawn :: Float -> BehaviourProgram
 moveTowardSpawn speed =
   BehaviourProgram (Free (MoveTowardSpawn speed (Pure ())))
 
+-- | Un behaviour step de retorno en 2D hacia el spawn anchor.
+moveTowardSpawn2D :: Float -> BehaviourProgram
+moveTowardSpawn2D speed =
+  BehaviourProgram (Free (MoveTowardSpawn2D speed (Pure ())))
+
 -- | Un behaviour step: mirar al jugador sin moverse.
 facePlayer :: BehaviourProgram
 facePlayer = BehaviourProgram (Free (FacePlayer (Pure ())))
+
+-- | Un behaviour step: mirar al jugador sin tocar la velocidad.
+setFacingTowardPlayer :: BehaviourProgram
+setFacingTowardPlayer =
+  BehaviourProgram (Free (SetFacingTowardPlayer (Pure ())))
 
 -- | Contador de espera en la instrucción activa, si aplica.
 waitFramesRemaining :: BehaviourProgram -> Maybe Frames

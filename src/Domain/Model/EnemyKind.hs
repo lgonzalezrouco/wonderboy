@@ -43,8 +43,10 @@ parámetros de ambos (antes coexistían en un record plano con la mitad en cero)
 data EnemyMotionStats
   = -- | Patrulla horizontal: velocidad (px/s) y frames de espera por tramo (Snail).
     PatrolMotion Float Frames
-  | -- | FSM reactivo: chaseSpeed, returnSpeed, chaseRange, spawnRadius (Bat, Golem).
+  | -- | FSM reactivo: chaseSpeed, returnSpeed, chaseRange, spawnRadius (Golem).
     ReactiveMotion Float Float Float Float
+  | -- | FSM reactivo en 2D con planeo vertical en spawn (Bat).
+    FlyingReactiveMotion Float Float Float Float Float Frames
   deriving (Eq, Show, Generic)
 
 -- | Parámetros fijos por clase (píxeles lógicos y px/s).
@@ -75,7 +77,7 @@ enemyKindStats kind = case kind of
       { eksWidth = 18
       , eksHeight = 18
       , eksMaxHealth = health 1
-      , eksMotion = ReactiveMotion 80 40 120 8
+      , eksMotion = FlyingReactiveMotion 80 40 120 8 35 (frames 45)
       }
   GolemKind ->
     EnemyKindStats

@@ -19,7 +19,7 @@ import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.Player (Player (..))
 import Domain.ValueObjects.Frames (hasFramesLeft)
-import Domain.ValueObjects.Velocity (velX)
+import Domain.ValueObjects.Velocity (velX, velY)
 import Paths_wonderboy_hs (getDataFileName)
 
 -- | Bitmap cargado junto con su tamaño original en píxeles.
@@ -162,7 +162,7 @@ enemySprite catalog renderFrame enemy =
     BossGolemKind -> scBossGolem catalog
     BossBatKind -> scBossBat catalog <|> scBatFly catalog
  where
-  moving = abs (velX (enemyVel enemy)) > movingEpsilon
+  moving = enemyMoving enemy
   alternating idle movingSprite =
     if even (renderFrame `div` enemyAnimationStride)
       then movingSprite <|> idle
@@ -182,6 +182,14 @@ pad2 n
 
 movingEpsilon :: Float
 movingEpsilon = 0.01
+
+enemyMoving :: Enemy -> Bool
+enemyMoving e
+  | enemyKind e `elem` [BatKind, BossBatKind] =
+      let v = enemyVel e
+       in sqrt (velX v * velX v + velY v * velY v) > movingEpsilon
+  | otherwise =
+      abs (velX (enemyVel e)) > movingEpsilon
 
 playerAnimationStride :: Int
 playerAnimationStride = 4

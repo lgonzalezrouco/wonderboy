@@ -27,8 +27,8 @@ import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
-import Domain.ValueObjects.Velocity (velX)
-import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
+import Domain.ValueObjects.Velocity (velX, velY)
+import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
 
 runBehaviourN :: Int -> World -> World
 runBehaviourN 0 w = w
@@ -62,16 +62,29 @@ unit_snailPatrolMoves =
 
 unit_batChasesInRange :: Assertion
 unit_batChasesInRange =
-  let w0 = worldWithEnemyAt BatKind (position 80 8) (position 0 8)
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
       w1 = runBehaviourN 2 w0
       e = enemyFrom w1
-   in velX (enemyVel e) @?= (-80)
+      v = enemyVel e
+      vx = velX v
+      vy = velY v
+   in do
+        assertBool "chases left" (vx < 0)
+        assertBool "dives toward player" (vy < 0)
+        assertBool "chases at full speed" (abs (sqrt (vx * vx + vy * vy) - 80) < 0.01)
+
+unit_batHoversAtSpawn :: Assertion
+unit_batHoversAtSpawn =
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position (-200) 8)
+      w1 = runBehaviourN 4 w0
+      e = enemyFrom w1
+   in velY (enemyVel e) @?= 35
 
 unit_batReturnsTowardSpawn :: Assertion
 unit_batReturnsTowardSpawn =
   let bat =
-        (spawnEnemy 1 BatKind (position 80 8) (defaultProgramForKind BatKind))
-          { enemyPos = position 120 8
+        (spawnEnemy 1 BatKind (position 80 56) (defaultProgramForKind BatKind))
+          { enemyPos = position 120 56
           }
       w0 =
         floorWorld

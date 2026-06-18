@@ -17,7 +17,10 @@ import Domain.Logic.BehaviourSensing (
   nearSpawnHorizontally,
   playerHorizontalDelta,
   playerHorizontalDistance,
+  playerVerticalDelta,
   spawnHorizontalDelta,
+  spawnVerticalDelta,
+  velocityToward2D,
  )
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EntityBehaviour (
@@ -59,14 +62,30 @@ stepProgram w (BehaviourProgram prog) e =
       stepBranch (nearSpawnHorizontally radius e) thenBranch elseBranch e
     Free (MoveTowardPlayer speed next) ->
       (BehaviourProgram next, moveHorizontallyToward (playerHorizontalDelta w e) speed e)
+    Free (MoveTowardPlayer2D speed next) ->
+      ( BehaviourProgram next
+      , moveToward2D
+          (playerHorizontalDelta w e)
+          (playerVerticalDelta w e)
+          speed
+          e
+      )
     Free (MoveTowardSpawn speed next) ->
       (BehaviourProgram next, moveHorizontallyToward (spawnHorizontalDelta e) speed e)
+    Free (MoveTowardSpawn2D speed next) ->
+      ( BehaviourProgram next
+      , moveToward2D (spawnHorizontalDelta e) (spawnVerticalDelta e) speed e
+      )
     Free (FacePlayer next) ->
       ( BehaviourProgram next
       , e
           { enemyVel = velocity 0 0
           , enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)
           }
+      )
+    Free (SetFacingTowardPlayer next) ->
+      ( BehaviourProgram next
+      , e{enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)}
       )
 
 {- | Un behaviour step de decisión: elige rama y deja la velocidad en cero.
@@ -91,3 +110,10 @@ moveHorizontallyToward dx speed e =
         { enemyVel = velocity (dir * speed) 0
         , enemyFacing = facingTowardHorizontal (enemyFacing e) dx
         }
+
+moveToward2D :: Float -> Float -> Float -> Enemy -> Enemy
+moveToward2D dx dy speed e =
+  e
+    { enemyVel = velocityToward2D dx dy speed
+    , enemyFacing = facingTowardHorizontal (enemyFacing e) dx
+    }

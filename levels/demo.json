@@ -28,7 +28,7 @@
     {
       "id": 2,
       "kind": "bat",
-      "pos": { "x": 80, "y": 8 },
+      "pos": { "x": 80, "y": 56 },
       "behaviourHint": "chase the player when they get close, then return to spawn"
     },
     {
