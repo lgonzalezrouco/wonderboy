@@ -89,18 +89,18 @@ wonderboy-hs/
 
 ## Funcionalidades del juego
 
-- [ ] Movimiento y física del jugador (gravedad, plataformas, AABB)
-- [ ] Plataformas móviles
-- [ ] Recolección de ítems
-- [ ] Combate básico
-- [ ] IA de enemigos (Free monad)
-- [ ] Carga de niveles desde JSON
+- [x] Movimiento y física del jugador (gravedad, plataformas, AABB)
+- [x] Plataformas móviles
+- [x] Recolección de ítems
+- [x] Combate básico
+- [x] IA de enemigos (Free monad)
+- [x] Carga de niveles desde JSON
 
 ## Entregables del curso
 
-- [ ] Código del motor y **juego jugable** (`cabal run wonderboy-hs`)
-- [ ] Arquitectura por capas con núcleo puro en `Domain/` y mónadas en `UseCases/`
-- [ ] Tests de lógica donde aporten valor (`Domain`, `UseCases`) — opcionales pero recomendados
+- [x] Código del motor y **juego jugable** (`cabal run wonderboy-hs`)
+- [x] Arquitectura por capas con núcleo puro en `Domain/` y mónadas en `UseCases/`
+- [x] Tests de lógica donde aporten valor (`Domain`, `UseCases`) — opcionales pero recomendados
 - [ ] Informe del trabajo final (según consigna del curso; sin exigencia de demostraciones formales en el repo)
 
 ## División de trabajo

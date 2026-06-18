@@ -1,0 +1,38 @@
+{
+  "minScore": 300,
+  "spawn": { "x": -200, "y": 24 },
+  "platforms": [
+    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 200 },
+    { "pos": { "x": -260, "y": 0 }, "width": 400, "height": 8 },
+    { "pos": { "x": 228, "y": 0 }, "width": 220, "height": 8 },
+    { "pos": { "x": 556, "y": 0 }, "width": 150, "height": 8 },
+    { "pos": { "x": 745, "y": 48 }, "width": 78, "height": 8 },
+    { "pos": { "x": 861, "y": 88 }, "width": 78, "height": 8 },
+    { "pos": { "x": 977, "y": 120 }, "width": 96, "height": 8 },
+    { "pos": { "x": 1090, "y": 0 }, "width": 320, "height": 8 },
+    { "pos": { "x": 1505, "y": 0 }, "width": 300, "height": 8 },
+    { "pos": { "x": 1897, "y": 0 }, "width": 300, "height": 8 },
+    { "pos": { "x": 2289, "y": 0 }, "width": 391, "height": 8 },
+    { "pos": { "x": 2660, "y": 0 }, "width": 20, "height": 200 }
+  ],
+  "movingPlatforms": [],
+  "enemies": [
+    { "id": 1, "kind": "snail", "pos": { "x": -120, "y": 8 } },
+    { "id": 2, "kind": "snail", "pos": { "x": 1250, "y": 8 } },
+    { "id": 3, "kind": "snail", "pos": { "x": 2050, "y": 8 } }
+  ],
+  "pickups": [
+    { "id": 1, "pos": { "x": -150, "y": 16 }, "value": 50 },
+    { "id": 2, "pos": { "x": 40, "y": 16 }, "value": 50 },
+    { "id": 3, "pos": { "x": 330, "y": 16 }, "value": 75 },
+    { "id": 4, "pos": { "x": 784, "y": 56 }, "value": 100 },
+    { "id": 5, "pos": { "x": 900, "y": 96 }, "value": 100 },
+    { "id": 6, "pos": { "x": 1025, "y": 128 }, "value": 150 },
+    { "id": 7, "pos": { "x": 1180, "y": 16 }, "value": 75 },
+    { "id": 8, "pos": { "x": 1600, "y": 16 }, "value": 75 },
+    { "id": 9, "pos": { "x": 1990, "y": 16 }, "value": 75 },
+    { "id": 10, "pos": { "x": 2380, "y": 16 }, "value": 100 },
+    { "id": 11, "pos": { "x": 2470, "y": 16 }, "value": 100 }
+  ],
+  "exit": { "pos": { "x": 2540, "y": 8 }, "width": 36, "height": 64 }
+}

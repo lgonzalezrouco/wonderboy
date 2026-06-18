@@ -1,0 +1,55 @@
+{
+  "minScore": 600,
+  "spawn": { "x": -200, "y": 24 },
+  "platforms": [
+    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 200 },
+    { "pos": { "x": -260, "y": 0 }, "width": 320, "height": 8 },
+    { "pos": { "x": 170, "y": 0 }, "width": 180, "height": 8 },
+    { "pos": { "x": 460, "y": 0 }, "width": 160, "height": 8 },
+    { "pos": { "x": 660, "y": 52 }, "width": 80, "height": 8 },
+    { "pos": { "x": 820, "y": 52 }, "width": 80, "height": 8 },
+    { "pos": { "x": 1300, "y": 0 }, "width": 280, "height": 8 },
+    { "pos": { "x": 1690, "y": 0 }, "width": 220, "height": 8 },
+    { "pos": { "x": 2050, "y": 132 }, "width": 110, "height": 8 },
+    { "pos": { "x": 2200, "y": 64 }, "width": 100, "height": 8 },
+    { "pos": { "x": 2340, "y": 0 }, "width": 300, "height": 8 },
+    { "pos": { "x": 2752, "y": 0 }, "width": 140, "height": 8 },
+    { "pos": { "x": 3180, "y": 48 }, "width": 70, "height": 8 },
+    { "pos": { "x": 3540, "y": 0 }, "width": 700, "height": 8 },
+    { "pos": { "x": 4220, "y": 0 }, "width": 20, "height": 200 }
+  ],
+  "movingPlatforms": [
+    { "id": 1, "pos": { "x": 940, "y": 52 }, "width": 96, "height": 12, "endA": { "x": 940, "y": 52 }, "endB": { "x": 1180, "y": 52 }, "speed": 48, "startTowardB": true },
+    { "id": 2, "pos": { "x": 1950, "y": 8 }, "width": 80, "height": 12, "endA": { "x": 1950, "y": 8 }, "endB": { "x": 1950, "y": 120 }, "speed": 32, "startTowardB": true },
+    { "id": 3, "pos": { "x": 2912, "y": 44 }, "width": 90, "height": 12, "endA": { "x": 2912, "y": 44 }, "endB": { "x": 3060, "y": 44 }, "speed": 52, "startTowardB": true },
+    { "id": 4, "pos": { "x": 3290, "y": 44 }, "width": 90, "height": 12, "endA": { "x": 3290, "y": 44 }, "endB": { "x": 3420, "y": 44 }, "speed": 50, "startTowardB": true }
+  ],
+  "enemies": [
+    { "id": 1, "kind": "snail", "pos": { "x": -120, "y": 8 }, "behaviourPreset": "patrol" },
+    { "id": 2, "kind": "golem", "pos": { "x": 280, "y": 8 }, "behaviourPreset": "guard" },
+    { "id": 3, "kind": "bat", "pos": { "x": 540, "y": 40 }, "behaviourPreset": "chase" },
+    { "id": 4, "kind": "golem", "pos": { "x": 700, "y": 60 }, "behaviourPreset": "guard" },
+    { "id": 5, "kind": "bat", "pos": { "x": 1430, "y": 40 }, "behaviourPreset": "chase" },
+    { "id": 6, "kind": "golem", "pos": { "x": 1800, "y": 8 }, "behaviourPreset": "chase" },
+    { "id": 7, "kind": "bat", "pos": { "x": 2105, "y": 160 }, "behaviourPreset": "chase" },
+    { "id": 8, "kind": "snail", "pos": { "x": 2480, "y": 8 }, "behaviourPreset": "patrol" },
+    { "id": 9, "kind": "bossGolem", "pos": { "x": 3850, "y": 8 } }
+  ],
+  "pickups": [
+    { "id": 1, "pos": { "x": -150, "y": 16 }, "value": 50 },
+    { "id": 2, "pos": { "x": -10, "y": 16 }, "value": 75 },
+    { "id": 3, "pos": { "x": 240, "y": 16 }, "value": 75 },
+    { "id": 4, "pos": { "x": 540, "y": 16 }, "value": 75 },
+    { "id": 5, "pos": { "x": 860, "y": 60 }, "value": 100 },
+    { "id": 6, "pos": { "x": 1360, "y": 16 }, "value": 75 },
+    { "id": 7, "pos": { "x": 1520, "y": 16 }, "value": 75 },
+    { "id": 8, "pos": { "x": 1750, "y": 16 }, "value": 75 },
+    { "id": 9, "pos": { "x": 2105, "y": 140 }, "value": 150 },
+    { "id": 10, "pos": { "x": 2420, "y": 16 }, "value": 75 },
+    { "id": 11, "pos": { "x": 2560, "y": 16 }, "value": 75 },
+    { "id": 12, "pos": { "x": 2820, "y": 16 }, "value": 75 },
+    { "id": 13, "pos": { "x": 3620, "y": 16 }, "value": 75 },
+    { "id": 14, "pos": { "x": 4040, "y": 16 }, "value": 75 }
+  ],
+  "exit": { "pos": { "x": 4120, "y": 8 }, "width": 40, "height": 64 }
+}
