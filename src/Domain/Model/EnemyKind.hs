@@ -38,8 +38,7 @@ isBossKind kind = kind `elem` [BossGolemKind, BossBatKind]
 
 -- | Verdadero para enemigos que ignoran colisión con plataformas (vuelan).
 isFlyingKind :: EnemyKind -> Bool
-isFlyingKind BatKind = True
-isFlyingKind _ = False
+isFlyingKind kind = kind `elem` [BatKind, BossBatKind]
 
 {- | Parámetros de movimiento según el arquetipo natural de la clase.
 

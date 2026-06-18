@@ -53,7 +53,7 @@ frame la define 'Domain.ValueObjects.DeltaTime.isFrozen'; esta guarda protege a 
 cuando se la llama aislada.
 
 Los enemigos terrestres integran cinemática y resuelven colisión AABB; los
-voladores (@BatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
+voladores (@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
 este paso.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
