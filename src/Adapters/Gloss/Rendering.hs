@@ -311,14 +311,12 @@ renderHitboxOverlay combatParams w =
   let p = worldPlayer w
       playerBox = playerAabb p
       meleeOverlay =
-        if hasFramesLeft (playerAttackFrames p)
-          then
-            [ aabbOutline
-                hudAttackColor
-                hitboxOutlineThickness
-                (meleeHitbox combatParams playerBox (playerFacing p))
-            ]
-          else []
+        [ aabbOutline
+            hudAttackColor
+            hitboxOutlineThickness
+            (meleeHitbox combatParams playerBox (playerFacing p))
+        | hasFramesLeft (playerAttackFrames p)
+        ]
    in pictures
         ( [ aabbOutline platformColor hitboxOutlineThickness (platformAabb plat)
           | plat <- worldPlatforms w
