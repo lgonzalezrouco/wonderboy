@@ -1,6 +1,7 @@
 -- | Pure melee combat and enemy contact tests.
 module Domain.CombatTest where
 
+import Domain.Fixtures (testCombatParams)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyHealth, mkEnemy, spawnEnemy)
@@ -15,8 +16,7 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
-import Domain.ValueObjects.Damage (damage)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frames, noFrames)
 import Domain.ValueObjects.Health (health)
@@ -24,9 +24,6 @@ import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-
-testCombatParams :: CombatParams
-testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 testSpawn :: Position
 testSpawn = position 0 80

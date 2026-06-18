@@ -1,7 +1,7 @@
 -- | FSM reactivo y clases de enemigo (M13): sensado y presets con fixtures fijos.
 module Domain.EnemyFsmTest where
 
-import Domain.Fixtures (dtFrame, floorWorld, testParams, worldWithEnemyAt)
+import Domain.Fixtures (dtFrame, floorWorld, testCombatParams, testParams, worldWithEnemyAt)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
@@ -20,8 +20,6 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..), defaultMaxHealth)
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
-import Domain.ValueObjects.Damage (damage)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
@@ -48,9 +46,6 @@ golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
 
 meleeWorld :: Player -> [Enemy] -> World
 meleeWorld p enemies = floorWorld{worldPlayer = p, worldEnemies = enemies}
-
-testCombatParams :: CombatParams
-testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 unit_snailPatrolMoves :: Assertion
 unit_snailPatrolMoves =

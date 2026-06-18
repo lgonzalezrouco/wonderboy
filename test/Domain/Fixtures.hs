@@ -11,6 +11,7 @@ module Domain.Fixtures (
   floorWorld,
   mkTestPickup,
   testParams,
+  testCombatParams,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
@@ -42,17 +43,22 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
+import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (noInput)
-import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velocity)
 import Test.Tasty.HUnit (assertBool)
+import UseCases.GameMonad (combatParamsFromConfig, defaultConfig, physicsParamsFromConfig)
 
--- | Standard physics constants for tests (px/s, px/s²).
+-- | Física y combate alineados con 'defaultConfig' (única fuente de verdad).
 testParams :: PhysicsParams
-testParams = physicsParams 980 200 400
+testParams = physicsParamsFromConfig defaultConfig
+
+testCombatParams :: CombatParams
+testCombatParams = combatParamsFromConfig defaultConfig
 
 -- | One frame at 60 Hz.
 dtFrame :: DeltaTime

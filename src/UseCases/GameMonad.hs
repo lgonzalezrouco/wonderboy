@@ -119,7 +119,7 @@ defaultConfig =
     , gcAttackDuration = frames 6
     , gcInvincibilityDuration = frames 60
     , gcContactDamage = damage 1
-    , gcMeleeReach = 20.0
+    , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
     }
 
@@ -210,6 +210,7 @@ gameViewFromState cfg gs =
     , gvStartingLives = gcStartingLives cfg
     , gvScore = gsScore gs
     , gvBossHealth = bossHealthFromWorld (gsWorld gs)
+    , gvCombatParams = combatParamsFromConfig cfg
     }
 
 -- | Proyecta salud del jefe vivo para el HUD (como máximo un jefe por nivel).

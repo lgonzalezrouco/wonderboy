@@ -18,7 +18,7 @@ import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
   Key (..),
-  SpecialKey (KeyEsc),
+  SpecialKey (KeyEsc, KeyF1),
   playIO,
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
@@ -37,6 +37,7 @@ data AppState = AppState
   , appKeysHeld :: KeyState
   , appJumpPrev :: Bool
   , appAttackPrev :: Bool
+  , appShowHitboxes :: Bool
   }
 
 -- | Arranca la ventana Gloss y el bucle de juego.
@@ -76,6 +77,7 @@ initialAppState sprites world =
     , appKeysHeld = noKeys
     , appJumpPrev = False
     , appAttackPrev = False
+    , appShowHitboxes = True
     }
 
 drawFrame :: AppState -> IO Picture
@@ -84,11 +86,14 @@ drawFrame state =
     ( renderFrame
         (appSprites state)
         (appRenderFrame state)
+        (appShowHitboxes state)
         (gameViewFromState defaultConfig (appGameState state))
     )
 
 handleEvent :: Event -> AppState -> IO AppState
 handleEvent (EventKey (SpecialKey KeyEsc) Gloss.Down _ _) _ = exitSuccess
+handleEvent (EventKey (SpecialKey KeyF1) Gloss.Down _ _) state =
+  pure state{appShowHitboxes = not (appShowHitboxes state)}
 handleEvent event state =
   pure state{appKeysHeld = handleKeyEvent event (appKeysHeld state)}
 

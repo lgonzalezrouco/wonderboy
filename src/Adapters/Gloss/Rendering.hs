@@ -8,7 +8,7 @@ import Control.Applicative ((<|>))
 import Data.Maybe (isNothing)
 
 import Graphics.Gloss.Data.Color (Color, makeColor)
-import Graphics.Gloss.Data.Picture (Picture (..), pictures, rectangleSolid, text)
+import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectangleSolid, text)
 
 import Adapters.Gloss.Config (
   cameraY,
@@ -37,12 +37,13 @@ import Adapters.Gloss.Sprites (
   enemySprite,
   playerSprite,
  )
-import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind)
+import Domain.Logic.Combat (meleeHitbox)
+import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone (..))
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
-import Domain.Model.Pickup (Pickup, pickupAabb)
+import Domain.Model.Pickup (Pickup, pickupAabb, pickupPos)
 import Domain.Model.Platform (Platform, platformAabb)
 import Domain.Model.Player (
   Player,
@@ -56,11 +57,12 @@ import Domain.Model.Player (
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..), aabbFromBottomLeft)
 import Domain.ValueObjects.BossHealth (BossHealth (..))
+import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
-import Domain.ValueObjects.Position (posX)
+import Domain.ValueObjects.Position (Position, posX, posY)
 import Domain.ValueObjects.Score (scorePoints)
 
 hudMargin :: Float
@@ -187,22 +189,22 @@ attackCueLift = 24
 damageFlashColor :: Color
 damageFlashColor = makeColor 1.0 0.15 0.1 0.38
 
-backgroundWidth :: Float
-backgroundWidth = fromIntegral windowWidth
+hitboxOutlineThickness :: Float
+hitboxOutlineThickness = 2.0
 
-backgroundHeight :: Float
-backgroundHeight = fromIntegral windowHeight
+hitboxFootRadius :: Float
+hitboxFootRadius = 3.0
 
 -- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
-renderFrame :: SpriteCatalog -> Int -> GameView -> Picture
-renderFrame catalog renderTick gv =
+renderFrame :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
+renderFrame catalog renderTick showHitboxes gv =
   pictures
     [ Scale renderZoom renderZoom $
         pictures
           [ renderBackground catalog
-          , renderWorldLayer catalog renderTick (gvWorld gv)
+          , renderWorldLayer catalog renderTick showHitboxes (gvCombatParams gv) (gvWorld gv)
           ]
-    , renderHud catalog gv
+    , renderHud catalog gv showHitboxes
     , renderBossBar gv
     , renderGameOverOverlay gv
     ]
@@ -213,9 +215,15 @@ renderBackground catalog =
     Nothing -> Blank
     Just sprite -> drawSpriteCover backgroundWidth backgroundHeight sprite
 
+backgroundWidth :: Float
+backgroundWidth = fromIntegral windowWidth
+
+backgroundHeight :: Float
+backgroundHeight = fromIntegral windowHeight
+
 -- | Capa del mundo con transformación de cámara.
-renderWorldLayer :: SpriteCatalog -> Int -> World -> Picture
-renderWorldLayer catalog renderTick w =
+renderWorldLayer :: SpriteCatalog -> Int -> Bool -> CombatParams -> World -> Picture
+renderWorldLayer catalog renderTick showHitboxes combatParams w =
   let playerX = posX (playerPos (worldPlayer w))
    in Translate (-playerX) (-cameraY) $
         pictures
@@ -225,6 +233,7 @@ renderWorldLayer catalog renderTick w =
           , pictures (map (renderPickup catalog) (worldPickups w))
           , renderExitZone catalog (worldExit w)
           , renderPlayer catalog renderTick (worldPlayer w)
+          , if showHitboxes then renderHitboxOverlay combatParams w else Blank
           ]
 
 renderPlayer :: SpriteCatalog -> Int -> Player -> Picture
@@ -287,9 +296,49 @@ renderExitZone catalog exitZone =
  where
   box = exitAabb exitZone
 
+-- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
+renderHitboxOverlay :: CombatParams -> World -> Picture
+renderHitboxOverlay combatParams w =
+  let p = worldPlayer w
+      playerBox = playerAabb p
+      meleeOverlay =
+        if hasFramesLeft (playerAttackFrames p)
+          then
+            [ aabbOutline
+                hudAttackColor
+                hitboxOutlineThickness
+                (meleeHitbox combatParams playerBox (playerFacing p))
+            ]
+          else []
+   in pictures
+        ( [ aabbOutline platformColor hitboxOutlineThickness (platformAabb plat)
+          | plat <- worldPlatforms w
+          ]
+            <> [ aabbOutline movingPlatformColor hitboxOutlineThickness (movingPlatformAabb mp)
+               | mp <- worldMovingPlatforms w
+               ]
+            <> [ aabbOutline (enemyColorForKind (enemyKind e)) hitboxOutlineThickness (enemyAabb e)
+               | e <- worldEnemies w
+               ]
+            <> [ aabbOutline pickupColor hitboxOutlineThickness (pickupAabb pickup)
+               | pickup <- worldPickups w
+               ]
+            <> [ aabbOutline hudMutedColor hitboxOutlineThickness (exitAabb (worldExit w))
+               , aabbOutline playerColor hitboxOutlineThickness playerBox
+               , renderFootAnchor (playerPos p) playerColor
+               ]
+            <> meleeOverlay
+            <> [ renderFootAnchor (enemyPos e) (enemyColorForKind (enemyKind e))
+               | e <- worldEnemies w
+               ]
+            <> [ renderFootAnchor (pickupPos pickup) pickupColor
+               | pickup <- worldPickups w
+               ]
+        )
+
 -- | Panel superior izquierdo: vidas, salud, ataque y hint de controles.
-renderHud :: SpriteCatalog -> GameView -> Picture
-renderHud catalog gv =
+renderHud :: SpriteCatalog -> GameView -> Bool -> Picture
+renderHud catalog gv showHitboxes =
   let halfW = fromIntegral windowWidth / 2
       halfH = fromIntegral windowHeight / 2
       topLeftX = -halfW + hudMargin
@@ -318,6 +367,7 @@ renderHud catalog gv =
             renderScore catalog (scorePoints (gvScore gv))
         , renderAttackRow catalog contentX row4Y p
         , hudHint contentX row5Y "Space - attack"
+        , if showHitboxes then hudHint contentX (row5Y - 16) "F1 - hitboxes" else Blank
         ]
 
 -- | Barra superior centrada con la salud del jefe.
@@ -474,6 +524,33 @@ aabbToPicture color box =
       cx = (aabbMinX box + aabbMaxX box) / 2
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleSolid w h))
+
+-- | Contorno de una caja de colisión (solo borde, sin rellenar el interior).
+aabbOutline :: Color -> Float -> Aabb -> Picture
+aabbOutline color thickness box =
+  let minX = aabbMinX box
+      maxX = aabbMaxX box
+      minY = aabbMinY box
+      maxY = aabbMaxY box
+      w = maxX - minX
+      h = maxY - minY
+      cx = (minX + maxX) / 2
+      cy = (minY + maxY) / 2
+      t = thickness
+   in pictures
+        [ edge cx (minY + t / 2) w t
+        , edge cx (maxY - t / 2) w t
+        , edge (minX + t / 2) cy t h
+        , edge (maxX - t / 2) cy t h
+        ]
+ where
+  edge x y ew eh =
+    Translate x y (Color color (rectangleSolid ew eh))
+
+-- | Punto en el ancla de pies (centro inferior) de una entidad.
+renderFootAnchor :: Position -> Color -> Picture
+renderFootAnchor pos color =
+  Translate (posX pos) (posY pos) (Color color (circleSolid hitboxFootRadius))
 
 drawEntitySprite :: Facing -> Aabb -> Sprite -> Picture
 drawEntitySprite facing box sprite =

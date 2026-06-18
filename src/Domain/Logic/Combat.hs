@@ -5,6 +5,7 @@ out-of-bounds y muerte.
 -}
 module Domain.Logic.Combat (
   resolveCombat,
+  meleeHitbox,
 )
 where
 
