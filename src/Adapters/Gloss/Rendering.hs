@@ -69,10 +69,10 @@ hudMargin :: Float
 hudMargin = 14
 
 hudPanelWidth :: Float
-hudPanelWidth = 248
+hudPanelWidth = 280
 
 hudPanelHeight :: Float
-hudPanelHeight = 168
+hudPanelHeight = 180
 
 hudLabelScale :: Float
 hudLabelScale = 0.2
@@ -84,11 +84,11 @@ hudHintScale = 0.16
 
 -- | Margen interno del panel para el contenido.
 hudContentInset :: Float
-hudContentInset = 12
+hudContentInset = 14
 
 -- | Desplazamiento de la primera fila bajo el borde superior del panel.
 hudRow1Offset :: Float
-hudRow1Offset = 20
+hudRow1Offset = 30
 
 -- | Separación vertical entre filas (LIVES, HEALTH, SCORE, ATTACK).
 hudRowGap :: Float
@@ -104,7 +104,7 @@ hudTextHeight = 18
 
 -- | Ancho fijo de la columna de rótulos; los valores empiezan después.
 hudLabelColumnWidth :: Float
-hudLabelColumnWidth = 82
+hudLabelColumnWidth = 112
 
 -- | Centro vertical de iconos/pips respecto de la línea base del rótulo.
 hudValueCenterLift :: Float
@@ -132,7 +132,7 @@ hudHealthPipHeight = 10
 
 -- | Desplazamiento horizontal del recuadro "ATTACK" respecto del contenido.
 hudAttackBoxOffsetX :: Float
-hudAttackBoxOffsetX = 34
+hudAttackBoxOffsetX = 8
 
 -- | Ajuste vertical del recuadro "ATTACK".
 hudAttackBoxDrop :: Float
@@ -166,10 +166,19 @@ bossBarHeight :: Float
 bossBarHeight = 14
 
 bossBarTopOffset :: Float
-bossBarTopOffset = 28
+bossBarTopOffset = 52
+
+bossBarLabelOffsetX :: Float
+bossBarLabelOffsetX = -28
 
 bossBarLabelOffsetY :: Float
-bossBarLabelOffsetY = 22
+bossBarLabelOffsetY = 18
+
+bossLabelColor :: Color
+bossLabelColor = makeColor 0.02 0.03 0.06 0.92
+
+bossLabelShadowColor :: Color
+bossLabelShadowColor = makeColor 1.0 1.0 1.0 0.45
 
 entitySpritePadding :: Float
 entitySpritePadding = 0.0
@@ -390,9 +399,14 @@ renderBossBar gv =
                 Color hudBossEmptyColor (rectangleSolid bossBarWidth bossBarHeight)
             , Translate (-(bossBarWidth / 2) + fillW / 2) barY $
                 Color hudBossColor (rectangleSolid fillW bossBarHeight)
-            , Translate 0 (barY + bossBarLabelOffsetY) $
-                Scale hudLabelScale hudLabelScale $
-                  Color hudTextColor (text "BOSS")
+            , Translate bossBarLabelOffsetX (barY + bossBarLabelOffsetY) $
+                pictures
+                  [ Translate 1 (-1) $
+                      Scale hudLabelScale hudLabelScale $
+                        Color bossLabelShadowColor (text "BOSS")
+                  , Scale hudLabelScale hudLabelScale $
+                      Color bossLabelColor (text "BOSS")
+                  ]
             ]
 
 renderGameOverOverlay :: GameView -> Picture
