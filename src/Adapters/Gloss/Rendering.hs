@@ -12,6 +12,7 @@ import Graphics.Gloss.Data.Picture (Picture (..), pictures, rectangleSolid, text
 
 import Adapters.Gloss.Config (
   cameraY,
+  renderZoom,
   enemyColorForKind,
   hudAttackColor,
   hudBossColor,
@@ -183,8 +184,11 @@ backgroundHeight = fromIntegral windowHeight
 renderFrame :: SpriteCatalog -> Int -> GameView -> Picture
 renderFrame catalog renderTick gv =
   pictures
-    [ renderBackground catalog
-    , renderWorldLayer catalog renderTick (gvWorld gv)
+    [ Scale renderZoom renderZoom $
+        pictures
+          [ renderBackground catalog
+          , renderWorldLayer catalog renderTick (gvWorld gv)
+          ]
     , renderHud catalog gv
     , renderBossBar gv
     , renderGameOverOverlay gv
