@@ -1,7 +1,9 @@
 -- | Resolución AABB jugador–plataforma (eje Y, luego eje X).
 module Domain.Logic.Collision (
   resolvePlayerPlatforms,
+  resolveEnemyPlatforms,
   playerOverlapsAnyPlatform,
+  enemyOverlapsAnyPlatform,
   playerRestingOnPlatformTop,
   playerRidingPlatformTop,
 )
@@ -10,6 +12,8 @@ where
 import Data.List (sortBy)
 import Data.Ord (comparing)
 
+import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyPos)
+import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Model.Platform (Platform, platformAabb)
 import Domain.Model.Player (Player (..), playerAabb, playerPos)
 import Domain.ValueObjects.Aabb (
@@ -38,6 +42,98 @@ y se repite hasta no quedar solapamiento o agotar pasadas (orden estable).
 resolvePlayerPlatforms :: [Platform] -> Float -> Player -> Player
 resolvePlayerPlatforms plats vyBefore =
   resolvePasses maxResolvePasses vyBefore (sortPlatforms plats)
+
+{- | Resuelve colisión enemigo–plataforma para clases terrestres.
+
+Los enemigos voladores ('isFlyingKind') no colisionan: mantienen su ruta aérea.
+@vyBefore@ es la componente vertical tras gravedad y antes de integrar posición
+(igual que el jugador).
+-}
+resolveEnemyPlatforms :: [Platform] -> Float -> Enemy -> Enemy
+resolveEnemyPlatforms plats vyBefore e
+  | isFlyingKind (enemyKind e) = e
+  | otherwise =
+      resolveEnemyPasses maxResolvePasses vyBefore (sortPlatforms plats) e
+
+resolveEnemyPasses :: Int -> Float -> [Platform] -> Enemy -> Enemy
+resolveEnemyPasses 0 _ _ e = e
+resolveEnemyPasses n vyBefore plats e =
+  let e' = resolveEnemyOnce vyBefore plats e
+   in if doneResolvingEnemy e e' n plats then e' else resolveEnemyPasses (n - 1) vyBefore plats e'
+
+doneResolvingEnemy :: Enemy -> Enemy -> Int -> [Platform] -> Bool
+doneResolvingEnemy e e' n plats =
+  e' == e || n <= 1 || not (enemyOverlapsAnyPlatform plats e)
+
+resolveEnemyOnce :: Float -> [Platform] -> Enemy -> Enemy
+resolveEnemyOnce vyBefore plats e =
+  foldl (resolveEnemyAgainst vyBefore) e plats
+
+enemyOverlapsAnyPlatform :: [Platform] -> Enemy -> Bool
+enemyOverlapsAnyPlatform plats e =
+  let box = enemyAabb e
+   in any (aabbOverlaps box . platformAabb) plats
+
+resolveEnemyAgainst :: Float -> Enemy -> Platform -> Enemy
+resolveEnemyAgainst vyBefore e plat =
+  let box = enemyAabb e
+      solid = platformAabb plat
+   in if aabbOverlaps box solid
+        then resolveEnemyOverlap vyBefore e box solid
+        else e
+
+resolveEnemyOverlap :: Float -> Enemy -> Aabb -> Aabb -> Enemy
+resolveEnemyOverlap vyBefore e box solid =
+  let eY = resolveEnemyAxisY vyBefore e box solid
+      box' = enemyAabb eY
+   in if eY /= e || restingOnTop box' solid || touchingCeiling box' solid
+        then eY
+        else resolveEnemyAxisX eY box' solid
+
+resolveEnemyAxisY :: Float -> Enemy -> Aabb -> Aabb -> Enemy
+resolveEnemyAxisY vyBefore e box solid
+  | vyBefore <= 0
+  , pushUp > epsilon
+  , pushUp <= pushDown + epsilon =
+      landEnemyOnTop pushUp e
+  | vyBefore <= 0
+  , nearZero pushUp
+  , restingOnTop box solid =
+      landEnemyOnTop 0 e
+  | vyBefore > 0
+  , pushDown > epsilon
+  , pushDown < pushUp =
+      bumpEnemyCeiling pushDown e
+  | otherwise =
+      e
+ where
+  (pushUp, pushDown) = separationsY box solid
+
+landEnemyOnTop :: Float -> Enemy -> Enemy
+landEnemyOnTop pushUp = zeroEnemyVy . nudgeEnemyY pushUp
+
+bumpEnemyCeiling :: Float -> Enemy -> Enemy
+bumpEnemyCeiling pushDown = zeroEnemyVy . nudgeEnemyY (-pushDown)
+
+resolveEnemyAxisX :: Enemy -> Aabb -> Aabb -> Enemy
+resolveEnemyAxisX e box solid =
+  case horizontalNudge (separationsX box solid) (velX (enemyVel e)) of
+    Nothing -> e
+    Just dx -> zeroEnemyVx . nudgeEnemyX dx $ e
+
+zeroEnemyVy :: Enemy -> Enemy
+zeroEnemyVy e = e{enemyVel = velocity (velX (enemyVel e)) 0}
+
+zeroEnemyVx :: Enemy -> Enemy
+zeroEnemyVx e = e{enemyVel = velocity 0 (velY (enemyVel e))}
+
+nudgeEnemyX :: Float -> Enemy -> Enemy
+nudgeEnemyX dx e =
+  e{enemyPos = translate dx 0 (enemyPos e)}
+
+nudgeEnemyY :: Float -> Enemy -> Enemy
+nudgeEnemyY dy e =
+  e{enemyPos = translate 0 dy (enemyPos e)}
 
 sortPlatforms :: [Platform] -> [Platform]
 sortPlatforms =

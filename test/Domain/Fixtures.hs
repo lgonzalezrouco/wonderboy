@@ -11,6 +11,7 @@ module Domain.Fixtures (
   floorWorld,
   mkTestPickup,
   testParams,
+  testCombatParams,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
@@ -42,17 +43,22 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
+import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Input (noInput)
-import Domain.ValueObjects.PhysicsParams (PhysicsParams (..), physicsParams)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velocity)
 import Test.Tasty.HUnit (assertBool)
+import UseCases.GameMonad (combatParamsFromConfig, defaultConfig, physicsParamsFromConfig)
 
--- | Standard physics constants for tests (px/s, px/s²).
+-- | Física y combate alineados con 'defaultConfig' (única fuente de verdad).
 testParams :: PhysicsParams
-testParams = physicsParams 980 200 400
+testParams = physicsParamsFromConfig defaultConfig
+
+testCombatParams :: CombatParams
+testCombatParams = combatParamsFromConfig defaultConfig
 
 -- | One frame at 60 Hz.
 dtFrame :: DeltaTime
@@ -61,7 +67,7 @@ dtFrame = deltaTime 0.016
 -- | Demo level JSON shared by the load tests and the orchestration fixtures.
 demoJsonFixture :: Text
 demoJsonFixture =
-  "{\"minScore\":150,\"spawn\":{\"x\":-100,\"y\":80},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8},{\"pos\":{\"x\":130,\"y\":24},\"width\":32,\"height\":8},{\"pos\":{\"x\":200,\"y\":48},\"width\":64,\"height\":8}],\"movingPlatforms\":[{\"id\":1,\"pos\":{\"x\":30,\"y\":72},\"width\":48,\"height\":8,\"endA\":{\"x\":30,\"y\":72},\"endB\":{\"x\":90,\"y\":72},\"speed\":35,\"startTowardB\":true}],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":40,\"y\":8},\"behaviourHint\":\"patrol back and forth along the ground\"},{\"id\":2,\"kind\":\"bat\",\"pos\":{\"x\":80,\"y\":8},\"behaviourHint\":\"chase the player when they get close, then return to spawn\"},{\"id\":3,\"kind\":\"golem\",\"pos\":{\"x\":170,\"y\":8},\"behaviourHint\":\"slowly chase when the player is nearby, guard near spawn when idle\"}],\"pickups\":[{\"id\":1,\"pos\":{\"x\":-120,\"y\":8},\"value\":100},{\"id\":2,\"pos\":{\"x\":10,\"y\":8},\"value\":50},{\"id\":3,\"pos\":{\"x\":60,\"y\":80},\"value\":200},{\"id\":4,\"pos\":{\"x\":232,\"y\":56},\"value\":75}],\"exit\":{\"pos\":{\"x\":280,\"y\":0},\"width\":32,\"height\":64}}"
+  "{\"minScore\":150,\"spawn\":{\"x\":-100,\"y\":80},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8},{\"pos\":{\"x\":130,\"y\":24},\"width\":32,\"height\":8},{\"pos\":{\"x\":200,\"y\":48},\"width\":64,\"height\":8}],\"movingPlatforms\":[{\"id\":1,\"pos\":{\"x\":30,\"y\":72},\"width\":48,\"height\":8,\"endA\":{\"x\":30,\"y\":72},\"endB\":{\"x\":90,\"y\":72},\"speed\":35,\"startTowardB\":true}],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":40,\"y\":8},\"behaviourHint\":\"patrol back and forth along the ground\"},{\"id\":2,\"kind\":\"bat\",\"pos\":{\"x\":80,\"y\":56},\"behaviourHint\":\"chase the player when they get close, then return to spawn\"},{\"id\":3,\"kind\":\"bossGolem\",\"pos\":{\"x\":220,\"y\":56}}],\"pickups\":[{\"id\":1,\"pos\":{\"x\":-120,\"y\":8},\"value\":100},{\"id\":2,\"pos\":{\"x\":10,\"y\":8},\"value\":50},{\"id\":3,\"pos\":{\"x\":60,\"y\":80},\"value\":200},{\"id\":4,\"pos\":{\"x\":232,\"y\":56},\"value\":75}],\"exit\":{\"pos\":{\"x\":280,\"y\":0},\"width\":32,\"height\":64}}"
 
 -- | Decodes the demo level definition from 'demoJsonFixture'.
 decodeDemoLevel :: Either String LevelDefinition

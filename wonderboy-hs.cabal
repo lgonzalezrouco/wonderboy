@@ -54,7 +54,48 @@ bug-reports:        https://github.com/lgonzalezrouco/wonderboy/issues
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 extra-doc-files:    README.md
 
-data-files:         levels/demo.json
+data-files:
+    levels/demo.json
+    assets/sprites/backgrounds/castle.bmp
+    assets/sprites/backgrounds/grasslands.bmp
+    assets/sprites/bosses/boss-bat.bmp
+    assets/sprites/bosses/boss-golem.bmp
+    assets/sprites/enemies/bat-fly.bmp
+    assets/sprites/enemies/bat-idle.bmp
+    assets/sprites/enemies/golem-idle.bmp
+    assets/sprites/enemies/golem-walk.bmp
+    assets/sprites/enemies/snail-idle.bmp
+    assets/sprites/enemies/snail-walk.bmp
+    assets/sprites/pickups/gem-yellow.bmp
+    assets/sprites/player/player-hurt.bmp
+    assets/sprites/player/player-idle.bmp
+    assets/sprites/player/player-jump.bmp
+    assets/sprites/player/player-walk-01.bmp
+    assets/sprites/player/player-walk-02.bmp
+    assets/sprites/player/player-walk-03.bmp
+    assets/sprites/player/player-walk-04.bmp
+    assets/sprites/player/player-walk-05.bmp
+    assets/sprites/player/player-walk-06.bmp
+    assets/sprites/player/player-walk-07.bmp
+    assets/sprites/player/player-walk-08.bmp
+    assets/sprites/player/player-walk-09.bmp
+    assets/sprites/player/player-walk-10.bmp
+    assets/sprites/player/player-walk-11.bmp
+    assets/sprites/tiles/bridge.bmp
+    assets/sprites/tiles/grass-half-left.bmp
+    assets/sprites/tiles/grass-half-mid.bmp
+    assets/sprites/tiles/grass-half-right.bmp
+    assets/sprites/tiles/grass-left.bmp
+    assets/sprites/tiles/grass-mid.bmp
+    assets/sprites/tiles/grass-right.bmp
+    assets/sprites/tiles/sign-exit.bmp
+    assets/sprites/ui/attack-sword.bmp
+    assets/sprites/ui/heart-empty.bmp
+    assets/sprites/ui/heart-full.bmp
+    assets/sprites/ui/heart-half.bmp
+    assets/sprites/ui/life-p1.bmp
+    assets/sprites/ui/life-x.bmp
+    assets/sprites/ui/score-gem-yellow.bmp
 
 source-repository head
     type:     git
@@ -128,6 +169,7 @@ library
         Adapters.Gloss.Config
       , Adapters.Gloss.Input
       , Adapters.Gloss.Rendering
+      , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
       , Paths_wonderboy_hs

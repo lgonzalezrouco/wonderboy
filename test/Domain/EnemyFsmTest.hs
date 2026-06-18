@@ -1,7 +1,7 @@
 -- | FSM reactivo y clases de enemigo (M13): sensado y presets con fixtures fijos.
 module Domain.EnemyFsmTest where
 
-import Domain.Fixtures (dtFrame, floorWorld, testParams, worldWithEnemyAt)
+import Domain.Fixtures (dtFrame, floorWorld, testCombatParams, testParams, worldWithEnemyAt)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
@@ -20,14 +20,13 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..), defaultMaxHealth)
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
-import Domain.ValueObjects.Damage (damage)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
-import Domain.ValueObjects.Velocity (velX)
+import Domain.ValueObjects.Velocity (velX, velY)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 runBehaviourN :: Int -> World -> World
@@ -41,16 +40,16 @@ enemyFrom w = case worldEnemies w of
 
 attackingPlayerAt :: Position -> Player
 attackingPlayerAt pos =
-  (spawnPlayer (health 3) pos){playerAttackFrames = frames 6, playerFacing = FacingRight}
+  (spawnPlayer (health 3) pos)
+    { playerAttackFrames = cpAttackDuration testCombatParams
+    , playerFacing = FacingRight
+    }
 
 golemAt :: Position -> Enemy
 golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
 
 meleeWorld :: Player -> [Enemy] -> World
 meleeWorld p enemies = floorWorld{worldPlayer = p, worldEnemies = enemies}
-
-testCombatParams :: CombatParams
-testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 unit_snailPatrolMoves :: Assertion
 unit_snailPatrolMoves =
@@ -62,16 +61,35 @@ unit_snailPatrolMoves =
 
 unit_batChasesInRange :: Assertion
 unit_batChasesInRange =
-  let w0 = worldWithEnemyAt BatKind (position 80 8) (position 0 8)
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
       w1 = runBehaviourN 2 w0
       e = enemyFrom w1
-   in velX (enemyVel e) @?= (-80)
+   in do
+        velX (enemyVel e) @?= (-80)
+        velY (enemyVel e) @?= 0
+
+unit_batChaseSustainsVelocity :: Assertion
+unit_batChaseSustainsVelocity =
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
+      steady = runBehaviourN 6 w0
+      worlds = take 8 (iterate runBehaviourStep steady)
+      speeds = map (abs . velX . enemyVel . enemyFrom) worlds
+   in all (> 0) speeds @?= True
+
+unit_batPatrolsHorizontallyAtSpawn :: Assertion
+unit_batPatrolsHorizontallyAtSpawn =
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position (-200) 8)
+      w1 = runBehaviourN 4 w0
+      e = enemyFrom w1
+   in do
+        velY (enemyVel e) @?= 0
+        abs (velX (enemyVel e)) @?= 40
 
 unit_batReturnsTowardSpawn :: Assertion
 unit_batReturnsTowardSpawn =
   let bat =
-        (spawnEnemy 1 BatKind (position 80 8) (defaultProgramForKind BatKind))
-          { enemyPos = position 120 8
+        (spawnEnemy 1 BatKind (position 80 56) (defaultProgramForKind BatKind))
+          { enemyPos = position 120 56
           }
       w0 =
         floorWorld

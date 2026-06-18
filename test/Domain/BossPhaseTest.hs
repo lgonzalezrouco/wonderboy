@@ -4,7 +4,7 @@ module Domain.BossPhaseTest where
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 
-import Domain.Fixtures (floorWorld)
+import Domain.Fixtures (floorWorld, testCombatParams)
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.BossPhase (resolveBossPhases)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
@@ -24,15 +24,10 @@ import Domain.Model.Enemy (
  )
 import Domain.Model.EnemyKind (EnemyKind (..), isBossKind)
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.CombatParams (CombatParams, combatParams)
-import Domain.ValueObjects.Damage (damage)
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (Health, health)
 import Domain.ValueObjects.Position (Position, position)
 import Test.Tasty.HUnit (Assertion, (@?=))
-
-testCombatParams :: CombatParams
-testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 spawnBossFromCatalog :: Int -> EnemyKind -> Position -> Enemy
 spawnBossFromCatalog eid kind pos =

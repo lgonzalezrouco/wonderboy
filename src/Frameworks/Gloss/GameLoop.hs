@@ -9,6 +9,7 @@ where
 import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
+import Adapters.Gloss.Sprites (SpriteCatalog, loadSpriteCatalog)
 import Adapters.Gloss.Time (capDeltaTime)
 import Adapters.LevelFile (readLevelFile)
 import Domain.Model.World (World)
@@ -17,7 +18,7 @@ import Graphics.Gloss (Display (InWindow), Picture)
 import Graphics.Gloss.Interface.IO.Game (
   Event (..),
   Key (..),
-  SpecialKey (KeyEsc),
+  SpecialKey (KeyEsc, KeyF1),
   playIO,
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
@@ -31,9 +32,12 @@ import UseCases.UpdateGame (updateGame)
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState
   { appGameState :: GameState
+  , appSprites :: SpriteCatalog
+  , appRenderFrame :: Int
   , appKeysHeld :: KeyState
   , appJumpPrev :: Bool
   , appAttackPrev :: Bool
+  , appShowHitboxes :: Bool
   }
 
 -- | Arranca la ventana Gloss y el bucle de juego.
@@ -41,11 +45,12 @@ runGame :: IO ()
 runGame = do
   path <- getDataFileName "levels/demo.json"
   world <- loadWorld path
+  sprites <- loadSpriteCatalog
   playIO
     (InWindow "Wonder Boy" (windowWidth, windowHeight) (100, 100))
     backgroundColor
     60
-    (initialAppState world)
+    (initialAppState sprites world)
     drawFrame
     handleEvent
     advanceFrame
@@ -63,20 +68,32 @@ loadWorld path =
   exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
 
 -- | Estado inicial a partir de un mundo cargado.
-initialAppState :: World -> AppState
-initialAppState world =
+initialAppState :: SpriteCatalog -> World -> AppState
+initialAppState sprites world =
   AppState
     { appGameState = initialGameState defaultConfig world
+    , appSprites = sprites
+    , appRenderFrame = 0
     , appKeysHeld = noKeys
     , appJumpPrev = False
     , appAttackPrev = False
+    , appShowHitboxes = False
     }
 
 drawFrame :: AppState -> IO Picture
-drawFrame state = pure (renderFrame (gameViewFromState defaultConfig (appGameState state)))
+drawFrame state =
+  pure
+    ( renderFrame
+        (appSprites state)
+        (appRenderFrame state)
+        (appShowHitboxes state)
+        (gameViewFromState defaultConfig (appGameState state))
+    )
 
 handleEvent :: Event -> AppState -> IO AppState
 handleEvent (EventKey (SpecialKey KeyEsc) Gloss.Down _ _) _ = exitSuccess
+handleEvent (EventKey (SpecialKey KeyF1) Gloss.Down _ _) state =
+  pure state{appShowHitboxes = not (appShowHitboxes state)}
 handleEvent event state =
   pure state{appKeysHeld = handleKeyEvent event (appKeysHeld state)}
 
@@ -94,6 +111,10 @@ advanceFrame dt state = do
       pure
         state
           { appGameState = gs'
+          , appRenderFrame =
+              if frozen
+                then appRenderFrame state
+                else (appRenderFrame state + 1) `mod` 1000000
           , appJumpPrev = if frozen then appJumpPrev state else jumpPrev
           , appAttackPrev = if frozen then appAttackPrev state else attackPrev
           }

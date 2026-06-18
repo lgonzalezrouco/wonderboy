@@ -2,6 +2,7 @@
 module Adapters.Gloss.Config (
   windowWidth,
   windowHeight,
+  renderZoom,
   backgroundColor,
   cameraY,
   maxDeltaSeconds,
@@ -29,11 +30,15 @@ import Domain.Model.EnemyKind (EnemyKind (..))
 
 -- | Ancho de la ventana en píxeles.
 windowWidth :: Int
-windowWidth = 800
+windowWidth = 1024
 
 -- | Alto de la ventana en píxeles.
 windowHeight :: Int
-windowHeight = 600
+windowHeight = 768
+
+-- | Factor de zoom del mundo y fondo (solo adaptador; la física no cambia).
+renderZoom :: Float
+renderZoom = 1.5
 
 -- | Color de fondo de la ventana.
 backgroundColor :: Color

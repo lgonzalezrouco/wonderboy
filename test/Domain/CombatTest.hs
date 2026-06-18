@@ -1,6 +1,7 @@
 -- | Pure melee combat and enemy contact tests.
 module Domain.CombatTest where
 
+import Domain.Fixtures (testCombatParams)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyHealth, mkEnemy, spawnEnemy)
@@ -15,18 +16,14 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
-import Domain.ValueObjects.Damage (damage)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (frames, noFrames)
+import Domain.ValueObjects.Frames (Frames, frameCount, frames, noFrames)
 import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-
-testCombatParams :: CombatParams
-testCombatParams = combatParams (frames 6) (frames 60) (damage 1) 20.0 (damage 1)
 
 testSpawn :: Position
 testSpawn = position 0 80
@@ -47,13 +44,13 @@ floorWorld =
 unit_attackEdgeStartsWindow :: Assertion
 unit_attackEdgeStartsWindow =
   let w' = resolveCombat testCombatParams (noInput{inputAttack = True}) floorWorld
-   in playerAttackFrames (worldPlayer w') @?= frames 6
+   in playerAttackFrames (worldPlayer w') @?= cpAttackDuration testCombatParams
 
 unit_meleeRemovesEnemy :: Assertion
 unit_meleeRemovesEnemy =
   let p =
         (spawnPlayer (health 3) (position 0 8))
-          { playerAttackFrames = frames 6
+          { playerAttackFrames = cpAttackDuration testCombatParams
           , playerFacing = FacingRight
           }
       w =
@@ -68,7 +65,7 @@ unit_meleeRemovesEnemyWhenOverlapping :: Assertion
 unit_meleeRemovesEnemyWhenOverlapping =
   let p =
         (spawnPlayer (health 3) (position 50 8))
-          { playerAttackFrames = frames 6
+          { playerAttackFrames = cpAttackDuration testCombatParams
           , playerFacing = FacingRight
           }
       w =
@@ -139,7 +136,7 @@ unit_attackDirectionLatched :: Assertion
 unit_attackDirectionLatched =
   let p =
         (spawnPlayer (health 3) (position 0 8))
-          { playerAttackFrames = frames 6
+          { playerAttackFrames = cpAttackDuration testCombatParams
           , playerFacing = FacingRight
           }
       enemy = mkEnemy 1 (position (-40) 8) (patrolHorizontal 10 (frames 10))
@@ -190,11 +187,13 @@ unit_meleeWindowCountsDownAndRearms =
   let golem = spawnEnemy 1 GolemKind (position 40 8) (patrolHorizontal 10 (frames 10))
       attacker =
         (spawnPlayer (health 3) (position 0 8))
-          { playerAttackFrames = frames 6
+          { playerAttackFrames = cpAttackDuration testCombatParams
           , playerFacing = FacingRight
           }
       w0 = floorWorld{worldPlayer = attacker, worldEnemies = [golem]}
-      wAfterWindow = iterate (resolveCombat testCombatParams noInput) w0 !! 6
+      wAfterWindow =
+        iterate (resolveCombat testCombatParams noInput) w0
+          !! framesToStepCount (cpAttackDuration testCombatParams)
       wRearmed = resolveCombat testCombatParams (noInput{inputAttack = True}) wAfterWindow
    in do
         case worldEnemies wAfterWindow of
@@ -202,6 +201,9 @@ unit_meleeWindowCountsDownAndRearms =
           _ -> assertFailure "golem should take exactly one melee hit per swing"
         playerAttackFrames (worldPlayer wAfterWindow) @?= noFrames
         playerAttackFrames (worldPlayer wRearmed) @?= cpAttackDuration testCombatParams
+
+framesToStepCount :: Frames -> Int
+framesToStepCount = frameCount
 
 unit_iframesLastFullDuration :: Assertion
 unit_iframesLastFullDuration =

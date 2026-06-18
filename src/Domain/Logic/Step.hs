@@ -5,7 +5,7 @@ module Domain.Logic.Step (
 )
 where
 
-import Domain.Logic.Collision (resolvePlayerPlatforms)
+import Domain.Logic.Collision (resolveEnemyPlatforms, resolvePlayerPlatforms)
 import Domain.Logic.MovingPlatforms (
   advanceMovingPlatforms,
   allCollisionPlatforms,
@@ -13,13 +13,16 @@ import Domain.Logic.MovingPlatforms (
   mpaPlatform,
  )
 import Domain.Logic.Physics (
+  applyEnemyGravity,
   applyGravity,
   applyHorizontalInput,
   applyJump,
-  integrateEnemies,
+  integrateEnemy,
   integratePlayer,
  )
 import Domain.Logic.RunBehaviour (runBehaviourStep)
+import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player, playerOnGround, playerVel)
 import Domain.Model.World (World (..))
@@ -49,8 +52,9 @@ Con el frame congelado devuelve el mundo sin cambios: es la identidad temporal /
 frame la define 'Domain.ValueObjects.DeltaTime.isFrozen'; esta guarda protege a 'step'
 cuando se la llama aislada.
 
-Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DSL
-(M6) antes de este paso. Sin gravedad ni colisiones enemigo–plataforma en M6.
+Los enemigos terrestres integran cinemática y resuelven colisión AABB; los
+voladores (@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
+este paso.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 step _ dt _ w | isFrozen dt = w
@@ -67,9 +71,11 @@ step params dt input w =
       vyAtCollide = velY (playerVel p3)
       plats = allCollisionPlatforms (worldPlatforms w') moving
       p4 = integrateAndCollide dt p3 plats vyAtCollide
+      enemies' =
+        map (integrateAndCollideEnemy params dt plats) (worldEnemies w')
    in w'
         { worldPlayer = p4
-        , worldEnemies = integrateEnemies dt (worldEnemies w')
+        , worldEnemies = enemies'
         }
 
 {- | Integra y resuelve colisiones en sub-pasos para reducir túnel AABB en sólidos finos.
@@ -81,6 +87,16 @@ integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
    in runSubsteps n (deltaTimeSub dt n) plats vyBefore p
+
+integrateAndCollideEnemy ::
+  PhysicsParams -> DeltaTime -> [Platform] -> Enemy -> Enemy
+integrateAndCollideEnemy params dt plats e
+  | isFlyingKind (enemyKind e) = integrateEnemy dt e
+  | otherwise =
+      let e1 = applyEnemyGravity params dt e
+          vyBefore = velY (enemyVel e1)
+          e2 = integrateEnemy dt e1
+       in resolveEnemyPlatforms plats vyBefore e2
 
 {- | Aplica integración + colisión @n@ veces de forma /estricta/.
 

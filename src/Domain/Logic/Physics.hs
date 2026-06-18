@@ -5,8 +5,10 @@ Colisiones con plataformas en @Domain.Logic.Collision@.
 module Domain.Logic.Physics (
   applyHorizontalInput,
   applyGravity,
+  applyEnemyGravity,
   applyJump,
   integratePlayer,
+  integrateEnemy,
   integrateEnemies,
 )
 where
@@ -42,6 +44,14 @@ applyGravity pp dt p =
  where
   t = seconds dt
   vy' = velY (playerVel p) - ppGravity pp * t
+
+-- | Gravedad para enemigos terrestres (misma ley que el jugador).
+applyEnemyGravity :: PhysicsParams -> DeltaTime -> Enemy -> Enemy
+applyEnemyGravity pp dt e =
+  e{enemyVel = velocity (velX (enemyVel e)) vy'}
+ where
+  t = seconds dt
+  vy' = velY (enemyVel e) - ppGravity pp * t
 
 -- | Integra posición del jugador: @pos += vel * dt@.
 integratePlayer :: DeltaTime -> Player -> Player

@@ -17,7 +17,10 @@ import Domain.Logic.BehaviourSensing (
   nearSpawnHorizontally,
   playerHorizontalDelta,
   playerHorizontalDistance,
+  playerVerticalDelta,
   spawnHorizontalDelta,
+  spawnVerticalDelta,
+  velocityToward2D,
  )
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EntityBehaviour (
@@ -59,8 +62,20 @@ stepProgram w (BehaviourProgram prog) e =
       stepBranch (nearSpawnHorizontally radius e) thenBranch elseBranch e
     Free (MoveTowardPlayer speed next) ->
       (BehaviourProgram next, moveHorizontallyToward (playerHorizontalDelta w e) speed e)
+    Free (MoveTowardPlayer2D speed next) ->
+      ( BehaviourProgram next
+      , moveToward2D
+          (playerHorizontalDelta w e)
+          (playerVerticalDelta w e)
+          speed
+          e
+      )
     Free (MoveTowardSpawn speed next) ->
       (BehaviourProgram next, moveHorizontallyToward (spawnHorizontalDelta e) speed e)
+    Free (MoveTowardSpawn2D speed next) ->
+      ( BehaviourProgram next
+      , moveToward2D (spawnHorizontalDelta e) (spawnVerticalDelta e) speed e
+      )
     Free (FacePlayer next) ->
       ( BehaviourProgram next
       , e
@@ -68,12 +83,17 @@ stepProgram w (BehaviourProgram prog) e =
           , enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)
           }
       )
+    Free (SetFacingTowardPlayer next) ->
+      ( BehaviourProgram next
+      , e{enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)}
+      )
 
-{- | Un behaviour step de decisión: elige rama y deja la velocidad en cero.
+{- | Un behaviour step de decisión: elige rama sin tocar la velocidad.
 
-Las ramas son la cola del programa (los constructores 'IfPlayerWithinRange' /
-'IfNearSpawn' fijan su continuación a 'Pure ()'), así que no hay un @next@ que
-encadenar tras la rama elegida.
+La velocidad la fijan las instrucciones de la rama (@MoveTowardPlayer@,
+@SetVelocity@, @FacePlayer@, etc.). Ponerla en cero aquí hacía parpadear el
+murciélago en chase: el bucle @moveTowardPlayer >>> wait >>> loop@ re-entra en
+el sensor cada pocos frames.
 -}
 stepBranch ::
   Bool ->
@@ -82,7 +102,7 @@ stepBranch ::
   Enemy ->
   (BehaviourProgram, Enemy)
 stepBranch cond thenBranch elseBranch e =
-  (if cond then thenBranch else elseBranch, e{enemyVel = velocity 0 0})
+  (if cond then thenBranch else elseBranch, e)
 
 moveHorizontallyToward :: Float -> Float -> Enemy -> Enemy
 moveHorizontallyToward dx speed e =
@@ -91,3 +111,10 @@ moveHorizontallyToward dx speed e =
         { enemyVel = velocity (dir * speed) 0
         , enemyFacing = facingTowardHorizontal (enemyFacing e) dx
         }
+
+moveToward2D :: Float -> Float -> Float -> Enemy -> Enemy
+moveToward2D dx dy speed e =
+  e
+    { enemyVel = velocityToward2D dx dy speed
+    , enemyFacing = facingTowardHorizontal (enemyFacing e) dx
+    }
