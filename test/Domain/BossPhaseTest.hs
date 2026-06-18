@@ -75,17 +75,22 @@ unit_bossStartsPhaseZero =
 
 unit_bossTransitionsAt66Percent :: Assertion
 unit_bossTransitionsAt66Percent =
-  let w1 = damageBossTo (health 3) worldWithGolemKing
+  let w1 = damageBossTo (health 13) worldWithGolemKing
    in phaseIndex (bossIn w1) @?= 1
 
 unit_bossTransitionsAt33Percent :: Assertion
 unit_bossTransitionsAt33Percent =
-  let w1 = damageBossTo (health 1) worldWithGolemKing
+  let w1 = damageBossTo (health 6) worldWithGolemKing
    in phaseIndex (bossIn w1) @?= 2
+
+unit_bossStaysPhaseZeroAboveThreshold :: Assertion
+unit_bossStaysPhaseZeroAboveThreshold =
+  let w1 = damageBossTo (health 14) worldWithGolemKing
+   in phaseIndex (bossIn w1) @?= 0
 
 unit_bossPhasesMonotonic :: Assertion
 unit_bossPhasesMonotonic =
-  let king = golemKingAt{enemyBossPhase = Just (bossPhaseIndex 2), enemyHealth = health 6}
+  let king = golemKingAt{enemyBossPhase = Just (bossPhaseIndex 2), enemyHealth = health 20}
       w0 = floorWorld{worldEnemies = [king]}
       w1 = transitionFrom w0 w0
    in phaseIndex (bossIn w1) @?= 2

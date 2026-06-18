@@ -210,7 +210,7 @@ renderFrame catalog renderTick showHitboxes gv =
   pictures
     [ Scale renderZoom renderZoom $
         pictures
-          [ renderBackground catalog
+          [ renderBackground catalog (gvLevelIndex gv)
           , renderWorldLayer catalog renderTick showHitboxes (gvCombatParams gv) (gvWorld gv)
           ]
     , renderHud catalog gv showHitboxes
@@ -220,11 +220,19 @@ renderFrame catalog renderTick showHitboxes gv =
     , renderVictoryOverlay gv
     ]
 
-renderBackground :: SpriteCatalog -> Picture
-renderBackground catalog =
-  case scBackgroundGrasslands catalog of
+-- | Índice del nivel final/jefe; usa el fondo del castillo a partir de aquí.
+bossLevelIndex :: Int
+bossLevelIndex = 3
+
+renderBackground :: SpriteCatalog -> Int -> Picture
+renderBackground catalog levelIndex =
+  case backgroundSprite of
     Nothing -> Blank
     Just sprite -> drawSpriteCover backgroundWidth backgroundHeight sprite
+ where
+  backgroundSprite
+    | levelIndex >= bossLevelIndex = scBackgroundCastle catalog
+    | otherwise = scBackgroundGrasslands catalog
 
 backgroundWidth :: Float
 backgroundWidth = fromIntegral windowWidth

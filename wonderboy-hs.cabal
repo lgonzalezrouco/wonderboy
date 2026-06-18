@@ -230,6 +230,11 @@ test-suite wonderboy-hs-test
       , Domain.LevelFlowTest
       , UseCases.UpdateGameTest
       , UseCases.LoadLevelTest
+      , UseCases.LevelContentTest
+      , Paths_wonderboy_hs
+
+    autogen-modules:
+        Paths_wonderboy_hs
 
     type:             exitcode-stdio-1.0
 

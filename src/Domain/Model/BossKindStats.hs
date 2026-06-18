@@ -31,7 +31,7 @@ bossGolemStats =
   BossGolemStats
     { bgsWidth = 48
     , bgsHeight = 48
-    , bgsMaxHealth = health 6
+    , bgsMaxHealth = health 20
     }
 
 bossBatStats :: BossBatStats
