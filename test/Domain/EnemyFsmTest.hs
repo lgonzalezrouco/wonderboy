@@ -20,6 +20,7 @@ import Domain.Model.Player (
   spawnPlayer,
  )
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
@@ -39,7 +40,10 @@ enemyFrom w = case worldEnemies w of
 
 attackingPlayerAt :: Position -> Player
 attackingPlayerAt pos =
-  (spawnPlayer (health 3) pos){playerAttackFrames = frames 6, playerFacing = FacingRight}
+  (spawnPlayer (health 3) pos)
+    { playerAttackFrames = cpAttackDuration testCombatParams
+    , playerFacing = FacingRight
+    }
 
 golemAt :: Position -> Enemy
 golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
