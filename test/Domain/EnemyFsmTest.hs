@@ -28,7 +28,7 @@ import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
 import Domain.ValueObjects.Velocity (velX, velY)
-import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 runBehaviourN :: Int -> World -> World
 runBehaviourN 0 w = w
@@ -65,20 +65,18 @@ unit_batChasesInRange =
   let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
       w1 = runBehaviourN 2 w0
       e = enemyFrom w1
-      v = enemyVel e
-      vx = velX v
-      vy = velY v
    in do
-        assertBool "chases left" (vx < 0)
-        assertBool "dives toward player" (vy < 0)
-        assertBool "chases at full speed" (abs (sqrt (vx * vx + vy * vy) - 80) < 0.01)
+        velX (enemyVel e) @?= (-80)
+        velY (enemyVel e) @?= 0
 
-unit_batHoversAtSpawn :: Assertion
-unit_batHoversAtSpawn =
+unit_batPatrolsHorizontallyAtSpawn :: Assertion
+unit_batPatrolsHorizontallyAtSpawn =
   let w0 = worldWithEnemyAt BatKind (position 80 56) (position (-200) 8)
       w1 = runBehaviourN 4 w0
       e = enemyFrom w1
-   in velY (enemyVel e) @?= 35
+   in do
+        velY (enemyVel e) @?= 0
+        abs (velX (enemyVel e)) @?= 40
 
 unit_batReturnsTowardSpawn :: Assertion
 unit_batReturnsTowardSpawn =

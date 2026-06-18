@@ -7,6 +7,7 @@ module Domain.Logic.Physics (
   applyGravity,
   applyJump,
   integratePlayer,
+  integrateEnemy,
   integrateEnemies,
 )
 where

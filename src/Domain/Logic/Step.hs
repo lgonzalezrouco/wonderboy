@@ -5,7 +5,7 @@ module Domain.Logic.Step (
 )
 where
 
-import Domain.Logic.Collision (resolvePlayerPlatforms)
+import Domain.Logic.Collision (resolveEnemyPlatforms, resolvePlayerPlatforms)
 import Domain.Logic.MovingPlatforms (
   advanceMovingPlatforms,
   allCollisionPlatforms,
@@ -16,10 +16,11 @@ import Domain.Logic.Physics (
   applyGravity,
   applyHorizontalInput,
   applyJump,
-  integrateEnemies,
+  integrateEnemy,
   integratePlayer,
  )
 import Domain.Logic.RunBehaviour (runBehaviourStep)
+import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player, playerOnGround, playerVel)
 import Domain.Model.World (World (..))
@@ -49,8 +50,9 @@ Con el frame congelado devuelve el mundo sin cambios: es la identidad temporal /
 frame la define 'Domain.ValueObjects.DeltaTime.isFrozen'; esta guarda protege a 'step'
 cuando se la llama aislada.
 
-Los enemigos reciben cinemática (@pos += vel * dt@); la velocidad la fija el DSL
-(M6) antes de este paso. Sin gravedad ni colisiones enemigo–plataforma en M6.
+Los enemigos terrestres integran cinemática y resuelven colisión AABB; los
+voladores (@BatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
+este paso.
 -}
 step :: PhysicsParams -> DeltaTime -> Input -> World -> World
 step _ dt _ w | isFrozen dt = w
@@ -67,9 +69,11 @@ step params dt input w =
       vyAtCollide = velY (playerVel p3)
       plats = allCollisionPlatforms (worldPlatforms w') moving
       p4 = integrateAndCollide dt p3 plats vyAtCollide
+      enemies' =
+        map (integrateAndCollideEnemy dt plats) (worldEnemies w')
    in w'
         { worldPlayer = p4
-        , worldEnemies = integrateEnemies dt (worldEnemies w')
+        , worldEnemies = enemies'
         }
 
 {- | Integra y resuelve colisiones en sub-pasos para reducir túnel AABB en sólidos finos.
@@ -81,6 +85,10 @@ integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
    in runSubsteps n (deltaTimeSub dt n) plats vyBefore p
+
+integrateAndCollideEnemy :: DeltaTime -> [Platform] -> Enemy -> Enemy
+integrateAndCollideEnemy dt plats e =
+  resolveEnemyPlatforms plats (integrateEnemy dt e)
 
 {- | Aplica integración + colisión @n@ veces de forma /estricta/.
 

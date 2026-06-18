@@ -6,7 +6,7 @@ module Domain.Logic.EntityBehaviours (
   patrolHorizontal,
   reactiveFsm,
   flyingReactiveFsm,
-  hoverFacePlayer,
+  airPatrolFacePlayer,
   defaultProgramForKind,
   programForArchetype,
 )
@@ -27,9 +27,7 @@ import Domain.Model.EntityBehaviour (
   ifNearSpawn,
   ifPlayerWithinRange,
   moveTowardPlayer,
-  moveTowardPlayer2D,
   moveTowardSpawn,
-  moveTowardSpawn2D,
   setFacingTowardPlayer,
   setVelocity,
   waitFrames,
@@ -78,10 +76,10 @@ reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
           )
   | otherwise = idleProgram
 
-{- | FSM reactivo volador: persigue y regresa en 2D; en spawn planea mirando al jugador.
+{- | FSM reactivo aéreo: persigue y regresa en horizontal; en spawn patrulla en X.
 
-Misma lógica de rango que 'reactiveFsm', pero con movimiento vertical y planeo
-en la rama de spawn.
+Mantiene la altitud de spawn (sin planeo vertical). Los murciélagos ignoran
+colisión con plataformas en @Domain.Logic.Collision@.
 -}
 flyingReactiveFsm ::
   Float ->
@@ -91,37 +89,35 @@ flyingReactiveFsm ::
   Float ->
   Frames ->
   BehaviourProgram
-flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius hoverSpeed hoverLeg
+flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius patrolSpeed patrolLeg
   | chaseRange > 0
       && chaseSpeed > 0
       && returnSpeed > 0
       && spawnRadius > 0
-      && hoverSpeed > 0
-      && hasFramesLeft hoverLeg =
+      && patrolSpeed > 0
+      && hasFramesLeft patrolLeg =
       fix $ \loop ->
         ifPlayerWithinRange
           chaseRange
-          (moveTowardPlayer2D chaseSpeed >>> waitFrames (frames 1) >>> loop)
+          (moveTowardPlayer chaseSpeed >>> waitFrames (frames 1) >>> loop)
           ( ifNearSpawn
               spawnRadius
-              (hoverFacePlayer hoverSpeed hoverLeg >>> loop)
-              (moveTowardSpawn2D returnSpeed >>> waitFrames (frames 1) >>> loop)
+              (airPatrolFacePlayer patrolSpeed patrolLeg >>> loop)
+              (moveTowardSpawn returnSpeed >>> waitFrames (frames 1) >>> loop)
           )
   | otherwise = idleProgram
 
-{- | Planeo vertical en spawn: mira al jugador y oscila arriba/abajo.
-
-@hoverLeg@ controla cuántos frames mantiene cada dirección vertical.
+{- | Patrulla horizontal en el aire mirando al jugador (sin desplazamiento vertical).
 -}
-hoverFacePlayer :: Float -> Frames -> BehaviourProgram
-hoverFacePlayer hoverSpeed hoverLeg
-  | hoverSpeed > 0 && hasFramesLeft hoverLeg =
+airPatrolFacePlayer :: Float -> Frames -> BehaviourProgram
+airPatrolFacePlayer patrolSpeed patrolLeg
+  | patrolSpeed > 0 && hasFramesLeft patrolLeg =
       setFacingTowardPlayer
-        >>> setVelocity (velocity 0 hoverSpeed)
-        >>> waitFrames hoverLeg
+        >>> setVelocity (velocity (-patrolSpeed) 0)
+        >>> waitFrames patrolLeg
         >>> setFacingTowardPlayer
-        >>> setVelocity (velocity 0 (-hoverSpeed))
-        >>> waitFrames hoverLeg
+        >>> setVelocity (velocity patrolSpeed 0)
+        >>> waitFrames patrolLeg
   | otherwise = facePlayer
 
 {- | Programa de comportamiento para una variante de movimiento.
@@ -134,8 +130,8 @@ programForMotion :: EnemyMotionStats -> BehaviourProgram
 programForMotion (PatrolMotion speed legFrames) = patrolHorizontal speed legFrames
 programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) =
   reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
-programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius hoverSpeed hoverLeg) =
-  flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius hoverSpeed hoverLeg
+programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius patrolSpeed patrolLeg) =
+  flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius patrolSpeed patrolLeg
 
 -- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram

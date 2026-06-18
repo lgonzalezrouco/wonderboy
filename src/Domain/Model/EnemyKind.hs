@@ -8,6 +8,7 @@ module Domain.Model.EnemyKind (
   EnemyKindStats (..),
   enemyKindStats,
   isBossKind,
+  isFlyingKind,
 )
 where
 
@@ -35,6 +36,11 @@ data EnemyKind
 isBossKind :: EnemyKind -> Bool
 isBossKind kind = kind `elem` [BossGolemKind, BossBatKind]
 
+-- | Verdadero para enemigos que ignoran colisión con plataformas (vuelan).
+isFlyingKind :: EnemyKind -> Bool
+isFlyingKind BatKind = True
+isFlyingKind _ = False
+
 {- | Parámetros de movimiento según el arquetipo natural de la clase.
 
 Una clase patrulla /o/ reacciona: el tipo suma hace inrepresentable mezclar
@@ -45,7 +51,7 @@ data EnemyMotionStats
     PatrolMotion Float Frames
   | -- | FSM reactivo: chaseSpeed, returnSpeed, chaseRange, spawnRadius (Golem).
     ReactiveMotion Float Float Float Float
-  | -- | FSM reactivo en 2D con planeo vertical en spawn (Bat).
+  | -- | FSM reactivo aéreo: persigue en horizontal; en spawn patrulla en X (Bat).
     FlyingReactiveMotion Float Float Float Float Float Frames
   deriving (Eq, Show, Generic)
 
@@ -77,7 +83,7 @@ enemyKindStats kind = case kind of
       { eksWidth = 18
       , eksHeight = 18
       , eksMaxHealth = health 1
-      , eksMotion = FlyingReactiveMotion 80 40 120 8 35 (frames 45)
+      , eksMotion = FlyingReactiveMotion 80 40 120 24 40 (frames 60)
       }
   GolemKind ->
     EnemyKindStats
