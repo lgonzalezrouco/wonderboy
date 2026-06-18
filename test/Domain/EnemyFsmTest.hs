@@ -64,6 +64,14 @@ unit_batChasesInRange =
         velX (enemyVel e) @?= (-80)
         velY (enemyVel e) @?= 0
 
+unit_batChaseSustainsVelocity :: Assertion
+unit_batChaseSustainsVelocity =
+  let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
+      steady = runBehaviourN 6 w0
+      worlds = take 8 (iterate runBehaviourStep steady)
+      speeds = map (abs . velX . enemyVel . enemyFrom) worlds
+   in all (> 0) speeds @?= True
+
 unit_batPatrolsHorizontallyAtSpawn :: Assertion
 unit_batPatrolsHorizontallyAtSpawn =
   let w0 = worldWithEnemyAt BatKind (position 80 56) (position (-200) 8)

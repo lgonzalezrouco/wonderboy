@@ -88,11 +88,12 @@ stepProgram w (BehaviourProgram prog) e =
       , e{enemyFacing = facingTowardHorizontal (enemyFacing e) (playerHorizontalDelta w e)}
       )
 
-{- | Un behaviour step de decisión: elige rama y deja la velocidad en cero.
+{- | Un behaviour step de decisión: elige rama sin tocar la velocidad.
 
-Las ramas son la cola del programa (los constructores 'IfPlayerWithinRange' /
-'IfNearSpawn' fijan su continuación a 'Pure ()'), así que no hay un @next@ que
-encadenar tras la rama elegida.
+La velocidad la fijan las instrucciones de la rama (@MoveTowardPlayer@,
+@SetVelocity@, @FacePlayer@, etc.). Ponerla en cero aquí hacía parpadear el
+murciélago en chase: el bucle @moveTowardPlayer >>> wait >>> loop@ re-entra en
+el sensor cada pocos frames.
 -}
 stepBranch ::
   Bool ->
@@ -101,7 +102,7 @@ stepBranch ::
   Enemy ->
   (BehaviourProgram, Enemy)
 stepBranch cond thenBranch elseBranch e =
-  (if cond then thenBranch else elseBranch, e{enemyVel = velocity 0 0})
+  (if cond then thenBranch else elseBranch, e)
 
 moveHorizontallyToward :: Float -> Float -> Enemy -> Enemy
 moveHorizontallyToward dx speed e =
