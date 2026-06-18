@@ -39,7 +39,7 @@ import Adapters.Gloss.Sprites (
  )
 import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
-import Domain.Model.ExitZone (ExitZone (..))
+import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
@@ -55,7 +55,7 @@ import Domain.Model.Player (
   playerPos,
  )
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.Aabb (Aabb (..), aabbFromBottomLeft)
+import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.Facing (Facing (..))
@@ -216,6 +216,8 @@ renderFrame catalog renderTick showHitboxes gv =
     , renderHud catalog gv showHitboxes
     , renderBossBar gv
     , renderGameOverOverlay gv
+    , renderLevelCompleteOverlay gv
+    , renderVictoryOverlay gv
     ]
 
 renderBackground :: SpriteCatalog -> Picture
@@ -303,7 +305,7 @@ renderExitZone catalog exitZone =
     Nothing -> aabbToPicture hudMutedColor box
     Just sprite -> drawSpriteBottomCenter box sprite
  where
-  box = exitAabb exitZone
+  box = exitZoneAabb exitZone
 
 -- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
 renderHitboxOverlay :: CombatParams -> World -> Picture
@@ -330,7 +332,7 @@ renderHitboxOverlay combatParams w =
             <> [ aabbOutline pickupColor hitboxOutlineThickness (pickupAabb pickup)
                | pickup <- worldPickups w
                ]
-            <> [ aabbOutline hudMutedColor hitboxOutlineThickness (exitAabb (worldExit w))
+            <> [ aabbOutline hudMutedColor hitboxOutlineThickness (exitZoneAabb (worldExit w))
                , aabbOutline playerColor hitboxOutlineThickness playerBox
                , renderFootAnchor (playerPos p) playerColor
                ]
@@ -373,8 +375,9 @@ renderHud catalog gv showHitboxes =
         , Translate valueX (row3Y + hudValueCenterLift) $
             renderScore catalog (scorePoints (gvScore gv))
         , renderAttackRow catalog contentX row4Y p
-        , hudHint contentX row5Y "Space - attack"
-        , if showHitboxes then hudHint contentX (row5Y - 16) "F1 - hitboxes" else Blank
+        , renderExitHints gv contentX row5Y
+        , hudHint contentX (row5Y + hudHintGap) "Space - attack"
+        , if showHitboxes then hudHint contentX (row5Y + hudHintGap + 16) "F1 - hitboxes" else Blank
         ]
 
 -- | Barra superior centrada con la salud del jefe.
@@ -411,16 +414,51 @@ renderGameOverOverlay :: GameView -> Picture
 renderGameOverOverlay gv
   | gvPhase gv /= GameOver = Blank
   | otherwise =
-      pictures
-        [ Color hudOverlayDim $
-            rectangleSolid (fromIntegral windowWidth) (fromIntegral windowHeight)
-        , Translate 0 hudGameOverOffsetY $
-            Scale hudGameOverScale hudGameOverScale $
-              Color hudAttackColor (text "GAME OVER")
-        , Translate 0 hudGameOverHintOffsetY $
-            Scale hudHintScale hudHintScale $
-              Color hudMutedColor (text "Press Esc to quit")
-        ]
+      renderCenteredOverlay "GAME OVER" "Enter - retry    Esc - quit"
+
+renderLevelCompleteOverlay :: GameView -> Picture
+renderLevelCompleteOverlay gv
+  | gvPhase gv /= LevelComplete = Blank
+  | otherwise =
+      renderCenteredOverlay
+        ("LEVEL " ++ show (gvLevelIndex gv) ++ " COMPLETE")
+        "Press Enter to continue"
+
+renderVictoryOverlay :: GameView -> Picture
+renderVictoryOverlay gv
+  | gvPhase gv /= Victory = Blank
+  | otherwise =
+      renderCenteredOverlay "VICTORY!" "Enter - play again    Esc - quit"
+
+renderCenteredOverlay :: String -> String -> Picture
+renderCenteredOverlay title hint =
+  pictures
+    [ Color hudOverlayDim $
+        rectangleSolid (fromIntegral windowWidth) (fromIntegral windowHeight)
+    , Translate 0 hudGameOverOffsetY $
+        Scale hudGameOverScale hudGameOverScale $
+          Color hudAttackColor (text title)
+    , Translate 0 hudGameOverHintOffsetY $
+        Scale hudHintScale hudHintScale $
+          Color hudMutedColor (text hint)
+    ]
+
+renderExitHints :: GameView -> Float -> Float -> Picture
+renderExitHints gv x y =
+  case gvExitScoreHint gv of
+    Just (current, required) ->
+      hudHint
+        x
+        y
+        ( "Need "
+            ++ show (scorePoints required)
+            ++ " pts (have "
+            ++ show (scorePoints current)
+            ++ ")"
+        )
+    Nothing
+      | gvBossExitHint gv -> hudHint x y "Defeat the boss to leave"
+      | otherwise -> Blank
 
 renderAttackRow :: SpriteCatalog -> Float -> Float -> Player -> Picture
 renderAttackRow catalog x y p
@@ -637,7 +675,3 @@ tileStrip leftSprite midSprite rightSprite box =
   midPieces =
     [ tileAt i midSprite | i <- [midStart .. midEnd], i >= 0, i < tileCount
     ]
-
-exitAabb :: ExitZone -> Aabb
-exitAabb exitZone =
-  aabbFromBottomLeft (exitPos exitZone) (exitWidth exitZone) (exitHeight exitZone)

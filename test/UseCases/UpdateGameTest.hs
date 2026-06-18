@@ -7,7 +7,7 @@ import Domain.Fixtures (demoWorld, dtFrame, mkTestPickup, worldWithPickups)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
-import Domain.Model.ExitZone (defaultExitZone)
+import Domain.Model.ExitZone (ExitZone (..), defaultExitZone)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAttackFrames, spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth, worldPickups, worldPlayer)
@@ -35,6 +35,7 @@ playingState w =
     , gsLives = gcStartingLives defaultConfig
     , gsPhase = Playing
     , gsScore = score 0
+    , gsLevelIndex = 1
     }
 
 gameOverState :: World -> GameState
@@ -44,6 +45,7 @@ gameOverState w =
     , gsLives = lives 0
     , gsPhase = GameOver
     , gsScore = score 0
+    , gsLevelIndex = 1
     }
 
 unit_updateGameDtZeroSkipsBehaviour :: Assertion
@@ -77,7 +79,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldSpawnPoint = position 0 0
           , worldPickups = []
           , worldMinScore = score 0
-          , worldExit = defaultExitZone
+          , worldExit = ExitZone (position 500 0) 32 64
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0
@@ -140,6 +142,26 @@ unit_gameOverSkipsPickup =
         Right ((), gs') -> do
           gsScore gs' @?= score 0
           worldPickups (gsWorld gs') @?= [pickup]
+
+unit_updateGameLevelCompleteWhenHybridWin :: Assertion
+unit_updateGameLevelCompleteWhenHybridWin =
+  let exitZone =
+        ExitZone
+          { exitPos = position 0 0
+          , exitWidth = 32
+          , exitHeight = 64
+          }
+      w =
+        demoWorld
+          { worldPlayer = spawnPlayer defaultMaxHealth (position 0 0)
+          , worldMinScore = score 0
+          , worldExit = exitZone
+          , worldEnemies = []
+          }
+      gs0 = playingState w
+   in case runGameM defaultConfig gs0 (updateGame dtFrame noInput) of
+        Left err -> assertFailure (show err)
+        Right ((), gs') -> gsPhase gs' @?= LevelComplete
 
 -- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
 runTicks :: Int -> GameState -> GameState
