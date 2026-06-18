@@ -107,8 +107,7 @@ flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius patrolSpeed patr
           )
   | otherwise = idleProgram
 
-{- | Patrulla horizontal en el aire mirando al jugador (sin desplazamiento vertical).
--}
+-- | Patrulla horizontal en el aire mirando al jugador (sin desplazamiento vertical).
 airPatrolFacePlayer :: Float -> Frames -> BehaviourProgram
 airPatrolFacePlayer patrolSpeed patrolLeg
   | patrolSpeed > 0 && hasFramesLeft patrolLeg =

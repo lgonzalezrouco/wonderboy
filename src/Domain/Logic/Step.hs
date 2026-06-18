@@ -20,9 +20,9 @@ import Domain.Logic.Physics (
   integrateEnemy,
   integratePlayer,
  )
-import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player, playerOnGround, playerVel)
 import Domain.Model.World (World (..))
