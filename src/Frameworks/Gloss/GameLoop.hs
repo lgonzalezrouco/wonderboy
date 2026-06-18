@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 -- | Bucle de juego Gloss: orquesta adaptadores y 'updateGame' (M8).
 module Frameworks.Gloss.GameLoop (
   runGame,
