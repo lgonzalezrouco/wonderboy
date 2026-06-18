@@ -182,6 +182,7 @@ library
         Paths_wonderboy_hs
     build-depends:
       , aeson >=2.1 && <2.3
+      , bmp == 1.2.*
       , bytestring >=0.11 && <0.13
       , free >=5.2 && <5.3
       , gloss >=1.13 && <1.15
@@ -208,6 +209,8 @@ executable wonderboy-hs
     -- La librería `wonderboy-hs` expone todos los módulos del motor.
     -- El ejecutable la usa sólo para el demo; en M8 Gloss también entra aquí.
     build-depends:    wonderboy-hs
+
+    ghc-options:    -threaded
 
 test-suite wonderboy-hs-test
     import:           warnings, deps
