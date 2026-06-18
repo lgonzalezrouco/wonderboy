@@ -7,12 +7,11 @@ where
 import Control.Applicative ((<|>))
 import Data.Maybe (isNothing)
 
-import Graphics.Gloss.Data.Color (Color)
+import Graphics.Gloss.Data.Color (Color, makeColor)
 import Graphics.Gloss.Data.Picture (Picture (..), pictures, rectangleSolid, text)
 
 import Adapters.Gloss.Config (
   cameraY,
-  renderZoom,
   enemyColorForKind,
   hudAttackColor,
   hudBossColor,
@@ -28,6 +27,7 @@ import Adapters.Gloss.Config (
   pickupColor,
   platformColor,
   playerColor,
+  renderZoom,
   windowHeight,
   windowWidth,
  )
@@ -50,6 +50,7 @@ import Domain.Model.Player (
   playerAttackFrames,
   playerFacing,
   playerHealth,
+  playerInvincibilityFrames,
   playerPos,
  )
 import Domain.Model.World (World (..))
@@ -174,6 +175,18 @@ entitySpritePadding = 0.0
 platformVisualHeight :: Float
 platformVisualHeight = 35
 
+attackCueHeight :: Float
+attackCueHeight = 34
+
+attackCueGap :: Float
+attackCueGap = 7
+
+attackCueLift :: Float
+attackCueLift = 24
+
+damageFlashColor :: Color
+damageFlashColor = makeColor 1.0 0.15 0.1 0.38
+
 backgroundWidth :: Float
 backgroundWidth = fromIntegral windowWidth
 
@@ -216,9 +229,13 @@ renderWorldLayer catalog renderTick w =
 
 renderPlayer :: SpriteCatalog -> Int -> Player -> Picture
 renderPlayer catalog renderTick p =
-  case playerSprite catalog renderTick p of
-    Nothing -> aabbToPicture playerColor box
-    Just sprite -> drawEntitySprite (playerFacing p) box sprite
+  pictures
+    [ case playerSprite catalog renderTick p of
+        Nothing -> aabbToPicture playerColor box
+        Just sprite -> drawEntitySprite (playerFacing p) box sprite
+    , renderPlayerDamageFlash p box
+    , renderPlayerAttackCue catalog p box
+    ]
  where
   box = playerAabb p
 
@@ -240,10 +257,19 @@ renderPickup catalog pickup =
 
 renderPlatform :: SpriteCatalog -> Platform -> Picture
 renderPlatform catalog platform =
-  case (scTileGrassLeft catalog, scTileGrassMid catalog, scTileGrassRight catalog) of
+  case platformSprites catalog box of
     (leftSprite, Just midSprite, rightSprite) ->
-      tileStrip leftSprite midSprite rightSprite (platformAabb platform)
+      tileStrip leftSprite midSprite rightSprite box
     _ -> aabbToPicture platformColor (platformAabb platform)
+ where
+  box = platformAabb platform
+
+platformSprites :: SpriteCatalog -> Aabb -> (Maybe Sprite, Maybe Sprite, Maybe Sprite)
+platformSprites catalog box
+  | aabbMinY box <= 0 =
+      (scTileGrassLeft catalog, scTileGrassMid catalog, scTileGrassRight catalog)
+  | otherwise =
+      (scTileMovingLeft catalog, scTileMovingMid catalog, scTileMovingRight catalog)
 
 renderMovingPlatform :: SpriteCatalog -> MovingPlatform -> Picture
 renderMovingPlatform catalog platform =
@@ -396,6 +422,37 @@ renderAttackIcon catalog =
   case scHudAttackSword catalog of
     Nothing -> Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
     Just sprite -> drawSpriteAtHeight 20 sprite
+
+renderPlayerDamageFlash :: Player -> Aabb -> Picture
+renderPlayerDamageFlash p box
+  | not (hasFramesLeft (playerInvincibilityFrames p)) = Blank
+  | otherwise =
+      Translate cx cy $
+        Color damageFlashColor $
+          rectangleSolid (aabbMaxX box - aabbMinX box) (aabbMaxY box - aabbMinY box)
+ where
+  cx = (aabbMinX box + aabbMaxX box) / 2
+  cy = (aabbMinY box + aabbMaxY box) / 2
+
+renderPlayerAttackCue :: SpriteCatalog -> Player -> Aabb -> Picture
+renderPlayerAttackCue catalog p box
+  | not (hasFramesLeft (playerAttackFrames p)) = Blank
+  | otherwise =
+      Translate cueX cueY $
+        case scHudAttackSword catalog of
+          Nothing -> Color hudAttackColor (rectangleSolid attackCueHeight 12)
+          Just sprite -> Scale faceScale 1 (drawSpriteAtHeight attackCueHeight sprite)
+ where
+  facing = playerFacing p
+  faceScale =
+    case facing of
+      FacingLeft -> -1
+      FacingRight -> 1
+  cueX =
+    case facing of
+      FacingLeft -> aabbMinX box - attackCueGap
+      FacingRight -> aabbMaxX box + attackCueGap
+  cueY = aabbMinY box + attackCueLift
 
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =
