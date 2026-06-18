@@ -15,19 +15,21 @@ module UseCases.UpdateGame (
 )
 where
 
+import Control.Monad (unless)
 import Control.Monad.Reader (MonadReader, ask)
 import Control.Monad.State (MonadState, get, modify)
 
 import Domain.Logic.BossPhase (resolveBossPhases)
 import Domain.Logic.Combat (resolveCombat)
+import Domain.Logic.LevelFlow (resolveFramePhase, resolvePlayingWin)
 import Domain.Logic.Pickups (resolvePickups)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
 import Domain.Logic.Step (advanceFrame)
-import Domain.Model.GamePhase (GamePhase (..))
+import Domain.Model.GamePhase (GamePhase (Playing), isSimulationFrozen)
 import Domain.ValueObjects.DeltaTime (DeltaTime, isFrozen)
 import Domain.ValueObjects.Input (Input)
 import UseCases.GameMonad (
-  GameConfig,
+  GameConfig (..),
   GameError,
   GameState (..),
   combatParamsFromConfig,
@@ -38,10 +40,10 @@ import UseCases.GameMonad (
 
 {- | Actualiza el estado del juego para un frame dado.
 
-Con 'GameOver' no avanza simulación ni aplica input. Con el frame congelado
-('Domain.ValueObjects.DeltaTime.isFrozen') tampoco avanza nada: una sola guarda fija aquí
-la política de "frame congelado" a nivel de frame. En 'Playing' con tiempo: behaviour +
-física, combate, pickups, luego out-of-bounds y resolución de muerte.
+Con 'GameOver', 'LevelComplete' o 'Victory' no avanza simulación. Con el frame
+congelado ('Domain.ValueObjects.DeltaTime.isFrozen') tampoco avanza nada. En
+'Playing' con tiempo: behaviour + física, combate, pickups, victoria híbrida,
+luego out-of-bounds y muerte (la muerte anula la victoria en el mismo frame).
 
 La firma es polimórfica en las typeclasses 'mtl' que realmente usa
 ('MonadReader' 'GameConfig', 'MonadState' 'GameState'); no necesita 'MonadError'
@@ -54,31 +56,33 @@ updateGame ::
   m ()
 updateGame dt input = do
   st <- get
-  case gsPhase st of
-    GameOver -> pure ()
-    Playing
-      | isFrozen dt -> pure ()
-      | otherwise -> do
-          cfg <- ask
-          let params = physicsParamsFromConfig cfg
-              life = lifeParamsFromConfig cfg
-              combat = combatParamsFromConfig cfg
-              wBefore = gsWorld st
-              wAfterFrame = advanceFrame params dt input wBefore
-              wAfterCombat = resolveCombat combat input wAfterFrame
-              wAfterBoss = resolveBossPhases combat wBefore wAfterCombat
-              (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
-              (wFinal, lives', phase') =
-                resolveHazardsAndDeath life (gsLives st) Playing wAfterPickups
-          modify
-            ( \s ->
-                s
-                  { gsWorld = wFinal
-                  , gsLives = lives'
-                  , gsPhase = phase'
-                  , gsScore = gsScore s <> scoreDelta
-                  }
-            )
+  unless (isSimulationFrozen (gsPhase st) || isFrozen dt) $ do
+    cfg <- ask
+    let params = physicsParamsFromConfig cfg
+        life = lifeParamsFromConfig cfg
+        combat = combatParamsFromConfig cfg
+        livesBefore = gsLives st
+        scoreAfterPickups = gsScore st
+        wBefore = gsWorld st
+        wAfterFrame = advanceFrame params dt input wBefore
+        wAfterCombat = resolveCombat combat input wAfterFrame
+        wAfterBoss = resolveBossPhases combat wBefore wAfterCombat
+        (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
+        scoreFinal = scoreAfterPickups <> scoreDelta
+        phaseFromWin =
+          resolvePlayingWin (gsLevelIndex st) (gcLevelCount cfg) scoreFinal wAfterPickups
+        (wFinal, lives', phaseFromDeath) =
+          resolveHazardsAndDeath life livesBefore Playing wAfterPickups
+        phase' = resolveFramePhase livesBefore lives' phaseFromDeath phaseFromWin
+    modify
+      ( \s ->
+          s
+            { gsWorld = wFinal
+            , gsLives = lives'
+            , gsPhase = phase'
+            , gsScore = scoreFinal
+            }
+      )
 
 {- | Corre @n@ frames consecutivos con el mismo @dt@ e 'Input', o el primer error.
 

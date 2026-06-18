@@ -56,6 +56,9 @@ extra-doc-files:    README.md
 
 data-files:
     levels/demo.json
+    levels/level1.json
+    levels/level2.json
+    levels/level3.json
     assets/sprites/backgrounds/castle.bmp
     assets/sprites/backgrounds/grasslands.bmp
     assets/sprites/bosses/boss-bat.bmp
@@ -133,12 +136,14 @@ library
       , Domain.ValueObjects.BossHealth
       , Domain.ValueObjects.Lives
       , Domain.ValueObjects.Score
+      , Domain.ValueObjects.LevelCount
       , Domain.ValueObjects.Frames
       , Domain.Logic.Collision
       , Domain.Logic.Combat
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
       , Domain.Logic.MovingPlatforms
+      , Domain.Logic.LevelFlow
       , Domain.Logic.Pickups
       , Domain.Logic.PlayerLife
       , Domain.Logic.RunBehaviour
@@ -222,6 +227,7 @@ test-suite wonderboy-hs-test
       , Domain.PickupTest
       , Domain.StepTest
       , Domain.LevelLoadTest
+      , Domain.LevelFlowTest
       , UseCases.UpdateGameTest
       , UseCases.LoadLevelTest
 

@@ -74,12 +74,14 @@ resolveHazardsAndDeath ::
   GamePhase ->
   World ->
   (World, Lives, GamePhase)
-resolveHazardsAndDeath _ lives GameOver w = (w, lives, GameOver)
-resolveHazardsAndDeath lp lives Playing w =
-  let w'
-        | isPlayerOutOfBounds lp w =
-            w{worldPlayer = (worldPlayer w){playerHealth = health 0}}
-        | otherwise = w
-   in if isDepleted (playerHealth (worldPlayer w'))
-        then resolveDeath lp lives w'
-        else (w', lives, Playing)
+resolveHazardsAndDeath lp lives phase w =
+  case phase of
+    Playing ->
+      let w'
+            | isPlayerOutOfBounds lp w =
+                w{worldPlayer = (worldPlayer w){playerHealth = health 0}}
+            | otherwise = w
+       in if isDepleted (playerHealth (worldPlayer w'))
+            then resolveDeath lp lives w'
+            else (w', lives, Playing)
+    _ -> (w, lives, phase)

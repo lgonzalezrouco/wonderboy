@@ -31,5 +31,11 @@ data GameView = GameView
   -- ^ Salud del jefe vivo, si hay uno en el nivel.
   , gvCombatParams :: CombatParams
   -- ^ Parámetros de combate (proyectados desde config) para debug de hitboxes en el adaptador.
+  , gvLevelIndex :: Int
+  -- ^ Nivel actual del run (1–3).
+  , gvExitScoreHint :: Maybe (Score, Score)
+  -- ^ Puntuación actual y mínima cuando el jugador está en la salida sin alcanzar el umbral.
+  , gvBossExitHint :: Bool
+  -- ^ Hint de jefe vivo en la salida con puntuación suficiente.
   }
   deriving (Eq, Show)

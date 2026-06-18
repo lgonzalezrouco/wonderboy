@@ -14,6 +14,7 @@ module UseCases.GameMonad (
   -- * Configuración
   GameConfig (..),
   defaultConfig,
+  configForLevelCatalog,
   physicsParamsFromConfig,
   lifeParamsFromConfig,
   combatParamsFromConfig,
@@ -24,6 +25,9 @@ module UseCases.GameMonad (
   -- * Estado
   GameState (..),
   initialGameState,
+  startLevel,
+  advanceAfterLevelComplete,
+  restartRun,
   gameViewFromState,
 
   -- * La mónada
@@ -34,7 +38,6 @@ where
 
 -- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity, runIdentity)
-import Data.List (find)
 import GHC.Generics (Generic)
 
 -- Grupo 2 — terceros (mtl)
@@ -46,8 +49,8 @@ import Control.Monad.State (MonadState, StateT, runStateT)
 
 -- Grupo 3 — proyecto
 
-import Domain.Model.Enemy (Enemy (..))
-import Domain.Model.EnemyKind (isBossKind)
+import Domain.Logic.LevelFlow (findLivingBoss, showBossExitHint, showExitScoreHint)
+import Domain.Model.Enemy (enemyHealth, enemyMaxHealth)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.Player (spawnPlayer)
@@ -56,7 +59,8 @@ import Domain.ValueObjects.BossHealth (BossHealth, bossHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
 import Domain.ValueObjects.Damage (Damage, damage)
 import Domain.ValueObjects.Frames (Frames, frames)
-import Domain.ValueObjects.Health (Health, isDepleted)
+import Domain.ValueObjects.Health (Health)
+import Domain.ValueObjects.LevelCount (LevelCount, levelCount)
 import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.Lives (Lives, lives)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
@@ -100,6 +104,8 @@ data GameConfig = GameConfig
   -- ^ Alcance horizontal del melee en px lógicos (M10).
   , gcMeleeDamage :: Damage
   -- ^ Daño infligido a un enemigo por un melee que conecta (M10).
+  , gcLevelCount :: LevelCount
+  -- ^ Niveles en el run actual; la victoria ocurre al completar el último.
   }
   deriving (Eq, Show, Generic)
 
@@ -121,7 +127,13 @@ defaultConfig =
     , gcContactDamage = damage 1
     , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
+    , gcLevelCount = levelCount 3
     }
+
+-- | Ajusta 'gcLevelCount' al tamaño del catálogo de niveles del run.
+configForLevelCatalog :: [a] -> GameConfig
+configForLevelCatalog paths =
+  defaultConfig{gcLevelCount = levelCount (length paths)}
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
 physicsParamsFromConfig :: GameConfig -> PhysicsParams
@@ -182,18 +194,34 @@ data GameState = GameState
   , gsPhase :: GamePhase
   , gsScore :: Score
   -- ^ Puntuación del nivel actual; se reinicia al cargar un nivel (M18).
+  , gsLevelIndex :: Int
+  -- ^ Posición 1-based del nivel actual dentro del run.
   }
   deriving (Eq, Show, Generic)
 
 -- | Estado inicial de una partida nueva a partir de un mundo de nivel.
 initialGameState :: GameConfig -> World -> GameState
-initialGameState cfg w =
+initialGameState cfg = startLevel cfg (gcStartingLives cfg) 1
+
+-- | Carga un nivel en el run conservando vidas y reiniciando puntuación y salud.
+startLevel :: GameConfig -> Lives -> Int -> World -> GameState
+startLevel cfg runLives levelIndex w =
   GameState
     { gsWorld = w{worldPlayer = spawnPlayer (gcMaxHealth cfg) (worldSpawnPoint w)}
-    , gsLives = gcStartingLives cfg
+    , gsLives = runLives
     , gsPhase = Playing
     , gsScore = score 0
+    , gsLevelIndex = levelIndex
     }
+
+-- | Avanza al siguiente nivel tras confirmar 'LevelComplete'.
+advanceAfterLevelComplete :: GameConfig -> GameState -> World -> GameState
+advanceAfterLevelComplete cfg gs =
+  startLevel cfg (gsLives gs) (gsLevelIndex gs + 1)
+
+-- | Reinicia el run desde el nivel 1 con vidas iniciales.
+restartRun :: GameConfig -> World -> GameState
+restartRun cfg = startLevel cfg (gcStartingLives cfg) 1
 
 {- | Proyección para el adaptador de renderizado (sin importar 'GameMonad' desde Adapters).
 
@@ -202,24 +230,30 @@ configuración y no de constantes duplicadas en el adaptador.
 -}
 gameViewFromState :: GameConfig -> GameState -> GameView
 gameViewFromState cfg gs =
-  GameView
-    { gvWorld = gsWorld gs
-    , gvLives = gsLives gs
-    , gvPhase = gsPhase gs
-    , gvMaxHealth = gcMaxHealth cfg
-    , gvStartingLives = gcStartingLives cfg
-    , gvScore = gsScore gs
-    , gvBossHealth = bossHealthFromWorld (gsWorld gs)
-    , gvCombatParams = combatParamsFromConfig cfg
-    }
+  let w = gsWorld gs
+      s = gsScore gs
+   in GameView
+        { gvWorld = w
+        , gvLives = gsLives gs
+        , gvPhase = gsPhase gs
+        , gvMaxHealth = gcMaxHealth cfg
+        , gvStartingLives = gcStartingLives cfg
+        , gvScore = s
+        , gvBossHealth = bossHealthFromWorld w
+        , gvCombatParams = combatParamsFromConfig cfg
+        , gvLevelIndex = gsLevelIndex gs
+        , gvExitScoreHint =
+            if showExitScoreHint s w
+              then Just (s, worldMinScore w)
+              else Nothing
+        , gvBossExitHint = showBossExitHint s w
+        }
 
 -- | Proyecta salud del jefe vivo para el HUD (como máximo un jefe por nivel).
 bossHealthFromWorld :: World -> Maybe BossHealth
 bossHealthFromWorld w = do
-  e <- find isLivingBoss (worldEnemies w)
+  e <- findLivingBoss w
   pure (bossHealth (enemyHealth e) (enemyMaxHealth e))
- where
-  isLivingBoss e = isBossKind (enemyKind e) && not (isDepleted (enemyHealth e))
 
 -- ---------------------------------------------------------------------------
 -- La mónada GameM
