@@ -9,7 +9,7 @@ import Data.Text.IO qualified as TIO
 
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyKind, enemyMaxHealth)
 import Domain.Model.EnemyKind (EnemyKind (..), isBossKind)
-import Domain.Model.World (World, worldEnemies, worldFallingHazards, worldMinScore)
+import Domain.Model.World (World, worldCrumblingPlatforms, worldEnemies, worldFallingHazards, worldMinScore)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Score (scorePoints)
 import Paths_wonderboy_hs (getDataFileName)
@@ -39,6 +39,7 @@ unit_level2BuildsNoBoss = do
   w <- loadLevelWorld "levels/level2.json"
   scorePoints (worldMinScore w) @?= 500
   assertBool "level 2 has no boss" (null (bossesOf w))
+  assertBool "level 2 has crumbling platforms" (not (null (worldCrumblingPlatforms w)))
 
 unit_level3BuildsWithGolemKing :: Assertion
 unit_level3BuildsWithGolemKing = do

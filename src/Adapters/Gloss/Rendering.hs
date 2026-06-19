@@ -12,6 +12,7 @@ import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectang
 
 import Adapters.Gloss.Config (
   cameraY,
+  crumblingPlatformColor,
   enemyColorForKind,
   fallingHazardColor,
   hudAttackColor,
@@ -40,6 +41,10 @@ import Adapters.Gloss.Sprites (
   playerSprite,
  )
 import Domain.Logic.Combat (meleeHitbox)
+import Domain.Model.CrumblingPlatform (
+  CrumblingPlatform,
+  crumblingPlatformAabb,
+ )
 import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
 import Domain.Model.FallingHazard (
@@ -253,6 +258,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
         pictures
           [ pictures (map (renderPlatform catalog) (worldPlatforms w))
           , pictures (map (renderMovingPlatform catalog) (worldMovingPlatforms w))
+          , pictures (map renderCrumblingPlatform (worldCrumblingPlatforms w))
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
           , pictures (map renderProjectile (worldProjectiles w))
@@ -322,6 +328,10 @@ renderMovingPlatform catalog platform =
  where
   box = movingPlatformAabb platform
 
+renderCrumblingPlatform :: CrumblingPlatform -> Picture
+renderCrumblingPlatform cp =
+  aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
+
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
   case scExitSign catalog of
@@ -347,6 +357,9 @@ renderHitboxOverlay combatParams w =
           ]
             <> [ aabbOutline movingPlatformColor (movingPlatformAabb mp)
                | mp <- worldMovingPlatforms w
+               ]
+            <> [ aabbOutline crumblingPlatformColor (crumblingPlatformAabb cp)
+               | cp <- worldCrumblingPlatforms w
                ]
             <> [ aabbOutline (enemyColorForKind (enemyKind e)) (enemyAabb e)
                | e <- worldEnemies w

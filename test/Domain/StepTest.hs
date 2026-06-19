@@ -4,6 +4,7 @@ import Domain.Fixtures (
   ceilingPlatform,
   dtFrame,
   floorWorld,
+  testLifeParams,
   testParams,
   wallPlatform,
   worldGrounded,
@@ -34,7 +35,7 @@ import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
 unit_stepZeroIsIdentityAtSpawn :: Assertion
 unit_stepZeroIsIdentityAtSpawn =
-  step testParams (deltaTime 0) noInput initialWorld @?= initialWorld
+  step testParams testLifeParams (deltaTime 0) noInput initialWorld @?= initialWorld
 
 unit_stepZeroIsIdentityMoving :: Assertion
 unit_stepZeroIsIdentityMoving =
@@ -47,11 +48,11 @@ unit_stepZeroIsIdentityMoving =
                 , playerOnGround = False
                 }
           }
-   in step testParams (deltaTime 0) noInput moving @?= moving
+   in step testParams testLifeParams (deltaTime 0) noInput moving @?= moving
 
 unit_gravityMonotoneInAir :: Assertion
 unit_gravityMonotoneInAir = do
-  let w1 = step testParams dtFrame noInput initialWorld
+  let w1 = step testParams testLifeParams dtFrame noInput initialWorld
       vy0 = velY (playerVel (worldPlayer initialWorld))
       vy1 = velY (playerVel (worldPlayer w1))
   vy1 < vy0 @?= True
@@ -67,7 +68,7 @@ unit_jumpImpulseMatchesPpJumpSpeed :: Assertion
 unit_jumpImpulseMatchesPpJumpSpeed = do
   wGround <- worldGrounded
   posX (playerPos (worldPlayer wGround)) @?= 0
-  let wJump = step testParams dtFrame (noInput{inputJump = True}) wGround
+  let wJump = step testParams testLifeParams dtFrame (noInput{inputJump = True}) wGround
       vy = velY (playerVel (worldPlayer wJump))
   vy @?= ppJumpSpeed testParams
 
@@ -81,18 +82,18 @@ unit_jumpGatingInAir = do
                 , playerOnGround = False
                 }
           }
-      wNoJump = step testParams dtFrame noInput wAir
-      wJump = step testParams dtFrame (noInput{inputJump = True}) wAir
+      wNoJump = step testParams testLifeParams dtFrame noInput wAir
+      wJump = step testParams testLifeParams dtFrame (noInput{inputJump = True}) wAir
   worldPlayer wJump @?= worldPlayer wNoJump
 
 unit_horizontalInputLeft :: Assertion
 unit_horizontalInputLeft = do
-  let w = step testParams dtFrame (noInput{inputLeft = True}) initialWorld
+  let w = step testParams testLifeParams dtFrame (noInput{inputLeft = True}) initialWorld
   velX (playerVel (worldPlayer w)) @?= (-ppMoveSpeed testParams)
 
 unit_horizontalInputRight :: Assertion
 unit_horizontalInputRight = do
-  let w = step testParams dtFrame (noInput{inputRight = True}) initialWorld
+  let w = step testParams testLifeParams dtFrame (noInput{inputRight = True}) initialWorld
   velX (playerVel (worldPlayer w)) @?= ppMoveSpeed testParams
 
 unit_ceilingBumpZeroesVy :: Assertion
@@ -100,7 +101,7 @@ unit_ceilingBumpZeroesVy = do
   let w0 = worldWithCeiling
       vyBefore = velY (playerVel (worldPlayer w0))
   assertBool "setup: player moving upward" (vyBefore > 0)
-  let w1 = step testParams dtFrame noInput w0
+  let w1 = step testParams testLifeParams dtFrame noInput w0
       p1 = worldPlayer w1
       solid = platformAabb ceilingPlatform
   velY (playerVel p1) @?= 0
@@ -110,7 +111,7 @@ unit_ceilingBumpZeroesVy = do
 
 unit_wallBlockNoPenetration :: Assertion
 unit_wallBlockNoPenetration = do
-  let w1 = step testParams dtFrame (noInput{inputRight = True}) worldWithWall
+  let w1 = step testParams testLifeParams dtFrame (noInput{inputRight = True}) worldWithWall
       p1 = worldPlayer w1
       wallFace = aabbMinX (platformAabb wallPlatform)
       maxFootX = wallFace - playerWidth / 2
@@ -135,7 +136,7 @@ unit_substepPreventsTunnelingThroughThinPlatform = do
           , worldPlatforms = [thinPlatform]
           , worldMovingPlatforms = []
           }
-      p1 = worldPlayer (step testParams dtFrame noInput w0)
+      p1 = worldPlayer (step testParams testLifeParams dtFrame noInput w0)
       platTop = aabbMaxY (platformAabb thinPlatform)
   assertBool "player lands on the thin platform instead of tunneling through it" (playerOnGround p1)
   assertBool
@@ -152,7 +153,7 @@ unit_groundEnemyFallsOntoPlatform = do
           , worldEnemies =
               [spawnEnemy 1 GolemKind (position 60 40) (defaultProgramForKind GolemKind)]
           }
-      wN = iterate (step testParams dtFrame noInput) w0 !! 80
+      wN = iterate (step testParams testLifeParams dtFrame noInput) w0 !! 80
       platTop = aabbMaxY (platformAabb ledge)
   case worldEnemies wN of
     e : _ ->

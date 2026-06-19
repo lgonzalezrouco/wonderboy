@@ -7,6 +7,7 @@ import Domain.Fixtures (
   floorWorld,
   runBehaviourN,
   testCombatParams,
+  testLifeParams,
   testParams,
   worldWithEnemyAt,
  )
@@ -53,7 +54,7 @@ meleeWorld p enemies = floorWorld{worldPlayer = p, worldEnemies = enemies}
 unit_snailPatrolMoves :: Assertion
 unit_snailPatrolMoves =
   let w0 = worldWithEnemyAt SnailKind (position 40 8) (position (-200) 8)
-      wN = iterate (advanceFrame testParams dtFrame noInput) w0 !! 120
+      wN = iterate (advanceFrame testParams testLifeParams dtFrame noInput) w0 !! 120
    in case worldEnemies wN of
         e : _ -> posX (enemyPos e) /= 40 @?= True
         [] -> assertFailure "expected snail"

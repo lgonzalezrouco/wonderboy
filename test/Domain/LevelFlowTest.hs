@@ -47,6 +47,7 @@ worldInExit =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 worldAwayFromExit :: World

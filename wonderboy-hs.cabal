@@ -142,6 +142,7 @@ library
       , Domain.Logic.Collision
       , Domain.Logic.Combat
       , Domain.Logic.Projectiles
+      , Domain.Logic.CrumblingPlatforms
       , Domain.Logic.FallingHazards
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
@@ -163,6 +164,7 @@ library
       , Domain.Model.Player
       , Domain.Model.Projectile
       , Domain.Model.FallingHazard
+      , Domain.Model.CrumblingPlatform
       , Domain.Model.World
       , Domain.Model.BossKindStats
       , Domain.Model.BossPhase
@@ -236,6 +238,7 @@ test-suite wonderboy-hs-test
       , Domain.PickupTest
       , Domain.ProjectileTest
       , Domain.FallingHazardTest
+      , Domain.CrumblingPlatformTest
       , Domain.StepTest
       , Domain.LevelLoadTest
       , Domain.LevelFlowTest

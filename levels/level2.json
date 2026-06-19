@@ -5,7 +5,6 @@
     { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 200 },
     { "pos": { "x": -260, "y": 0 }, "width": 360, "height": 8 },
     { "pos": { "x": 195, "y": 0 }, "width": 200, "height": 8 },
-    { "pos": { "x": 540, "y": 120 }, "width": 120, "height": 8 },
     { "pos": { "x": 700, "y": 56 }, "width": 110, "height": 8 },
     { "pos": { "x": 850, "y": 0 }, "width": 300, "height": 8 },
     { "pos": { "x": 1500, "y": 0 }, "width": 300, "height": 8 },
@@ -18,6 +17,9 @@
     { "id": 1, "pos": { "x": 420, "y": 8 }, "width": 80, "height": 12, "endA": { "x": 420, "y": 8 }, "endB": { "x": 420, "y": 110 }, "speed": 30, "startTowardB": true },
     { "id": 2, "pos": { "x": 1170, "y": 44 }, "width": 96, "height": 12, "endA": { "x": 1170, "y": 44 }, "endB": { "x": 1404, "y": 44 }, "speed": 46, "startTowardB": true },
     { "id": 3, "pos": { "x": 2175, "y": 40 }, "width": 90, "height": 12, "endA": { "x": 2175, "y": 40 }, "endB": { "x": 2255, "y": 40 }, "speed": 34, "startTowardB": true }
+  ],
+  "crumblingPlatforms": [
+    { "id": 1, "pos": { "x": 540, "y": 120 }, "width": 120, "height": 8 }
   ],
   "enemies": [
     { "id": 1, "kind": "snail", "pos": { "x": -60, "y": 8 } },

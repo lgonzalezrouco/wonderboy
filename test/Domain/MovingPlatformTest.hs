@@ -1,6 +1,7 @@
 -- | Pure moving platform motion, carry, and landing tests.
 module Domain.MovingPlatformTest where
 
+import Domain.Fixtures (testLifeParams)
 import Domain.Logic.MovingPlatforms (
   advanceMovingPlatforms,
   mpaDeltaX,
@@ -87,6 +88,7 @@ worldWithShuttle mp p =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 unit_mkMovingPlatformRejectsInvalid :: Assertion
@@ -115,7 +117,7 @@ unit_horizontalCarryOnGround =
         case advanceMovingPlatforms dtFrame [horizontalShuttle] of
           (adv : _) -> mpaDeltaX adv
           [] -> 0
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
       dx = posX (playerPos (worldPlayer w1)) - posX (playerPos (worldPlayer w0))
    in assertBool "player horizontal delta matches platform" (abs (dx - expectedDx) <= 1e-3)
 
@@ -132,7 +134,7 @@ unit_verticalCarryDownOnGround =
         case advanceMovingPlatforms dtFrame [mp] of
           (adv : _) -> mpaDeltaY adv
           [] -> 0
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
       dy = posY (playerPos (worldPlayer w1)) - posY (playerPos (worldPlayer w0))
    in assertBool "player vertical delta matches descending shuttle" (abs (dy - expectedDy) <= 1e-3)
 
@@ -145,7 +147,7 @@ unit_jumpOffDoesNotInheritPlatformVelocity =
           (playerOnShuttle pos)
             { playerVel = velocity 0 400
             }
-      w1 = step testParams dtFrame (noInput{inputJump = True}) w0
+      w1 = step testParams testLifeParams dtFrame (noInput{inputJump = True}) w0
    in velX (playerVel (worldPlayer w1)) @?= 0
 
 unit_noCarryInAir :: Assertion
@@ -157,14 +159,14 @@ unit_noCarryInAir =
           , playerVel = velocity 0 100
           }
       w0 = worldWithShuttle horizontalShuttle p
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
    in posX (playerPos (worldPlayer w1)) @?= posX pos
 
 unit_verticalCarryOnGround :: Assertion
 unit_verticalCarryOnGround =
   let pos = position 24 32
       w0 = worldWithShuttle verticalShuttle (playerOnShuttle pos)
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
       dy = posY (playerPos (worldPlayer w1)) - posY (playerPos (worldPlayer w0))
    in assertBool "player moves vertically with shuttle" (dy > 0.01)
 
@@ -187,8 +189,9 @@ unit_jumpIntoSideDoesNotTeleport =
           , worldProjectiles = []
           , worldNextProjectileId = 1
           , worldFallingHazards = []
+          , worldCrumblingPlatforms = []
           }
-      w1 = step testParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
+      w1 = step testParams testLifeParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
       px = posX (playerPos (worldPlayer w1))
    in do
         assertBool "did not tunnel past platform right edge" (px < 78)
@@ -203,7 +206,7 @@ unit_sideContactDoesNotCarry =
           , playerVel = velocity 0 0
           }
       w0 = worldWithShuttle horizontalShuttle p
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
       dx = posX (playerPos (worldPlayer w1)) - posX pos
    in assertBool "side contact does not apply platform carry" (abs dx < 0.5)
 
@@ -234,8 +237,9 @@ unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways =
           , worldProjectiles = []
           , worldNextProjectileId = 1
           , worldFallingHazards = []
+          , worldCrumblingPlatforms = []
           }
-      w1 = step testParams dtFrame noInput w0
+      w1 = step testParams testLifeParams dtFrame noInput w0
       p1 = worldPlayer w1
    in do
         posX (playerPos p1) @?= posX pos
@@ -261,6 +265,7 @@ unit_landingOnMovingPlatformSetsOnGround =
           , worldProjectiles = []
           , worldNextProjectileId = 1
           , worldFallingHazards = []
+          , worldCrumblingPlatforms = []
           }
-      w1 = foldl (\w _ -> step testParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
+      w1 = foldl (\w _ -> step testParams testLifeParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
    in playerOnGround (worldPlayer w1) @?= True

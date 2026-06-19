@@ -68,6 +68,7 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldProjectiles = []
       , worldNextProjectileId = 1
       , worldFallingHazards = []
+      , worldCrumblingPlatforms = []
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -86,6 +87,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldProjectiles = []
           , worldNextProjectileId = 1
           , worldFallingHazards = []
+          , worldCrumblingPlatforms = []
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0

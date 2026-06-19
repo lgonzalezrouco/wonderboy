@@ -12,6 +12,7 @@ module Domain.Fixtures (
   mkTestPickup,
   testParams,
   testCombatParams,
+  testLifeParams,
   testThrowParams,
   testPlayerProjectile,
   testEnemyProjectile,
@@ -58,6 +59,7 @@ import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Input (noInput)
+import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
@@ -67,6 +69,7 @@ import Test.Tasty.HUnit (assertBool)
 import UseCases.GameMonad (
   combatParamsFromConfig,
   defaultConfig,
+  lifeParamsFromConfig,
   physicsParamsFromConfig,
   throwParamsFromConfig,
  )
@@ -77,6 +80,9 @@ testParams = physicsParamsFromConfig defaultConfig
 
 testCombatParams :: CombatParams
 testCombatParams = combatParamsFromConfig defaultConfig
+
+testLifeParams :: LifeParams
+testLifeParams = lifeParamsFromConfig defaultConfig
 
 testThrowParams :: ThrowParams
 testThrowParams = throwParamsFromConfig defaultConfig
@@ -153,6 +159,7 @@ floorWorld =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 -- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
@@ -175,7 +182,7 @@ fallUntilGround _ w
 fallUntilGround 0 w =
   assertBool "player did not land within step budget" False >> pure w
 fallUntilGround n w =
-  fallUntilGround (n - 1) (step testParams dtFrame noInput w)
+  fallUntilGround (n - 1) (step testParams testLifeParams dtFrame noInput w)
 
 -- | 'initialWorld' after the player has landed on the test floor.
 worldGrounded :: IO World
@@ -196,6 +203,7 @@ worldWithCeiling =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -216,6 +224,7 @@ worldWithWall =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).
