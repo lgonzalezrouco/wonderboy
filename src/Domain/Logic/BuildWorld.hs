@@ -17,11 +17,13 @@ import Data.Text qualified as T
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetype)
 import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHealth, bossPhases, phaseProgram)
+import Domain.Model.CrumblingPlatform (CrumblingPlatform, mkCrumblingPlatform)
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyMaxHealth, spawnEnemy)
 import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.ExitZone (ExitZone (..))
 import Domain.Model.FallingHazard (FallingHazard, spawnFallingHazard)
 import Domain.Model.LevelDefinition (
+  CrumblingPlatformDef (..),
   EnemyDef (..),
   FallingHazardDef (..),
   LevelBuildError (..),
@@ -48,11 +50,13 @@ buildWorld lvl = do
   checkUniqueIds (map enemyDefId (levelEnemies lvl)) "enemy"
   checkUniqueIds (map pickupDefId (levelPickups lvl)) "pickup"
   checkUniqueIds (map fhDefId (levelFallingHazards lvl)) "falling hazard"
+  checkUniqueIds (map cpDefId (levelCrumblingPlatforms lvl)) "crumbling platform"
   checkBossCount (levelEnemies lvl)
   movingPlats <- traverse buildMovingPlatform (levelMovingPlatforms lvl)
   enemies <- traverse buildEnemy (levelEnemies lvl)
   pickups <- traverse buildPickup (levelPickups lvl)
   hazards <- traverse buildFallingHazard (levelFallingHazards lvl)
+  crumbling <- traverse buildCrumblingPlatform (levelCrumblingPlatforms lvl)
   let spawn = levelSpawn lvl
   pure
     World
@@ -67,6 +71,7 @@ buildWorld lvl = do
       , worldProjectiles = []
       , worldNextProjectileId = 1
       , worldFallingHazards = hazards
+      , worldCrumblingPlatforms = crumbling
       }
 
 checkUniqueIds :: [Int] -> Text -> Either LevelBuildError ()
@@ -169,6 +174,17 @@ buildFallingHazard def
           (fhDefHeight def)
           (fhDefFallSpeed def)
           (frames <$> fhDefLoopDelay def)
+
+buildCrumblingPlatform :: CrumblingPlatformDef -> Either LevelBuildError CrumblingPlatform
+buildCrumblingPlatform def =
+  case mkCrumblingPlatform
+    (cpDefId def)
+    (cpDefPos def)
+    (cpDefWidth def)
+    (cpDefHeight def) of
+    Nothing ->
+      Left (levelBuildError "crumbling platform id, width and height must be > 0")
+    Just plat -> Right plat
 
 buildExit :: RectDef -> ExitZone
 buildExit rect =

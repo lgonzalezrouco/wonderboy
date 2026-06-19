@@ -6,6 +6,11 @@ module Domain.Logic.Step (
 where
 
 import Domain.Logic.Collision (resolveEnemyPlatforms, resolvePlayerPlatforms)
+import Domain.Logic.CrumblingPlatforms (
+  advanceCrumblingPlatforms,
+  appendEnemySolidCrumbling,
+  appendPlayerSolidCrumbling,
+ )
 import Domain.Logic.MovingPlatforms (
   advanceMovingPlatforms,
   allCollisionPlatforms,
@@ -28,6 +33,7 @@ import Domain.Model.Player (Player, playerOnGround, playerVel)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime, isFrozen, seconds)
 import Domain.ValueObjects.Input (Input)
+import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Velocity (velY)
 
@@ -40,10 +46,10 @@ frame congelado no avanza ninguna fase (ni behaviour ni física). Si avanza, pri
 fija la velocidad de los enemigos ('runBehaviourStep') y después 'step' integra física y
 colisiones.
 -}
-advanceFrame :: PhysicsParams -> DeltaTime -> Input -> World -> World
-advanceFrame params dt input w
+advanceFrame :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
+advanceFrame params life dt input w
   | isFrozen dt = w
-  | otherwise = step params dt input (runBehaviourStep w)
+  | otherwise = step params life dt input (runBehaviourStep w)
 
 {- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
 
@@ -56,23 +62,27 @@ Los enemigos terrestres integran cinemática y resuelven colisión AABB; los
 voladores (@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
 este paso.
 -}
-step :: PhysicsParams -> DeltaTime -> Input -> World -> World
-step _ dt _ w | isFrozen dt = w
-step params dt input w =
-  let advances = advanceMovingPlatforms dt (worldMovingPlatforms w)
+step :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
+step _ _ dt _ w | isFrozen dt = w
+step params life dt input w =
+  let p0 = worldPlayer w
+      wCrumble = advanceCrumblingPlatforms life dt p0 w
+      advances = advanceMovingPlatforms dt (worldMovingPlatforms wCrumble)
       moving = map mpaPlatform advances
-      w' = w{worldMovingPlatforms = moving}
-      p0 = worldPlayer w'
-      wasOnGround = playerOnGround p0carried
+      w' = wCrumble{worldMovingPlatforms = moving}
       p0carried = applyPrePhysicsCarry p0 advances
+      wasOnGround = playerOnGround p0carried
       p1 = applyHorizontalInput params input p0carried
       p2 = applyGravity params dt p1
       p3 = applyJump params input wasOnGround p2
       vyAtCollide = velY (playerVel p3)
-      plats = allCollisionPlatforms (worldPlatforms w') moving
-      p4 = integrateAndCollide dt p3 plats vyAtCollide
+      crumbling = worldCrumblingPlatforms w'
+      basePlats = allCollisionPlatforms (worldPlatforms w') moving
+      playerPlats = appendPlayerSolidCrumbling basePlats crumbling
+      enemyPlats = appendEnemySolidCrumbling basePlats crumbling
+      p4 = integrateAndCollide dt p3 playerPlats vyAtCollide
       enemies' =
-        map (integrateAndCollideEnemy params dt plats) (worldEnemies w')
+        map (integrateAndCollideEnemy params dt enemyPlats) (worldEnemies w')
    in w'
         { worldPlayer = p4
         , worldEnemies = enemies'

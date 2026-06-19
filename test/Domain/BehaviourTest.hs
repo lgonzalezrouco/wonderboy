@@ -4,7 +4,7 @@ composición con la física en el dominio. La orquestación en 'GameM' vive en
 -}
 module Domain.BehaviourTest where
 
-import Domain.Fixtures (dtFrame, testParams)
+import Domain.Fixtures (dtFrame, testLifeParams, testParams)
 import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep, stepEnemyBehaviour)
 import Domain.Logic.Step (step)
@@ -40,6 +40,7 @@ minimalWorld =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 worldWithEnemy :: Enemy -> World
@@ -87,7 +88,7 @@ unit_behaviourThenStepMovesEnemy =
   let e0 = mkEnemy 0 (position 0 8) (setVelocity (velocity (-40) 0))
       w0 = worldWithEnemy e0
       w1 = runBehaviourStep w0
-      w2 = step testParams dtFrame noInput w1
+      w2 = step testParams testLifeParams dtFrame noInput w1
    in case worldEnemies w2 of
         e : _ -> (posX (enemyPos e) < 0) @?= True
         [] -> assertFailure "expected one enemy after stepping"
@@ -95,7 +96,7 @@ unit_behaviourThenStepMovesEnemy =
 unit_stepDoesNotRunBehaviour :: Assertion
 unit_stepDoesNotRunBehaviour =
   let e = mkEnemy 1 (position 50 8) (patrolHorizontal 40 (frames 90))
-      w1 = step testParams dtFrame noInput (worldWithEnemy e)
+      w1 = step testParams testLifeParams dtFrame noInput (worldWithEnemy e)
    in case worldEnemies w1 of
         enemy : _ -> posX (enemyPos enemy) @?= 50
         [] -> assertFailure "expected one enemy to remain"

@@ -49,6 +49,7 @@ floorWorld =
     , worldProjectiles = []
     , worldNextProjectileId = 1
     , worldFallingHazards = []
+    , worldCrumblingPlatforms = []
     }
 
 belowFloor :: Position
@@ -130,6 +131,7 @@ unit_respawnClearsProjectiles =
           { worldProjectiles = [flying]
           , worldNextProjectileId = 2
           , worldFallingHazards = []
+          , worldCrumblingPlatforms = []
           }
       (w', _, _) = resolveHazardsAndDeath testLifeParams (lives 3) Playing w
    in worldProjectiles w' @?= []

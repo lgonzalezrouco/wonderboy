@@ -11,6 +11,11 @@ module Domain.Logic.PlayerLife (
 )
 where
 
+import Domain.Model.CrumblingPlatform (
+  CrumblingPlatform,
+  crumblingPlatformIsAnchored,
+  crumblingPlatformPos,
+ )
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.MovingPlatform (movingPlatformPos)
 import Domain.Model.Platform (Platform (..))
@@ -38,7 +43,13 @@ lowestPlatformBottomY w =
   let ys =
         map (posY . platformPos) (worldPlatforms w)
           ++ map (posY . movingPlatformPos) (worldMovingPlatforms w)
+          ++ map (posY . crumblingPlatformPos) (anchoredCrumblingPlatforms w)
    in if null ys then 0 else minimum ys
+
+-- | Instancias cuya posición anclada aún cuenta para la línea de muerte.
+anchoredCrumblingPlatforms :: World -> [CrumblingPlatform]
+anchoredCrumblingPlatforms w =
+  filter crumblingPlatformIsAnchored (worldCrumblingPlatforms w)
 
 {- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
 

@@ -8,6 +8,7 @@ Tipos alineados con @levels/*.json@; la construcción del 'World' vive en
 -}
 module Domain.Model.LevelDefinition (
   BehaviourArchetype (..),
+  CrumblingPlatformDef (..),
   EnemyDef (..),
   FallingHazardDef (..),
   LevelBuildError (..),
@@ -80,6 +81,15 @@ data MovingPlatformDef = MovingPlatformDef
   }
   deriving (Eq, Show, Generic)
 
+-- | Plataforma que se desmorona en el JSON del nivel.
+data CrumblingPlatformDef = CrumblingPlatformDef
+  { cpDefId :: Int
+  , cpDefPos :: Position
+  , cpDefWidth :: Float
+  , cpDefHeight :: Float
+  }
+  deriving (Eq, Show, Generic)
+
 -- | Colocación de enemigo en el JSON del nivel.
 data EnemyDef = EnemyDef
   { enemyDefId :: Int
@@ -118,6 +128,7 @@ data LevelDefinition = LevelDefinition
   , levelEnemies :: [EnemyDef]
   , levelPickups :: [PickupDef]
   , levelFallingHazards :: [FallingHazardDef]
+  , levelCrumblingPlatforms :: [CrumblingPlatformDef]
   , levelExit :: RectDef
   }
   deriving (Eq, Show, Generic)
@@ -157,6 +168,23 @@ instance ToJSON MovingPlatformDef where
       , "endB" .= mpDefEndB mp
       , "speed" .= mpDefSpeed mp
       , "startTowardB" .= mpDefStartTowardB mp
+      ]
+
+instance FromJSON CrumblingPlatformDef where
+  parseJSON = withObject "CrumblingPlatform" $ \o ->
+    CrumblingPlatformDef
+      <$> o .: "id"
+      <*> o .: "pos"
+      <*> o .: "width"
+      <*> o .: "height"
+
+instance ToJSON CrumblingPlatformDef where
+  toJSON cp =
+    object
+      [ "id" .= cpDefId cp
+      , "pos" .= cpDefPos cp
+      , "width" .= cpDefWidth cp
+      , "height" .= cpDefHeight cp
       ]
 
 instance FromJSON EnemyDef where
@@ -218,6 +246,7 @@ instance FromJSON LevelDefinition where
       <*> o .: "enemies"
       <*> o .: "pickups"
       <*> (fromMaybe [] <$> o .:? "fallingHazards")
+      <*> (fromMaybe [] <$> o .:? "crumblingPlatforms")
       <*> o .: "exit"
 
 instance ToJSON LevelDefinition where
@@ -230,6 +259,7 @@ instance ToJSON LevelDefinition where
       , "enemies" .= levelEnemies lvl
       , "pickups" .= levelPickups lvl
       , "fallingHazards" .= levelFallingHazards lvl
+      , "crumblingPlatforms" .= levelCrumblingPlatforms lvl
       , "exit" .= levelExit lvl
       ]
 

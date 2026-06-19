@@ -23,6 +23,7 @@ module Adapters.Gloss.Config (
   hudOverlayDim,
   projectileColor,
   fallingHazardColor,
+  crumblingPlatformColor,
 )
 where
 
@@ -127,3 +128,7 @@ projectileColor = makeColor 0.95 0.85 0.2 1.0
 -- | Color del placeholder de peligros que caen (M21).
 fallingHazardColor :: Color
 fallingHazardColor = makeColor 0.95 0.35 0.15 1.0
+
+-- | Color del placeholder de plataformas que se desmoronan (M22).
+crumblingPlatformColor :: Color
+crumblingPlatformColor = makeColor 0.75 0.55 0.25 1.0

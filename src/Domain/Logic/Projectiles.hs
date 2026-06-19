@@ -6,6 +6,7 @@ where
 
 import Data.List (find)
 
+import Domain.Logic.CrumblingPlatforms (appendPlayerSolidCrumbling)
 import Domain.Logic.MovingPlatforms (allCollisionPlatforms)
 import Domain.Logic.PlayerLife (applyDamage)
 import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyHealth, enemyId, enemyShootCooldownFrames)
@@ -55,7 +56,10 @@ resolveProjectiles ::
 resolveProjectiles tp cp pp dt input w =
   let w0 = trySpawn tp input w
       w0' = w0{worldEnemies = map tickEnemyShootCooldown (worldEnemies w0)}
-      plats = allCollisionPlatforms (worldPlatforms w0') (worldMovingPlatforms w0')
+      plats =
+        appendPlayerSolidCrumbling
+          (allCollisionPlatforms (worldPlatforms w0') (worldMovingPlatforms w0'))
+          (worldCrumblingPlatforms w0')
       (survivors, removedPassive) =
         foldr
           (despawnPassive plats . advanceProjectile pp dt)
