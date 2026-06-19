@@ -1,6 +1,7 @@
 -- | Pure player life, damage, and out-of-bounds tests.
 module Domain.PlayerLifeTest where
 
+import Domain.Fixtures (testPlayerProjectile)
 import Domain.Logic.PlayerLife (
   applyDamage,
   resolveHazardsAndDeath,
@@ -45,6 +46,8 @@ floorWorld =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = defaultExitZone
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 belowFloor :: Position
@@ -117,6 +120,17 @@ unit_respawnResetsVelocity =
    in do
         velX (playerVel (worldPlayer w')) @?= 0
         velY (playerVel (worldPlayer w')) @?= 0
+
+unit_respawnClearsProjectiles :: Assertion
+unit_respawnClearsProjectiles =
+  let flying = testPlayerProjectile 1 (position 40 40) (velocity 100 100) (frames 60)
+      w =
+        deadBelowFloor
+          { worldProjectiles = [flying]
+          , worldNextProjectileId = 2
+          }
+      (w', _, _) = resolveHazardsAndDeath testLifeParams (lives 3) Playing w
+   in worldProjectiles w' @?= []
 
 mustMovingPlatform :: Maybe MovingPlatform -> MovingPlatform
 mustMovingPlatform (Just mp) = mp

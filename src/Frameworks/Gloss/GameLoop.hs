@@ -61,6 +61,7 @@ data AppState = AppState
   , appKeysHeld :: KeyState
   , appJumpPrev :: Bool
   , appAttackPrev :: Bool
+  , appThrowPrev :: Bool
   , appShowHitboxes :: Bool
   }
 
@@ -125,6 +126,7 @@ initialAppState cfg paths sprites world =
     , appKeysHeld = noKeys
     , appJumpPrev = False
     , appAttackPrev = False
+    , appThrowPrev = False
     , appShowHitboxes = False
     }
 
@@ -166,6 +168,7 @@ resetInputState state =
     { appKeysHeld = noKeys
     , appJumpPrev = False
     , appAttackPrev = False
+    , appThrowPrev = False
     }
 
 handleConfirm :: AppState -> IO AppState
@@ -196,8 +199,12 @@ advanceFrame dt state = do
   let cfg = appConfig state
       dt' = capDeltaTime dt
       frozen = isFrozen dt'
-      (input, jumpPrev, attackPrev) =
-        buildInput (appKeysHeld state) (appJumpPrev state) (appAttackPrev state)
+      (input, jumpPrev, attackPrev, throwPrev) =
+        buildInput
+          (appKeysHeld state)
+          (appJumpPrev state)
+          (appAttackPrev state)
+          (appThrowPrev state)
   case runGameM cfg (appGameState state) (updateGame dt' input) of
     Left err -> do
       hPutStrLn stderr ("Error: " ++ show err)
@@ -212,4 +219,5 @@ advanceFrame dt state = do
                 else (appRenderFrame state + 1) `mod` 1000000
           , appJumpPrev = if frozen then appJumpPrev state else jumpPrev
           , appAttackPrev = if frozen then appAttackPrev state else attackPrev
+          , appThrowPrev = if frozen then appThrowPrev state else throwPrev
           }

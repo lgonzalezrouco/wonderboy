@@ -37,6 +37,8 @@ minimalWorld =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = defaultExitZone
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 worldWithEnemy :: Enemy -> World

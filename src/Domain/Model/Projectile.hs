@@ -1,0 +1,84 @@
+{- | Proyectiles de jugador y enemigo (entidades de corta duración).
+
+Reutilizable por el arco del jugador (M19) y disparos enemigos (M20).
+-}
+module Domain.Model.Projectile (
+  ProjectileMotion (..),
+  ProjectileOwner (..),
+  Projectile (..),
+  projectileAabb,
+  spawnPlayerProjectile,
+)
+where
+
+import GHC.Generics (Generic)
+
+import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
+import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Frames (Frames)
+import Domain.ValueObjects.Position (Position)
+import Domain.ValueObjects.Velocity (Velocity, velocity)
+
+-- | Perfil de movimiento del proyectil.
+data ProjectileMotion
+  = -- | Gravedad + despawn al tocar plataforma (arco del jugador en M19).
+    Ballistic
+  | -- | Velocidad constante; reservado para enemigos en M20.
+    Linear
+  deriving (Eq, Show, Generic)
+
+-- | Quién disparó el proyectil.
+data ProjectileOwner
+  = PlayerProjectile
+  | EnemyProjectile
+  deriving (Eq, Show, Generic)
+
+-- | Estado de un proyectil en un frame.
+data Projectile = Projectile
+  { projectileId :: Int
+  , projectilePos :: Position
+  , projectileVel :: Velocity
+  , projectileLifetime :: Frames
+  , projectileMotion :: ProjectileMotion
+  , projectileOwner :: ProjectileOwner
+  , projectileWidth :: Float
+  , projectileHeight :: Float
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Caja de colisión del proyectil (centro inferior en 'projectilePos').
+projectileAabb :: Projectile -> Aabb
+projectileAabb p =
+  aabbFromBottomCenter
+    (projectilePos p)
+    (projectileWidth p)
+    (projectileHeight p)
+
+{- | Crea un proyectil del jugador con velocidad inicial según 'Facing'.
+
+La posición es el punto de spawn; el tamaño viene de 'ThrowParams'.
+-}
+spawnPlayerProjectile ::
+  Int ->
+  Position ->
+  Facing ->
+  Float ->
+  Float ->
+  Frames ->
+  Float ->
+  Float ->
+  Projectile
+spawnPlayerProjectile pid pos facing hSpeed liftSpeed lifetime width height =
+  let (vx, vy) = case facing of
+        FacingRight -> (hSpeed, liftSpeed)
+        FacingLeft -> (-hSpeed, liftSpeed)
+   in Projectile
+        { projectileId = pid
+        , projectilePos = pos
+        , projectileVel = velocity vx vy
+        , projectileLifetime = lifetime
+        , projectileMotion = Ballistic
+        , projectileOwner = PlayerProjectile
+        , projectileWidth = width
+        , projectileHeight = height
+        }

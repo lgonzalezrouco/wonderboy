@@ -24,6 +24,7 @@ import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.LevelFlow (resolveFramePhase, resolvePlayingWin)
 import Domain.Logic.Pickups (resolvePickups)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
+import Domain.Logic.Projectiles (resolveProjectiles)
 import Domain.Logic.Step (advanceFrame)
 import Domain.Model.GamePhase (GamePhase (Playing), isSimulationFrozen)
 import Domain.ValueObjects.DeltaTime (DeltaTime, isFrozen)
@@ -36,6 +37,7 @@ import UseCases.GameMonad (
   lifeParamsFromConfig,
   physicsParamsFromConfig,
   runGameM,
+  throwParamsFromConfig,
  )
 
 {- | Actualiza el estado del juego para un frame dado.
@@ -61,12 +63,14 @@ updateGame dt input = do
     let params = physicsParamsFromConfig cfg
         life = lifeParamsFromConfig cfg
         combat = combatParamsFromConfig cfg
+        throwP = throwParamsFromConfig cfg
         livesBefore = gsLives st
         scoreAfterPickups = gsScore st
         wBefore = gsWorld st
         wAfterFrame = advanceFrame params dt input wBefore
         wAfterCombat = resolveCombat combat input wAfterFrame
-        wAfterBoss = resolveBossPhases combat wBefore wAfterCombat
+        wAfterProjectiles = resolveProjectiles throwP params dt input wAfterCombat
+        wAfterBoss = resolveBossPhases combat wBefore wAfterProjectiles
         (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
         scoreFinal = scoreAfterPickups <> scoreDelta
         phaseFromWin =

@@ -21,6 +21,7 @@ module Adapters.Gloss.Config (
   hudBossColor,
   hudBossEmptyColor,
   hudOverlayDim,
+  projectileColor,
 )
 where
 
@@ -116,3 +117,7 @@ hudAttackColor = makeColor 1.0 0.5 0.15 1.0
 -- | Color del velo que oscurece la pantalla en el overlay de Game Over.
 hudOverlayDim :: Color
 hudOverlayDim = makeColor 0.02 0.03 0.06 0.55
+
+-- | Color del placeholder del proyectil lanzado (M19).
+projectileColor :: Color
+projectileColor = makeColor 0.95 0.85 0.2 1.0

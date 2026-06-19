@@ -18,6 +18,7 @@ module UseCases.GameMonad (
   physicsParamsFromConfig,
   lifeParamsFromConfig,
   combatParamsFromConfig,
+  throwParamsFromConfig,
 
   -- * Errores
   GameError (..),
@@ -65,6 +66,7 @@ import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.Lives (Lives, lives)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
 import Domain.ValueObjects.Score (Score, score)
+import Domain.ValueObjects.ThrowParams (ThrowParams (..), throwParams)
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la pila
@@ -106,6 +108,18 @@ data GameConfig = GameConfig
   -- ^ Daño infligido a un enemigo por un melee que conecta (M10).
   , gcLevelCount :: LevelCount
   -- ^ Niveles en el run actual; la victoria ocurre al completar el último.
+  , gcThrowCooldown :: Frames
+  -- ^ Frames de espera tras despawn del proyectil del jugador (M19).
+  , gcThrowLifetime :: Frames
+  -- ^ Vida inicial de cada proyectil lanzado (M19).
+  , gcThrowHorizontalSpeed :: Float
+  -- ^ Velocidad horizontal de lanzamiento (px/s) (M19).
+  , gcThrowLiftSpeed :: Float
+  -- ^ Impulso vertical inicial del arco (px/s) (M19).
+  , gcProjectileWidth :: Float
+  -- ^ Ancho de la caja del proyectil (M19).
+  , gcProjectileHeight :: Float
+  -- ^ Alto de la caja del proyectil (M19).
   }
   deriving (Eq, Show, Generic)
 
@@ -128,6 +142,12 @@ defaultConfig =
     , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
     , gcLevelCount = levelCount 3
+    , gcThrowCooldown = frames 30
+    , gcThrowLifetime = frames 120
+    , gcThrowHorizontalSpeed = 280.0
+    , gcThrowLiftSpeed = 320.0
+    , gcProjectileWidth = 12.0
+    , gcProjectileHeight = 12.0
     }
 
 -- | Ajusta 'gcLevelCount' al tamaño del catálogo de niveles del run.
@@ -168,6 +188,18 @@ combatParamsFromConfig cfg =
     (gcInvincibilityDuration cfg)
     (gcContactDamage cfg)
     (gcMeleeReach cfg)
+    (gcMeleeDamage cfg)
+
+-- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Projectiles'.
+throwParamsFromConfig :: GameConfig -> ThrowParams
+throwParamsFromConfig cfg =
+  throwParams
+    (gcThrowCooldown cfg)
+    (gcThrowLifetime cfg)
+    (gcThrowHorizontalSpeed cfg)
+    (gcThrowLiftSpeed cfg)
+    (gcProjectileWidth cfg)
+    (gcProjectileHeight cfg)
     (gcMeleeDamage cfg)
 
 {- | Errores recuperables del motor.

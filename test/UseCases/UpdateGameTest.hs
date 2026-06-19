@@ -65,6 +65,8 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldPickups = []
       , worldMinScore = score 0
       , worldExit = defaultExitZone
+      , worldProjectiles = []
+      , worldNextProjectileId = 1
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -80,6 +82,8 @@ unit_updateGamePatrolReversesVelocity =
           , worldPickups = []
           , worldMinScore = score 0
           , worldExit = ExitZone (position 500 0) 32 64
+          , worldProjectiles = []
+          , worldNextProjectileId = 1
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0
