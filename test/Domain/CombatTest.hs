@@ -41,6 +41,7 @@ floorWorld =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 unit_attackEdgeStartsWindow :: Assertion

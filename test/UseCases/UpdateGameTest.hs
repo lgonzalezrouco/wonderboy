@@ -67,6 +67,7 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldExit = defaultExitZone
       , worldProjectiles = []
       , worldNextProjectileId = 1
+      , worldFallingHazards = []
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -84,6 +85,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldExit = ExitZone (position 500 0) 32 64
           , worldProjectiles = []
           , worldNextProjectileId = 1
+          , worldFallingHazards = []
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0

@@ -46,6 +46,7 @@ worldInExit =
     , worldExit = exitForPlayer
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 worldAwayFromExit :: World
