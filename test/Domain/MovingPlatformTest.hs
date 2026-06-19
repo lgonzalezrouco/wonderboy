@@ -89,6 +89,7 @@ worldWithShuttle mp p =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 unit_mkMovingPlatformRejectsInvalid :: Assertion
@@ -190,6 +191,7 @@ unit_jumpIntoSideDoesNotTeleport =
           , worldNextProjectileId = 1
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
+          , worldBossArena = Nothing
           }
       w1 = step testParams testLifeParams dtFrame (noInput{inputRight = True, inputJump = True}) w0
       px = posX (playerPos (worldPlayer w1))
@@ -238,6 +240,7 @@ unit_ceilingBumpUnderMovingPlatformDoesNotNudgeSideways =
           , worldNextProjectileId = 1
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
+          , worldBossArena = Nothing
           }
       w1 = step testParams testLifeParams dtFrame noInput w0
       p1 = worldPlayer w1
@@ -266,6 +269,7 @@ unit_landingOnMovingPlatformSetsOnGround =
           , worldNextProjectileId = 1
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
+          , worldBossArena = Nothing
           }
       w1 = foldl (\w _ -> step testParams testLifeParams dtFrame noInput w) w0 ([1 .. 15] :: [Int])
    in playerOnGround (worldPlayer w1) @?= True

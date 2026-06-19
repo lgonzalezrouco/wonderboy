@@ -16,6 +16,7 @@ import Data.Text qualified as T
 
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetype)
+import Domain.Model.BossArena (BossArena, mkBossArena)
 import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHealth, bossPhases, phaseProgram)
 import Domain.Model.CrumblingPlatform (CrumblingPlatform, mkCrumblingPlatform)
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyMaxHealth, spawnEnemy)
@@ -23,6 +24,7 @@ import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.ExitZone (ExitZone (..))
 import Domain.Model.FallingHazard (FallingHazard, spawnFallingHazard)
 import Domain.Model.LevelDefinition (
+  BossArenaDef (..),
   CrumblingPlatformDef (..),
   EnemyDef (..),
   FallingHazardDef (..),
@@ -52,6 +54,7 @@ buildWorld lvl = do
   checkUniqueIds (map fhDefId (levelFallingHazards lvl)) "falling hazard"
   checkUniqueIds (map cpDefId (levelCrumblingPlatforms lvl)) "crumbling platform"
   checkBossCount (levelEnemies lvl)
+  bossArena <- checkBossArena (levelBossArena lvl) (levelEnemies lvl)
   movingPlats <- traverse buildMovingPlatform (levelMovingPlatforms lvl)
   enemies <- traverse buildEnemy (levelEnemies lvl)
   pickups <- traverse buildPickup (levelPickups lvl)
@@ -72,6 +75,7 @@ buildWorld lvl = do
       , worldNextProjectileId = 1
       , worldFallingHazards = hazards
       , worldCrumblingPlatforms = crumbling
+      , worldBossArena = bossArena
       }
 
 checkUniqueIds :: [Int] -> Text -> Either LevelBuildError ()
@@ -91,6 +95,17 @@ checkBossCount defs
   | otherwise = Left (levelBuildError "at most one boss per level")
  where
   bossDefs = filter (isBossKind . enemyDefKind) defs
+
+checkBossArena :: Maybe BossArenaDef -> [EnemyDef] -> Either LevelBuildError (Maybe BossArena)
+checkBossArena Nothing _ = Right Nothing
+checkBossArena (Just def) defs
+  | not (any (isBossKind . enemyDefKind) defs) =
+      Left (levelBuildError "bossArena requires a boss enemy in the level")
+  | otherwise =
+      maybe
+        (Left (levelBuildError "bossArena left must be less than right"))
+        (Right . Just)
+        (mkBossArena def)
 
 buildPlatform :: PlatformDef -> Platform
 buildPlatform (PlatformDef rect) =

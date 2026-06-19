@@ -48,6 +48,7 @@ worldInExit =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 worldAwayFromExit :: World

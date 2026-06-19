@@ -7,9 +7,10 @@ module UseCases.LevelContentTest where
 
 import Data.Text.IO qualified as TIO
 
+import Domain.Model.BossArena (bossArenaLeft, bossArenaRight)
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyKind, enemyMaxHealth)
 import Domain.Model.EnemyKind (EnemyKind (..), isBossKind)
-import Domain.Model.World (World, worldCrumblingPlatforms, worldEnemies, worldFallingHazards, worldMinScore)
+import Domain.Model.World (World, worldBossArena, worldCrumblingPlatforms, worldEnemies, worldFallingHazards, worldMinScore)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Score (scorePoints)
 import Paths_wonderboy_hs (getDataFileName)
@@ -52,3 +53,8 @@ unit_level3BuildsWithGolemKing = do
       healthPoints (enemyMaxHealth b) @?= 20
     bs -> assertFailure ("expected exactly one boss, got " ++ show (length bs))
   assertBool "level 3 has falling hazards" (not (null (worldFallingHazards w)))
+  case worldBossArena w of
+    Just arena -> do
+      bossArenaLeft arena @?= 3540
+      bossArenaRight arena @?= 4220
+    Nothing -> assertFailure "level 3 should define bossArena"

@@ -160,6 +160,7 @@ floorWorld =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 -- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
@@ -204,6 +205,7 @@ worldWithCeiling =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -225,6 +227,7 @@ worldWithWall =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).

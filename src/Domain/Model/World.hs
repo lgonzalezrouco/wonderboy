@@ -18,6 +18,7 @@ where
 
 import GHC.Generics (Generic)
 
+import Domain.Model.BossArena (BossArena)
 import Domain.Model.CrumblingPlatform (CrumblingPlatform)
 import Domain.Model.Enemy (Enemy)
 import Domain.Model.ExitZone (ExitZone, defaultExitZone)
@@ -54,6 +55,7 @@ data World = World
   , worldNextProjectileId :: Int
   , worldFallingHazards :: [FallingHazard]
   , worldCrumblingPlatforms :: [CrumblingPlatform]
+  , worldBossArena :: Maybe BossArena
   }
   deriving (Eq, Show, Generic)
 
@@ -82,4 +84,5 @@ initialWorld =
         , worldNextProjectileId = 1
         , worldFallingHazards = []
         , worldCrumblingPlatforms = []
+        , worldBossArena = Nothing
         }
