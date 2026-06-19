@@ -7,6 +7,7 @@ module Domain.Logic.EntityBehaviours (
   reactiveFsm,
   flyingReactiveFsm,
   airPatrolFacePlayer,
+  archerProgram,
   defaultProgramForKind,
   programForArchetype,
 )
@@ -26,10 +27,12 @@ import Domain.Model.EntityBehaviour (
   idleProgram,
   ifNearSpawn,
   ifPlayerWithinRange,
+  moveToward,
   moveTowardPlayer,
   moveTowardSpawn,
   setFacingTowardPlayer,
   setVelocity,
+  shoot,
   waitFrames,
   (>>>),
  )
@@ -99,7 +102,7 @@ flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius patrolSpeed patr
       fix $ \loop ->
         ifPlayerWithinRange
           chaseRange
-          (moveTowardPlayer chaseSpeed >>> waitFrames (frames 1) >>> loop)
+          (moveToward chaseSpeed >>> waitFrames (frames 1) >>> loop)
           ( ifNearSpawn
               spawnRadius
               (airPatrolFacePlayer patrolSpeed patrolLeg >>> loop)
@@ -119,6 +122,17 @@ airPatrolFacePlayer patrolSpeed patrolLeg
         >>> waitFrames patrolLeg
   | otherwise = facePlayer
 
+-- | Archer: dispara en rango, mira al jugador y espera cooldown entre disparos.
+archerProgram :: Float -> Frames -> BehaviourProgram
+archerProgram shootRange cooldown
+  | shootRange > 0 && hasFramesLeft cooldown =
+      fix $ \loop ->
+        ifPlayerWithinRange
+          shootRange
+          (facePlayer >>> shoot >>> waitFrames cooldown >>> loop)
+          (facePlayer >>> waitFrames (frames 1) >>> loop)
+  | otherwise = idleProgram
+
 {- | Programa de comportamiento para una variante de movimiento.
 
 El arquetipo chase y el arquetipo guard comparten la misma máquina reactiva
@@ -131,6 +145,8 @@ programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) 
   reactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius
 programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius patrolSpeed patrolLeg) =
   flyingReactiveFsm chaseRange chaseSpeed returnSpeed spawnRadius patrolSpeed patrolLeg
+programForMotion (ArcherMotion shootRange cooldown _ _ _ _) =
+  archerProgram shootRange cooldown
 
 -- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
@@ -149,4 +165,5 @@ programForArchetype kind archetype =
     (ChaseArchetype, motion@ReactiveMotion{}) -> programForMotion motion
     (ChaseArchetype, motion@FlyingReactiveMotion{}) -> programForMotion motion
     (GuardArchetype, motion@ReactiveMotion{}) -> programForMotion motion
+    (_, motion@ArcherMotion{}) -> programForMotion motion
     _ -> idleProgram

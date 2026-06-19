@@ -229,6 +229,7 @@ test-suite wonderboy-hs-test
       , Domain.PlayerLifeTest
       , Domain.CombatTest
       , Domain.EnemyFsmTest
+      , Domain.NewEnemyKindsTest
       , Domain.MovingPlatformTest
       , Domain.PickupTest
       , Domain.ProjectileTest

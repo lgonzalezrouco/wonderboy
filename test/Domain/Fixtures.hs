@@ -14,11 +14,14 @@ module Domain.Fixtures (
   testCombatParams,
   testThrowParams,
   testPlayerProjectile,
+  testEnemyProjectile,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
   worldWithPickups,
   worldWithWall,
+  enemyFrom,
+  runBehaviourN,
   worldWithEnemyAt,
 )
 where
@@ -31,8 +34,9 @@ import Data.Text.Encoding (encodeUtf8)
 
 import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind)
+import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Logic.Step (step)
-import Domain.Model.Enemy (spawnEnemy)
+import Domain.Model.Enemy (Enemy (..), spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind)
 import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.LevelDefinition (LevelBuildError (..), LevelDefinition)
@@ -46,8 +50,8 @@ import Domain.Model.Player (
  )
 import Domain.Model.Projectile (
   Projectile (..),
-  ProjectileMotion (Ballistic),
-  ProjectileOwner (PlayerProjectile),
+  ProjectileMotion (Ballistic, Linear),
+  ProjectileOwner (EnemyProjectile, PlayerProjectile),
  )
 import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
 import Domain.ValueObjects.CombatParams (CombatParams)
@@ -89,6 +93,20 @@ testPlayerProjectile pid pos vel lifetime =
     , projectileOwner = PlayerProjectile
     , projectileWidth = tpWidth testThrowParams
     , projectileHeight = tpHeight testThrowParams
+    }
+
+-- | Enemy-owned linear projectile for combat tests.
+testEnemyProjectile :: Int -> Position -> Velocity -> Frames -> Projectile
+testEnemyProjectile pid pos vel lifetime =
+  Projectile
+    { projectileId = pid
+    , projectilePos = pos
+    , projectileVel = vel
+    , projectileLifetime = lifetime
+    , projectileMotion = Linear
+    , projectileOwner = EnemyProjectile
+    , projectileWidth = 8
+    , projectileHeight = 8
     }
 
 -- | One frame at 60 Hz.
@@ -211,6 +229,16 @@ ceilingPlatform = platform (position (-100) 80) 200 8
 risingPlayer :: Position -> Player
 risingPlayer pos =
   (spawnPlayer defaultMaxHealth pos){playerVel = velocity 0 500, playerOnGround = False}
+
+-- | Runs @n@ behaviour steps on the world.
+runBehaviourN :: Int -> World -> World
+runBehaviourN n w = iterate runBehaviourStep w !! n
+
+-- | First enemy in the world (test fixture; errors if empty).
+enemyFrom :: World -> Enemy
+enemyFrom w = case worldEnemies w of
+  e : _ -> e
+  [] -> error "enemyFrom: no enemies"
 
 -- | Floor world with one enemy of the given kind and a fixed player position.
 worldWithEnemyAt :: EnemyKind -> Position -> Position -> World

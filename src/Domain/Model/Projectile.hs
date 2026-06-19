@@ -8,6 +8,7 @@ module Domain.Model.Projectile (
   Projectile (..),
   projectileAabb,
   spawnPlayerProjectile,
+  spawnEnemyProjectile,
 )
 where
 
@@ -23,7 +24,7 @@ import Domain.ValueObjects.Velocity (Velocity, velocity)
 data ProjectileMotion
   = -- | Gravedad + despawn al tocar plataforma (arco del jugador en M19).
     Ballistic
-  | -- | Velocidad constante; reservado para enemigos en M20.
+  | -- | Velocidad constante (proyectiles enemigos).
     Linear
   deriving (Eq, Show, Generic)
 
@@ -79,6 +80,36 @@ spawnPlayerProjectile pid pos facing hSpeed liftSpeed lifetime width height =
         , projectileLifetime = lifetime
         , projectileMotion = Ballistic
         , projectileOwner = PlayerProjectile
+        , projectileWidth = width
+        , projectileHeight = height
+        }
+
+{- | Crea un proyectil enemigo con velocidad inicial hacia @(dx, dy)@.
+
+La posición es el punto de spawn; el vector no tiene que estar normalizado.
+-}
+spawnEnemyProjectile ::
+  Int ->
+  Position ->
+  Float ->
+  Float ->
+  Float ->
+  Frames ->
+  Float ->
+  Float ->
+  Projectile
+spawnEnemyProjectile pid pos dx dy speed lifetime width height =
+  let dist = sqrt (dx * dx + dy * dy)
+      scale = if dist <= 0 then 0 else speed / dist
+      vx = dx * scale
+      vy = dy * scale
+   in Projectile
+        { projectileId = pid
+        , projectilePos = pos
+        , projectileVel = velocity vx vy
+        , projectileLifetime = lifetime
+        , projectileMotion = Linear
+        , projectileOwner = EnemyProjectile
         , projectileWidth = width
         , projectileHeight = height
         }

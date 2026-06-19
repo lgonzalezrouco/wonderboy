@@ -31,6 +31,7 @@ import Domain.Model.EnemyKind (
 import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Frames (Frames, frames)
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
@@ -67,6 +68,8 @@ data Enemy = Enemy
   -- ^ Programa de comportamiento (descripción, no ejecución).
   , enemyBossPhase :: Maybe BossPhaseIndex
   -- ^ Fase actual del jefe; 'Nothing' para enemigos regulares.
+  , enemyShootCooldownFrames :: Frames
+  -- ^ Frames restantes antes de poder disparar de nuevo (Archer).
   }
   deriving (Show, Generic)
 
@@ -120,6 +123,7 @@ spawnEnemy eid kind pos prog =
         , enemyFacing = FacingRight
         , enemyProgram = prog
         , enemyBossPhase = bossPhase
+        , enemyShootCooldownFrames = frames 0
         }
 
 -- | Crea un enemigo Snail para tests con programa explícito.

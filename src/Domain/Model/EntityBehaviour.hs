@@ -17,10 +17,12 @@ module Domain.Model.EntityBehaviour (
   idleProgram,
   ifPlayerWithinRange,
   ifNearSpawn,
+  moveToward,
   moveTowardPlayer,
   moveTowardPlayer2D,
   moveTowardSpawn,
   moveTowardSpawn2D,
+  shoot,
   facePlayer,
   setFacingTowardPlayer,
   (>>>),
@@ -58,6 +60,10 @@ data EntityAction next
     FacePlayer next
   | -- | Orienta al enemigo hacia el jugador sin cambiar la velocidad.
     SetFacingTowardPlayer next
+  | -- | Velocidad en 2D hacia el jugador a @speed@ px/s (alias de persecución omnidireccional).
+    MoveToward Float next
+  | -- | Dispara un proyectil enemigo hacia el jugador (si el cooldown lo permite).
+    Shoot next
   deriving (Functor, Show, Generic)
 
 {- | Programa de comportamiento de un enemigo.
@@ -89,6 +95,8 @@ instance Show BehaviourProgram where
     Free (MoveTowardSpawn2D _ _) -> "BehaviourProgram <moveTowardSpawn2D …>"
     Free (FacePlayer _) -> "BehaviourProgram <facePlayer>"
     Free (SetFacingTowardPlayer _) -> "BehaviourProgram <setFacingTowardPlayer>"
+    Free (MoveToward _ _) -> "BehaviourProgram <moveToward …>"
+    Free (Shoot _) -> "BehaviourProgram <shoot>"
 
 -- | Encadena dos programas (monad @Free EntityAction@ con resultado @()@).
 infixl 1 >>>
@@ -131,6 +139,11 @@ ifNearSpawn :: Float -> BehaviourProgram -> BehaviourProgram -> BehaviourProgram
 ifNearSpawn radius thenBranch elseBranch =
   BehaviourProgram (Free (IfNearSpawn radius thenBranch elseBranch (Pure ())))
 
+-- | Un behaviour step de persecución en 2D hacia el jugador (@moveTowardPlayer2D@).
+moveToward :: Float -> BehaviourProgram
+moveToward speed =
+  BehaviourProgram (Free (MoveToward speed (Pure ())))
+
 -- | Un behaviour step de persecución horizontal hacia el jugador.
 moveTowardPlayer :: Float -> BehaviourProgram
 moveTowardPlayer speed =
@@ -159,6 +172,10 @@ facePlayer = BehaviourProgram (Free (FacePlayer (Pure ())))
 setFacingTowardPlayer :: BehaviourProgram
 setFacingTowardPlayer =
   BehaviourProgram (Free (SetFacingTowardPlayer (Pure ())))
+
+-- | Un behaviour step: disparo hacia el jugador (sujeto a cooldown del enemigo).
+shoot :: BehaviourProgram
+shoot = BehaviourProgram (Free (Shoot (Pure ())))
 
 -- | Contador de espera en la instrucción activa, si aplica.
 waitFramesRemaining :: BehaviourProgram -> Maybe Frames

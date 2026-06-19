@@ -63,6 +63,7 @@ enemyColorForKind kind = case kind of
   SnailKind -> makeColor 0.85 0.75 0.2 1.0
   BatKind -> makeColor 0.65 0.35 0.9 1.0
   GolemKind -> makeColor 0.55 0.58 0.62 1.0
+  ArcherKind -> makeColor 0.9 0.45 0.2 1.0
   BossGolemKind -> makeColor 0.75 0.15 0.25 1.0
   BossBatKind -> makeColor 0.55 0.1 0.45 1.0
 
