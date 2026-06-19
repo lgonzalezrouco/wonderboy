@@ -10,3 +10,5 @@ dist-newstyle/
 *.toml
 *.o
 *.dyn_o
+*.png
+/Assets/k*
