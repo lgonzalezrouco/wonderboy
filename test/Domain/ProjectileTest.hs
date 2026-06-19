@@ -50,6 +50,7 @@ unit_throwBlockedDuringFlight =
         floorWorld
           { worldProjectiles = [flying]
           , worldNextProjectileId = 2
+          , worldFallingHazards = []
           }
       w' = stepProjectiles (noInput{inputThrow = True}) w
    in length (worldProjectiles w') @?= 1

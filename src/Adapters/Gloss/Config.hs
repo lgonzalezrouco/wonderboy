@@ -22,6 +22,7 @@ module Adapters.Gloss.Config (
   hudBossEmptyColor,
   hudOverlayDim,
   projectileColor,
+  fallingHazardColor,
 )
 where
 
@@ -122,3 +123,7 @@ hudOverlayDim = makeColor 0.02 0.03 0.06 0.55
 -- | Color del placeholder del proyectil lanzado (M19).
 projectileColor :: Color
 projectileColor = makeColor 0.95 0.85 0.2 1.0
+
+-- | Color del placeholder de peligros que caen (M21).
+fallingHazardColor :: Color
+fallingHazardColor = makeColor 0.95 0.35 0.15 1.0

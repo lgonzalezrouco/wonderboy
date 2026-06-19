@@ -9,7 +9,7 @@ import Data.Text.IO qualified as TIO
 
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyKind, enemyMaxHealth)
 import Domain.Model.EnemyKind (EnemyKind (..), isBossKind)
-import Domain.Model.World (World, worldEnemies, worldMinScore)
+import Domain.Model.World (World, worldEnemies, worldFallingHazards, worldMinScore)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Score (scorePoints)
 import Paths_wonderboy_hs (getDataFileName)
@@ -50,3 +50,4 @@ unit_level3BuildsWithGolemKing = do
       healthPoints (enemyHealth b) @?= 20
       healthPoints (enemyMaxHealth b) @?= 20
     bs -> assertFailure ("expected exactly one boss, got " ++ show (length bs))
+  assertBool "level 3 has falling hazards" (not (null (worldFallingHazards w)))

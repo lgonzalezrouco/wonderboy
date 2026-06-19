@@ -9,6 +9,7 @@ Tipos alineados con @levels/*.json@; la construcción del 'World' vive en
 module Domain.Model.LevelDefinition (
   BehaviourArchetype (..),
   EnemyDef (..),
+  FallingHazardDef (..),
   LevelBuildError (..),
   LevelDefinition (..),
   MovingPlatformDef (..),
@@ -31,6 +32,7 @@ import Data.Aeson (
   (.=),
  )
 import Data.Aeson.Types (Parser)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
@@ -96,6 +98,17 @@ data PickupDef = PickupDef
   }
   deriving (Eq, Show, Generic)
 
+-- | Peligro ambiental que cae, en el JSON del nivel.
+data FallingHazardDef = FallingHazardDef
+  { fhDefId :: Int
+  , fhDefPos :: Position
+  , fhDefWidth :: Float
+  , fhDefHeight :: Float
+  , fhDefFallSpeed :: Float
+  , fhDefLoopDelay :: Maybe Int
+  }
+  deriving (Eq, Show, Generic)
+
 -- | Definición completa de un nivel.
 data LevelDefinition = LevelDefinition
   { levelMinScore :: Int
@@ -104,6 +117,7 @@ data LevelDefinition = LevelDefinition
   , levelMovingPlatforms :: [MovingPlatformDef]
   , levelEnemies :: [EnemyDef]
   , levelPickups :: [PickupDef]
+  , levelFallingHazards :: [FallingHazardDef]
   , levelExit :: RectDef
   }
   deriving (Eq, Show, Generic)
@@ -173,6 +187,27 @@ instance ToJSON PickupDef where
       , "value" .= pickupDefValue p
       ]
 
+instance FromJSON FallingHazardDef where
+  parseJSON = withObject "FallingHazard" $ \o ->
+    FallingHazardDef
+      <$> o .: "id"
+      <*> o .: "pos"
+      <*> o .: "width"
+      <*> o .: "height"
+      <*> o .: "fallSpeed"
+      <*> o .:? "loopDelay"
+
+instance ToJSON FallingHazardDef where
+  toJSON fh =
+    object $
+      [ "id" .= fhDefId fh
+      , "pos" .= fhDefPos fh
+      , "width" .= fhDefWidth fh
+      , "height" .= fhDefHeight fh
+      , "fallSpeed" .= fhDefFallSpeed fh
+      ]
+        ++ maybe [] (\d -> ["loopDelay" .= d]) (fhDefLoopDelay fh)
+
 instance FromJSON LevelDefinition where
   parseJSON = withObject "Level" $ \o ->
     LevelDefinition
@@ -182,6 +217,7 @@ instance FromJSON LevelDefinition where
       <*> o .: "movingPlatforms"
       <*> o .: "enemies"
       <*> o .: "pickups"
+      <*> (fromMaybe [] <$> o .:? "fallingHazards")
       <*> o .: "exit"
 
 instance ToJSON LevelDefinition where
@@ -193,6 +229,7 @@ instance ToJSON LevelDefinition where
       , "movingPlatforms" .= levelMovingPlatforms lvl
       , "enemies" .= levelEnemies lvl
       , "pickups" .= levelPickups lvl
+      , "fallingHazards" .= levelFallingHazards lvl
       , "exit" .= levelExit lvl
       ]
 

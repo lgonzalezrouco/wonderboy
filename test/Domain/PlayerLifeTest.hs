@@ -48,6 +48,7 @@ floorWorld =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 belowFloor :: Position
@@ -128,6 +129,7 @@ unit_respawnClearsProjectiles =
         deadBelowFloor
           { worldProjectiles = [flying]
           , worldNextProjectileId = 2
+          , worldFallingHazards = []
           }
       (w', _, _) = resolveHazardsAndDeath testLifeParams (lives 3) Playing w
    in worldProjectiles w' @?= []

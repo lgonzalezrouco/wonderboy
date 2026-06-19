@@ -20,6 +20,7 @@ import GHC.Generics (Generic)
 
 import Domain.Model.Enemy (Enemy)
 import Domain.Model.ExitZone (ExitZone, defaultExitZone)
+import Domain.Model.FallingHazard (FallingHazard)
 import Domain.Model.MovingPlatform (MovingPlatform)
 import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
@@ -50,6 +51,7 @@ data World = World
   , worldExit :: ExitZone
   , worldProjectiles :: [Projectile]
   , worldNextProjectileId :: Int
+  , worldFallingHazards :: [FallingHazard]
   }
   deriving (Eq, Show, Generic)
 
@@ -76,4 +78,5 @@ initialWorld =
         , worldExit = defaultExitZone
         , worldProjectiles = []
         , worldNextProjectileId = 1
+        , worldFallingHazards = []
         }

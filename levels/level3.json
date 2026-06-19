@@ -51,5 +51,8 @@
     { "id": 13, "pos": { "x": 3620, "y": 16 }, "value": 75 },
     { "id": 14, "pos": { "x": 4040, "y": 16 }, "value": 75 }
   ],
+  "fallingHazards": [
+    { "id": 1, "pos": { "x": 3350, "y": 180 }, "width": 24, "height": 24, "fallSpeed": 140, "loopDelay": 120 }
+  ],
   "exit": { "pos": { "x": 4120, "y": 8 }, "width": 40, "height": 64 }
 }

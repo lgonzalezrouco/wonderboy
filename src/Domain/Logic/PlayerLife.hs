@@ -5,6 +5,7 @@ expone transformaciones totales sobre 'World', vidas y 'GamePhase'.
 -}
 module Domain.Logic.PlayerLife (
   applyDamage,
+  deathLineY,
   isPlayerOutOfBounds,
   resolveHazardsAndDeath,
 )
@@ -39,7 +40,10 @@ lowestPlatformBottomY w =
           ++ map (posY . movingPlatformPos) (worldMovingPlatforms w)
    in if null ys then 0 else minimum ys
 
--- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
+{- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
+
+También usada como umbral de despawn de peligros que caen (M21).
+-}
 deathLineY :: LifeParams -> World -> Float
 deathLineY lp w = lowestPlatformBottomY w - lpDeathMargin lp
 

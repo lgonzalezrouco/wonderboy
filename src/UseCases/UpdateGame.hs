@@ -21,6 +21,7 @@ import Control.Monad.State (MonadState, get, modify)
 
 import Domain.Logic.BossPhase (resolveBossPhases)
 import Domain.Logic.Combat (resolveCombat)
+import Domain.Logic.FallingHazards (resolveFallingHazards)
 import Domain.Logic.LevelFlow (resolveFramePhase, resolvePlayingWin)
 import Domain.Logic.Pickups (resolvePickups)
 import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
@@ -70,7 +71,8 @@ updateGame dt input = do
         wAfterFrame = advanceFrame params dt input wBefore
         wAfterCombat = resolveCombat combat input wAfterFrame
         wAfterProjectiles = resolveProjectiles throwP combat params dt input wAfterCombat
-        wAfterBoss = resolveBossPhases combat wBefore wAfterProjectiles
+        wAfterHazards = resolveFallingHazards life combat dt wAfterProjectiles
+        wAfterBoss = resolveBossPhases combat wBefore wAfterHazards
         (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
         scoreFinal = scoreAfterPickups <> scoreDelta
         phaseFromWin =

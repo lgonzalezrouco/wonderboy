@@ -152,6 +152,7 @@ floorWorld =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 -- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
@@ -194,6 +195,7 @@ worldWithCeiling =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -213,6 +215,7 @@ worldWithWall =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).

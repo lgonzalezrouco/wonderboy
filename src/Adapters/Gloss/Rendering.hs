@@ -13,6 +13,7 @@ import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectang
 import Adapters.Gloss.Config (
   cameraY,
   enemyColorForKind,
+  fallingHazardColor,
   hudAttackColor,
   hudBossColor,
   hudBossEmptyColor,
@@ -41,6 +42,11 @@ import Adapters.Gloss.Sprites (
 import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
+import Domain.Model.FallingHazard (
+  FallingHazard (..),
+  fallingHazardAabb,
+  fallingHazardIsActive,
+ )
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.GameView (GameView (..))
 import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
@@ -250,6 +256,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
           , pictures (map renderProjectile (worldProjectiles w))
+          , pictures (map renderFallingHazard (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
@@ -285,6 +292,11 @@ renderPickup catalog pickup =
 
 renderProjectile :: Projectile -> Picture
 renderProjectile proj = aabbToPicture projectileColor (projectileAabb proj)
+
+renderFallingHazard :: FallingHazard -> Picture
+renderFallingHazard h
+  | fallingHazardIsActive h = aabbToPicture fallingHazardColor (fallingHazardAabb h)
+  | otherwise = Blank
 
 renderPlatform :: SpriteCatalog -> Platform -> Picture
 renderPlatform catalog platform =
@@ -344,6 +356,10 @@ renderHitboxOverlay combatParams w =
                ]
             <> [ aabbOutline projectileColor (projectileAabb proj)
                | proj <- worldProjectiles w
+               ]
+            <> [ aabbOutline fallingHazardColor (fallingHazardAabb fh)
+               | fh <- worldFallingHazards w
+               , fallingHazardIsActive fh
                ]
             <> [ aabbOutline hudMutedColor (exitZoneAabb (worldExit w))
                , aabbOutline playerColor playerBox

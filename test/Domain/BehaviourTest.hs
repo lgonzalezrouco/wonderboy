@@ -39,6 +39,7 @@ minimalWorld =
     , worldExit = defaultExitZone
     , worldProjectiles = []
     , worldNextProjectileId = 1
+    , worldFallingHazards = []
     }
 
 worldWithEnemy :: Enemy -> World

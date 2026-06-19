@@ -20,8 +20,10 @@ import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHe
 import Domain.Model.Enemy (Enemy, enemyHealth, enemyMaxHealth, spawnEnemy)
 import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.ExitZone (ExitZone (..))
+import Domain.Model.FallingHazard (FallingHazard, spawnFallingHazard)
 import Domain.Model.LevelDefinition (
   EnemyDef (..),
+  FallingHazardDef (..),
   LevelBuildError (..),
   LevelDefinition (..),
   MovingPlatformDef (..),
@@ -35,6 +37,7 @@ import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Score (score)
 
 -- | Construye el mundo inicial del nivel a partir de la definición autoral.
@@ -44,10 +47,12 @@ buildWorld lvl = do
   checkUniqueIds (map mpDefId (levelMovingPlatforms lvl)) "moving platform"
   checkUniqueIds (map enemyDefId (levelEnemies lvl)) "enemy"
   checkUniqueIds (map pickupDefId (levelPickups lvl)) "pickup"
+  checkUniqueIds (map fhDefId (levelFallingHazards lvl)) "falling hazard"
   checkBossCount (levelEnemies lvl)
   movingPlats <- traverse buildMovingPlatform (levelMovingPlatforms lvl)
   enemies <- traverse buildEnemy (levelEnemies lvl)
   pickups <- traverse buildPickup (levelPickups lvl)
+  hazards <- traverse buildFallingHazard (levelFallingHazards lvl)
   let spawn = levelSpawn lvl
   pure
     World
@@ -61,6 +66,7 @@ buildWorld lvl = do
       , worldExit = buildExit (levelExit lvl)
       , worldProjectiles = []
       , worldNextProjectileId = 1
+      , worldFallingHazards = hazards
       }
 
 checkUniqueIds :: [Int] -> Text -> Either LevelBuildError ()
@@ -144,6 +150,25 @@ buildPickup def =
   case mkPickup (pickupDefId def) (pickupDefPos def) (pickupDefValue def) of
     Nothing -> Left (invalidBuildId "invalid pickup id " (pickupDefId def))
     Just p -> Right p
+
+buildFallingHazard :: FallingHazardDef -> Either LevelBuildError FallingHazard
+buildFallingHazard def
+  | fhDefFallSpeed def <= 0 =
+      Left (levelBuildError "fallSpeed must be > 0")
+  | fhDefWidth def <= 0 || fhDefHeight def <= 0 =
+      Left (levelBuildError "falling hazard width and height must be > 0")
+  | Just delay <- fhDefLoopDelay def
+  , delay < 0 =
+      Left (levelBuildError "loopDelay must be >= 0")
+  | otherwise =
+      Right $
+        spawnFallingHazard
+          (fhDefId def)
+          (fhDefPos def)
+          (fhDefWidth def)
+          (fhDefHeight def)
+          (fhDefFallSpeed def)
+          (frames <$> fhDefLoopDelay def)
 
 buildExit :: RectDef -> ExitZone
 buildExit rect =
