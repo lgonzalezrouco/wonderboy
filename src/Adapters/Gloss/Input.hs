@@ -25,6 +25,7 @@ data KeyState = KeyState
   , upHeld :: Bool
   , wHeld :: Bool
   , spaceHeld :: Bool
+  , xHeld :: Bool
   }
   deriving (Eq, Show)
 
@@ -39,6 +40,7 @@ noKeys =
     , upHeld = False
     , wHeld = False
     , spaceHeld = False
+    , xHeld = False
     }
 
 -- | Actualiza 'KeyState' ante un evento de tecla (KeyDown / KeyUp).
@@ -50,6 +52,8 @@ handleKeyEvent (EventKey key state _ _) ks =
         Char 'd' -> ks{dHeld = held}
         Char 'w' -> ks{wHeld = held}
         Char ' ' -> ks{spaceHeld = held}
+        Char 'x' -> ks{xHeld = held}
+        Char 'X' -> ks{xHeld = held}
         SpecialKey KeySpace -> ks{spaceHeld = held}
         SpecialKey KeyLeft -> ks{leftHeld = held}
         SpecialKey KeyRight -> ks{rightHeld = held}
@@ -57,16 +61,18 @@ handleKeyEvent (EventKey key state _ _) ks =
         _ -> ks
 handleKeyEvent _ ks = ks
 
--- | Construye 'Input' de dominio y flags de salto/ataque previos (edge detection).
-buildInput :: KeyState -> Bool -> Bool -> (Input, Bool, Bool)
-buildInput ks prevJumpHeld prevAttackHeld =
+-- | Construye 'Input' de dominio y flags de salto/ataque/lanzamiento previos (edge detection).
+buildInput :: KeyState -> Bool -> Bool -> Bool -> (Input, Bool, Bool, Bool)
+buildInput ks prevJumpHeld prevAttackHeld prevThrowHeld =
   let jumpHeld = upHeld ks || wHeld ks
       attackHeld = spaceHeld ks
+      throwHeld = xHeld ks
       input =
         Input
           { inputLeft = leftHeld ks || aHeld ks
           , inputRight = rightHeld ks || dHeld ks
           , inputJump = jumpHeld && not prevJumpHeld
           , inputAttack = attackHeld && not prevAttackHeld
+          , inputThrow = throwHeld && not prevThrowHeld
           }
-   in (input, jumpHeld, attackHeld)
+   in (input, jumpHeld, attackHeld, throwHeld)

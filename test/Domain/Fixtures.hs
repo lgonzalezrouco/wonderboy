@@ -12,6 +12,8 @@ module Domain.Fixtures (
   mkTestPickup,
   testParams,
   testCombatParams,
+  testThrowParams,
+  testPlayerProjectile,
   wallPlatform,
   worldGrounded,
   worldWithCeiling,
@@ -42,16 +44,28 @@ import Domain.Model.Player (
   playerVel,
   spawnPlayer,
  )
+import Domain.Model.Projectile (
+  Projectile (..),
+  ProjectileMotion (Ballistic),
+  ProjectileOwner (PlayerProjectile),
+ )
 import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
 import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
+import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
-import Domain.ValueObjects.Velocity (velocity)
+import Domain.ValueObjects.ThrowParams (ThrowParams (..))
+import Domain.ValueObjects.Velocity (Velocity, velocity)
 import Test.Tasty.HUnit (assertBool)
-import UseCases.GameMonad (combatParamsFromConfig, defaultConfig, physicsParamsFromConfig)
+import UseCases.GameMonad (
+  combatParamsFromConfig,
+  defaultConfig,
+  physicsParamsFromConfig,
+  throwParamsFromConfig,
+ )
 
 -- | Física y combate alineados con 'defaultConfig' (única fuente de verdad).
 testParams :: PhysicsParams
@@ -59,6 +73,23 @@ testParams = physicsParamsFromConfig defaultConfig
 
 testCombatParams :: CombatParams
 testCombatParams = combatParamsFromConfig defaultConfig
+
+testThrowParams :: ThrowParams
+testThrowParams = throwParamsFromConfig defaultConfig
+
+-- | Player-owned ballistic projectile sized from 'testThrowParams'.
+testPlayerProjectile :: Int -> Position -> Velocity -> Frames -> Projectile
+testPlayerProjectile pid pos vel lifetime =
+  Projectile
+    { projectileId = pid
+    , projectilePos = pos
+    , projectileVel = vel
+    , projectileLifetime = lifetime
+    , projectileMotion = Ballistic
+    , projectileOwner = PlayerProjectile
+    , projectileWidth = tpWidth testThrowParams
+    , projectileHeight = tpHeight testThrowParams
+    }
 
 -- | One frame at 60 Hz.
 dtFrame :: DeltaTime
@@ -101,6 +132,8 @@ floorWorld =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = defaultExitZone
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 -- | Valid pickup for tests; panics only on negative @value@ (use 'mkPickup' for that case).
@@ -141,6 +174,8 @@ worldWithCeiling =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = defaultExitZone
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 -- | Player just left of a vertical wall, on a floor strip.
@@ -158,6 +193,8 @@ worldWithWall =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = defaultExitZone
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 -- | Wall left face at x = 50 (platform bottom-left anchor).

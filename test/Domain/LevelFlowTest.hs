@@ -44,6 +44,8 @@ worldInExit =
     , worldPickups = []
     , worldMinScore = score 0
     , worldExit = exitForPlayer
+    , worldProjectiles = []
+    , worldNextProjectileId = 1
     }
 
 worldAwayFromExit :: World

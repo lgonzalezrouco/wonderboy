@@ -24,6 +24,7 @@ import Domain.Model.MovingPlatform (MovingPlatform)
 import Domain.Model.Pickup (Pickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), spawnPlayer)
+import Domain.Model.Projectile (Projectile)
 import Domain.ValueObjects.Health (Health, health)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (Score, score)
@@ -47,6 +48,8 @@ data World = World
   , worldPickups :: [Pickup]
   , worldMinScore :: Score
   , worldExit :: ExitZone
+  , worldProjectiles :: [Projectile]
+  , worldNextProjectileId :: Int
   }
   deriving (Eq, Show, Generic)
 
@@ -71,4 +74,6 @@ initialWorld =
         , worldPickups = []
         , worldMinScore = score 0
         , worldExit = defaultExitZone
+        , worldProjectiles = []
+        , worldNextProjectileId = 1
         }

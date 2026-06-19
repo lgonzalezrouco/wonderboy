@@ -73,6 +73,8 @@ data Player = Player
   -- ^ Frames restantes de ventana de melee; 0 = sin ataque activo.
   , playerInvincibilityFrames :: Frames
   -- ^ Frames de invencibilidad restantes; 0 = vulnerable a contacto enemigo.
+  , playerThrowCooldownFrames :: Frames
+  -- ^ Frames restantes antes de poder lanzar de nuevo; 0 = listo.
   }
   deriving (Eq, Show, Generic)
 
@@ -107,4 +109,5 @@ spawnPlayer maxHealth pos =
     , playerFacing = FacingRight
     , playerAttackFrames = noFrames
     , playerInvincibilityFrames = noFrames
+    , playerThrowCooldownFrames = noFrames
     }

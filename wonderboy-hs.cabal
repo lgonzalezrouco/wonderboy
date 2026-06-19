@@ -129,6 +129,7 @@ library
       , Domain.ValueObjects.LifeParams
       , Domain.ValueObjects.Facing
       , Domain.ValueObjects.CombatParams
+      , Domain.ValueObjects.ThrowParams
       , Domain.ValueObjects.Tolerance
       , Domain.ValueObjects.Damage
       , Domain.ValueObjects.Health
@@ -140,6 +141,7 @@ library
       , Domain.ValueObjects.Frames
       , Domain.Logic.Collision
       , Domain.Logic.Combat
+      , Domain.Logic.Projectiles
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
       , Domain.Logic.MovingPlatforms
@@ -158,6 +160,7 @@ library
       , Domain.Model.Pickup
       , Domain.Model.Platform
       , Domain.Model.Player
+      , Domain.Model.Projectile
       , Domain.Model.World
       , Domain.Model.BossKindStats
       , Domain.Model.BossPhase
@@ -228,6 +231,7 @@ test-suite wonderboy-hs-test
       , Domain.EnemyFsmTest
       , Domain.MovingPlatformTest
       , Domain.PickupTest
+      , Domain.ProjectileTest
       , Domain.StepTest
       , Domain.LevelLoadTest
       , Domain.LevelFlowTest

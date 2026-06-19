@@ -59,6 +59,8 @@ buildWorld lvl = do
       , worldPickups = pickups
       , worldMinScore = score (levelMinScore lvl)
       , worldExit = buildExit (levelExit lvl)
+      , worldProjectiles = []
+      , worldNextProjectileId = 1
       }
 
 checkUniqueIds :: [Int] -> Text -> Either LevelBuildError ()

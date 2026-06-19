@@ -27,6 +27,7 @@ import Adapters.Gloss.Config (
   pickupColor,
   platformColor,
   playerColor,
+  projectileColor,
   renderZoom,
   windowHeight,
   windowWidth,
@@ -54,6 +55,7 @@ import Domain.Model.Player (
   playerInvincibilityFrames,
   playerPos,
  )
+import Domain.Model.Projectile (Projectile, projectileAabb)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
@@ -247,6 +249,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderMovingPlatform catalog) (worldMovingPlatforms w))
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
+          , pictures (map renderProjectile (worldProjectiles w))
           , renderExitZone catalog (worldExit w)
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
@@ -279,6 +282,9 @@ renderPickup catalog pickup =
     Just sprite -> drawSpriteInAabb box sprite
  where
   box = pickupAabb pickup
+
+renderProjectile :: Projectile -> Picture
+renderProjectile proj = aabbToPicture projectileColor (projectileAabb proj)
 
 renderPlatform :: SpriteCatalog -> Platform -> Picture
 renderPlatform catalog platform =
@@ -336,6 +342,9 @@ renderHitboxOverlay combatParams w =
             <> [ aabbOutline pickupColor (pickupAabb pickup)
                | pickup <- worldPickups w
                ]
+            <> [ aabbOutline projectileColor (projectileAabb proj)
+               | proj <- worldProjectiles w
+               ]
             <> [ aabbOutline hudMutedColor (exitZoneAabb (worldExit w))
                , aabbOutline playerColor playerBox
                , renderFootAnchor (playerPos p) playerColor
@@ -380,8 +389,11 @@ renderHud catalog gv showHitboxes =
             renderScore catalog (scorePoints (gvScore gv))
         , renderAttackRow catalog contentX row4Y p
         , renderExitHints gv contentX row5Y
-        , hudHint contentX (row5Y + hudHintGap) "Space - attack"
-        , if showHitboxes then hudHint contentX (row5Y + hudHintGap + 16) "F1 - hitboxes" else Blank
+        , hudHint contentX (row5Y - hudHintGap) "Space - attack"
+        , hudHint contentX (row5Y - hudHintGap * 2) "X - throw"
+        , if showHitboxes
+            then hudHint contentX (row5Y - hudHintGap * 2 - 16) "F1 - hitboxes"
+            else Blank
         ]
 
 -- | Barra superior centrada con la salud del jefe.

@@ -77,7 +77,10 @@ jobs:
 
       - name: Install Fourmolu
         run: |
+          # megaparsec-9.8.0 drops the foldl' import but still uses it; that
+          # breaks on GHC 9.6 (foldl' is not in Prelude until GHC 9.10).
           cabal install fourmolu-0.16.2.0 \
+            --constraint='megaparsec<9.8' \
             --overwrite-policy=always \
             --installdir="$HOME/.local/bin" \
             --install-method=copy
