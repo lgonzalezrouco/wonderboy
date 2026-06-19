@@ -28,6 +28,7 @@ data EnemyKind
   = SnailKind
   | BatKind
   | GolemKind
+  | ArcherKind
   | BossGolemKind
   | BossBatKind
   deriving (Eq, Show, Generic)
@@ -52,6 +53,8 @@ data EnemyMotionStats
     ReactiveMotion Float Float Float Float
   | -- | FSM reactivo aéreo: persigue en horizontal; en spawn patrulla en X (Bat).
     FlyingReactiveMotion Float Float Float Float Float Frames
+  | -- | Disparo a distancia: rango, cooldown, velocidad y tamaño del proyectil (Archer).
+    ArcherMotion Float Frames Float Frames Float Float
   deriving (Eq, Show, Generic)
 
 -- | Parámetros fijos por clase (píxeles lógicos y px/s).
@@ -90,6 +93,13 @@ enemyKindStats kind = case kind of
       , eksHeight = 32
       , eksMaxHealth = health 2
       , eksMotion = ReactiveMotion 25 25 100 12
+      }
+  ArcherKind ->
+    EnemyKindStats
+      { eksWidth = 24
+      , eksHeight = 24
+      , eksMaxHealth = health 1
+      , eksMotion = ArcherMotion 160 (frames 90) 200 (frames 120) 8 8
       }
   BossGolemKind ->
     let s = bossGolemStats

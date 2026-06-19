@@ -156,25 +156,24 @@ enemySprite :: SpriteCatalog -> Int -> Enemy -> Maybe Sprite
 enemySprite catalog renderFrame enemy =
   case enemyKind enemy of
     SnailKind ->
-      if moving
-        then alternating (scSnailIdle catalog) (scSnailWalk catalog)
-        else scSnailIdle catalog
+      patrolSprite renderFrame (scSnailIdle catalog) (scSnailWalk catalog)
     BatKind ->
-      if moving
-        then alternating (scBatIdle catalog) (scBatFly catalog)
-        else scBatIdle catalog
+      patrolSprite renderFrame (scBatIdle catalog) (scBatFly catalog)
     GolemKind ->
-      if moving
-        then alternating (scGolemIdle catalog) (scGolemWalk catalog)
-        else scGolemIdle catalog
+      patrolSprite renderFrame (scGolemIdle catalog) (scGolemWalk catalog)
+    ArcherKind -> scSnailIdle catalog
     BossGolemKind -> scBossGolem catalog
     BossBatKind -> scBossBat catalog <|> scBatFly catalog
  where
   moving = enemyMoving enemy
-  alternating idle movingSprite =
-    if even (renderFrame `div` enemyAnimationStride)
-      then movingSprite <|> idle
-      else idle <|> movingSprite
+  patrolSprite frame idle walk
+    | moving = idleOrWalk frame idle walk
+    | otherwise = idle
+
+idleOrWalk :: Int -> Maybe Sprite -> Maybe Sprite -> Maybe Sprite
+idleOrWalk frame idle walk
+  | even (frame `div` enemyAnimationStride) = walk <|> idle
+  | otherwise = idle <|> walk
 
 cyclingSprite :: Int -> [Sprite] -> Maybe Sprite
 cyclingSprite _ [] = Nothing

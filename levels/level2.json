@@ -25,8 +25,10 @@
     { "id": 3, "kind": "bat", "pos": { "x": 600, "y": 148 } },
     { "id": 4, "kind": "snail", "pos": { "x": 1000, "y": 8 } },
     { "id": 5, "kind": "bat", "pos": { "x": 1325, "y": 76 } },
-    { "id": 6, "kind": "golem", "pos": { "x": 2030, "y": 8 } },
-    { "id": 7, "kind": "bat", "pos": { "x": 2480, "y": 40 } }
+    { "id": 6, "kind": "archer", "pos": { "x": 1080, "y": 8 } },
+    { "id": 7, "kind": "golem", "pos": { "x": 2030, "y": 8 } },
+    { "id": 8, "kind": "archer", "pos": { "x": 1680, "y": 8 } },
+    { "id": 9, "kind": "bat", "pos": { "x": 2480, "y": 40 } }
   ],
   "pickups": [
     { "id": 1, "pos": { "x": -150, "y": 16 }, "value": 50 },

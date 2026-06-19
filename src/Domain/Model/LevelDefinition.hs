@@ -201,6 +201,7 @@ enemyKindToText kind = case kind of
   SnailKind -> "snail"
   BatKind -> "bat"
   GolemKind -> "golem"
+  ArcherKind -> "archer"
   BossGolemKind -> "bossGolem"
   BossBatKind -> "bossBat"
 
@@ -216,6 +217,7 @@ parseEnemyKind txt = case txt of
   "snail" -> Right SnailKind
   "bat" -> Right BatKind
   "golem" -> Right GolemKind
+  "archer" -> Right ArcherKind
   "bossGolem" -> Right BossGolemKind
   "bossBat" -> Right BossBatKind
   _ -> Left (levelBuildError ("unknown enemy kind: " <> txt))

@@ -47,14 +47,14 @@ worldWithEnemy e = minimalWorld{worldEnemies = [e]}
 unit_waitFramesDecrements :: Assertion
 unit_waitFramesDecrements =
   let e = mkEnemy 0 (position 0 0) (waitFrames (frames 3))
-      e' = stepEnemyBehaviour minimalWorld e
+      (_, e') = stepEnemyBehaviour minimalWorld e
    in waitFramesRemaining (enemyProgram e') @?= Just (frames 2)
 
 unit_waitFramesHoldsVelocity :: Assertion
 unit_waitFramesHoldsVelocity = do
   let e0 = mkEnemy 0 (position 0 0) (waitFrames (frames 2))
-      e1 = stepEnemyBehaviour minimalWorld e0
-      e2 = stepEnemyBehaviour minimalWorld e1
+      (_, e1) = stepEnemyBehaviour minimalWorld e0
+      (_, e2) = stepEnemyBehaviour minimalWorld e1
   velX (enemyVel e0) @?= 0
   velX (enemyVel e1) @?= 0
   velX (enemyVel e2) @?= 0
@@ -63,8 +63,8 @@ unit_waitThenRunsSetVelocityAfterWait :: Assertion
 unit_waitThenRunsSetVelocityAfterWait = do
   let prog = waitThen (frames 1) (setVelocity (velocity 7 0))
       e0 = mkEnemy 0 (position 0 0) prog
-      e1 = stepEnemyBehaviour minimalWorld e0
-      e2 = stepEnemyBehaviour minimalWorld e1
+      (_, e1) = stepEnemyBehaviour minimalWorld e0
+      (_, e2) = stepEnemyBehaviour minimalWorld e1
   waitFramesRemaining (enemyProgram e1) @?= Nothing
   velX (enemyVel e1) @?= 0
   velX (enemyVel e2) @?= 7
@@ -72,13 +72,13 @@ unit_waitThenRunsSetVelocityAfterWait = do
 unit_setVelocityOnStep :: Assertion
 unit_setVelocityOnStep =
   let e = mkEnemy 0 (position 0 0) (setVelocity (velocity 10 0))
-      e' = stepEnemyBehaviour minimalWorld e
+      (_, e') = stepEnemyBehaviour minimalWorld e
    in velX (enemyVel e') @?= 10
 
 unit_idleProgramNoOp :: Assertion
 unit_idleProgramNoOp =
   let e = mkEnemy 0 (position 0 0) idleProgram
-      e' = stepEnemyBehaviour minimalWorld e
+      (_, e') = stepEnemyBehaviour minimalWorld e
    in e' @?= e
 
 unit_behaviourThenStepMovesEnemy :: Assertion

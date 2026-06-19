@@ -1,7 +1,15 @@
 -- | FSM reactivo y clases de enemigo (M13): sensado y presets con fixtures fijos.
 module Domain.EnemyFsmTest where
 
-import Domain.Fixtures (dtFrame, floorWorld, testCombatParams, testParams, worldWithEnemyAt)
+import Domain.Fixtures (
+  dtFrame,
+  enemyFrom,
+  floorWorld,
+  runBehaviourN,
+  testCombatParams,
+  testParams,
+  worldWithEnemyAt,
+ )
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Logic.EntityBehaviours (defaultProgramForKind, patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
@@ -27,16 +35,7 @@ import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
 import Domain.ValueObjects.Velocity (velX, velY)
-import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-
-runBehaviourN :: Int -> World -> World
-runBehaviourN 0 w = w
-runBehaviourN n w = runBehaviourN (n - 1) (runBehaviourStep w)
-
-enemyFrom :: World -> Enemy
-enemyFrom w = case worldEnemies w of
-  e : _ -> e
-  [] -> error "enemyFrom: no enemies"
+import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
 
 attackingPlayerAt :: Position -> Player
 attackingPlayerAt pos =
@@ -64,9 +63,12 @@ unit_batChasesInRange =
   let w0 = worldWithEnemyAt BatKind (position 80 56) (position 0 8)
       w1 = runBehaviourN 2 w0
       e = enemyFrom w1
+      v = enemyVel e
+      speed = sqrt (velX v * velX v + velY v * velY v)
    in do
-        velX (enemyVel e) @?= (-80)
-        velY (enemyVel e) @?= 0
+        assertBool "bat chase speed is 80 px/s" (abs (speed - 80) < 0.01)
+        velX v < 0 @?= True
+        velY v < 0 @?= True
 
 unit_batChaseSustainsVelocity :: Assertion
 unit_batChaseSustainsVelocity =

@@ -31,7 +31,7 @@ import Domain.ValueObjects.Velocity (velocity)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 stepProjectiles :: Input -> World -> World
-stepProjectiles = resolveProjectiles testThrowParams testParams dtFrame
+stepProjectiles = resolveProjectiles testThrowParams testCombatParams testParams dtFrame
 
 unit_throwSpawnsProjectile :: Assertion
 unit_throwSpawnsProjectile =
