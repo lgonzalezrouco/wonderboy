@@ -50,6 +50,7 @@ floorWorld =
     , worldNextProjectileId = 1
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
+    , worldBossArena = Nothing
     }
 
 belowFloor :: Position
@@ -132,6 +133,7 @@ unit_respawnClearsProjectiles =
           , worldNextProjectileId = 2
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
+          , worldBossArena = Nothing
           }
       (w', _, _) = resolveHazardsAndDeath testLifeParams (lives 3) Playing w
    in worldProjectiles w' @?= []

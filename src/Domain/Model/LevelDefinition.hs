@@ -8,6 +8,7 @@ Tipos alineados con @levels/*.json@; la construcción del 'World' vive en
 -}
 module Domain.Model.LevelDefinition (
   BehaviourArchetype (..),
+  BossArenaDef (..),
   CrumblingPlatformDef (..),
   EnemyDef (..),
   FallingHazardDef (..),
@@ -37,6 +38,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
+import Domain.Model.BossArena (BossArenaDef (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.ValueObjects.Position (Position)
 
@@ -129,6 +131,7 @@ data LevelDefinition = LevelDefinition
   , levelPickups :: [PickupDef]
   , levelFallingHazards :: [FallingHazardDef]
   , levelCrumblingPlatforms :: [CrumblingPlatformDef]
+  , levelBossArena :: Maybe BossArenaDef
   , levelExit :: RectDef
   }
   deriving (Eq, Show, Generic)
@@ -247,11 +250,12 @@ instance FromJSON LevelDefinition where
       <*> o .: "pickups"
       <*> (fromMaybe [] <$> o .:? "fallingHazards")
       <*> (fromMaybe [] <$> o .:? "crumblingPlatforms")
+      <*> o .:? "bossArena"
       <*> o .: "exit"
 
 instance ToJSON LevelDefinition where
   toJSON lvl =
-    object
+    object $
       [ "minScore" .= levelMinScore lvl
       , "spawn" .= levelSpawn lvl
       , "platforms" .= levelPlatforms lvl
@@ -262,6 +266,7 @@ instance ToJSON LevelDefinition where
       , "crumblingPlatforms" .= levelCrumblingPlatforms lvl
       , "exit" .= levelExit lvl
       ]
+        ++ maybe [] (\a -> ["bossArena" .= a]) (levelBossArena lvl)
 
 enemyKindToText :: EnemyKind -> Text
 enemyKindToText kind = case kind of

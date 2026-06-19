@@ -52,6 +52,7 @@ unit_throwBlockedDuringFlight =
           , worldNextProjectileId = 2
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
+          , worldBossArena = Nothing
           }
       w' = stepProjectiles (noInput{inputThrow = True}) w
    in length (worldProjectiles w') @?= 1

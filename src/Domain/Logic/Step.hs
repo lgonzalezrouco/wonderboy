@@ -5,6 +5,7 @@ module Domain.Logic.Step (
 )
 where
 
+import Domain.Logic.BossArena (appendBossArenaWallsForPlayer)
 import Domain.Logic.Collision (resolveEnemyPlatforms, resolvePlayerPlatforms)
 import Domain.Logic.CrumblingPlatforms (
   advanceCrumblingPlatforms,
@@ -78,7 +79,8 @@ step params life dt input w =
       vyAtCollide = velY (playerVel p3)
       crumbling = worldCrumblingPlatforms w'
       basePlats = allCollisionPlatforms (worldPlatforms w') moving
-      playerPlats = appendPlayerSolidCrumbling basePlats crumbling
+      playerPlats =
+        appendBossArenaWallsForPlayer w' (appendPlayerSolidCrumbling basePlats crumbling)
       enemyPlats = appendEnemySolidCrumbling basePlats crumbling
       p4 = integrateAndCollide dt p3 playerPlats vyAtCollide
       enemies' =

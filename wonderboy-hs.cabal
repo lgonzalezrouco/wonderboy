@@ -139,6 +139,7 @@ library
       , Domain.ValueObjects.Score
       , Domain.ValueObjects.LevelCount
       , Domain.ValueObjects.Frames
+      , Domain.Logic.BossArena
       , Domain.Logic.Collision
       , Domain.Logic.Combat
       , Domain.Logic.Projectiles
@@ -166,6 +167,7 @@ library
       , Domain.Model.FallingHazard
       , Domain.Model.CrumblingPlatform
       , Domain.Model.World
+      , Domain.Model.BossArena
       , Domain.Model.BossKindStats
       , Domain.Model.BossPhase
       , Domain.Model.ExitZone
@@ -238,6 +240,7 @@ test-suite wonderboy-hs-test
       , Domain.PickupTest
       , Domain.ProjectileTest
       , Domain.FallingHazardTest
+      , Domain.BossArenaTest
       , Domain.CrumblingPlatformTest
       , Domain.StepTest
       , Domain.LevelLoadTest
