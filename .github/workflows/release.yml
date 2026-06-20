@@ -1,0 +1,183 @@
+# Build portable game bundles on version tags and publish a GitHub Release and itch.io channels.
+# Shares GHC / OpenGL setup with ci.yml (GHC 9.6.7, Cabal 3.12).
+# itch.io: set repo vars ITCH_USER + ITCH_GAME and secret BUTLER_API_KEY (see README).
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.artifact }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux-x86_64
+          - os: macos-latest
+            artifact: macos-arm64
+          - os: windows-latest
+            artifact: windows-x86_64
+
+    env:
+      GHC_VERSION: "9.6.7"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenGL / GLUT (Gloss on Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev freeglut3-dev
+
+      - name: Fix ghcup directory permissions (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo mkdir -p /usr/local/.ghcup
+          sudo chown -R "$USER:$USER" /usr/local/.ghcup
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: "3.12"
+          cabal-update: false
+
+      - name: Cache Cabal store and build dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: release-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-cabal-${{ hashFiles('**/*.cabal') }}
+          restore-keys: |
+            release-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-cabal-
+
+      - name: Cabal update
+        run: cabal update
+
+      - name: Build and test
+        run: |
+          cabal build all --enable-tests -O2
+          cabal test all --test-show-details=direct
+          cabal check
+
+      - name: Package release bundle (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE="${RUNNER_TEMP}/bundle"
+          mkdir -p "${BUNDLE}/levels" "${BUNDLE}/assets"
+          cp -r levels/* "${BUNDLE}/levels/"
+          cp -r assets/* "${BUNDLE}/assets/"
+          BIN="$(cabal list-bin exe:wonderboy-hs)"
+          cp "${BIN}" "${BUNDLE}/wonderboy-hs-bin"
+          chmod +x "${BUNDLE}/wonderboy-hs-bin"
+          {
+            echo '#!/usr/bin/env bash'
+            echo 'set -euo pipefail'
+            echo 'ROOT="$(cd "$(dirname "$0")" && pwd)"'
+            echo 'export wonderboy_hs_datadir="${ROOT}"'
+            echo 'exec "${ROOT}/wonderboy-hs-bin" "$@"'
+          } > "${BUNDLE}/wonderboy-hs"
+          chmod +x "${BUNDLE}/wonderboy-hs"
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            codesign -s - "${BUNDLE}/wonderboy-hs-bin" || true
+          fi
+          mkdir -p dist
+          tar -czf "dist/wonderboy-hs-${GITHUB_REF_NAME}-${{ matrix.artifact }}.tar.gz" -C "${BUNDLE}" .
+
+      - name: Package release bundle (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP "bundle"
+          New-Item -ItemType Directory -Force -Path $bundle, "$bundle\levels", "$bundle\assets" | Out-Null
+          Copy-Item -Recurse -Force "levels\*" "$bundle\levels\"
+          Copy-Item -Recurse -Force "assets\*" "$bundle\assets\"
+          $bin = cabal list-bin exe:wonderboy-hs
+          Copy-Item -Force $bin "$bundle\wonderboy-hs.exe"
+          @(
+            '@echo off',
+            'setlocal',
+            'set "wonderboy_hs_datadir=%~dp0"',
+            '"%~dp0wonderboy-hs.exe" %*'
+          ) | Set-Content -Path "$bundle\wonderboy-hs.cmd" -Encoding ascii
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $artifact = "wonderboy-hs-$env:GITHUB_REF_NAME-${{ matrix.artifact }}.zip"
+          Compress-Archive -Path "$bundle\*" -DestinationPath "dist\$artifact" -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+
+  itch:
+    name: Publish to itch.io
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ vars.ITCH_USER != '' && vars.ITCH_GAME != '' }}
+    env:
+      ITCH_USER: ${{ vars.ITCH_USER }}
+      ITCH_GAME: ${{ vars.ITCH_GAME }}
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Extract platform bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p itch/linux itch/osx itch/windows
+          tar -xzf artifacts/*-linux-x86_64.tar.gz -C itch/linux
+          tar -xzf artifacts/*-macos-arm64.tar.gz -C itch/osx
+          unzip -q artifacts/*-windows-x86_64.zip -d itch/windows
+
+      - name: Setup butler
+        uses: remarkablegames/setup-butler@v3
+
+      - name: Push Linux build
+        run: butler push itch/linux "${ITCH_USER}/${ITCH_GAME}:linux" --userversion "${VERSION}"
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+
+      - name: Push macOS build
+        run: butler push itch/osx "${ITCH_USER}/${ITCH_GAME}:osx" --userversion "${VERSION}"
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+
+      - name: Push Windows build
+        run: butler push itch/windows "${ITCH_USER}/${ITCH_GAME}:windows" --userversion "${VERSION}"
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}

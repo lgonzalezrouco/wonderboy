@@ -111,9 +111,65 @@ wonderboy-hs/
 | Integrante B | DSL de entidades, IA y carga de datos |
 | Ambos        | Integración, pruebas e informe        |
 
-## Cómo ejecutar
+## Jugar (sin instalar Haskell)
 
-Requisitos: **GHC** y **Cabal** ([GHCup](https://www.haskell.org/ghcup/)).
+Descargá el juego desde [itch.io](https://lgonzalezrouco.itch.io/wonderboy) o, alternativamente,
+el archivo para tu sistema operativo en
+[GitHub Releases](https://github.com/lgonzalezrouco/wonderboy/releases). Descomprimí el
+archivo (si aplica) y ejecutá:
+
+| Plataforma                | Archivo                               | Cómo iniciar       |
+| ------------------------- | ------------------------------------- | ------------------ |
+| **Linux**                 | `wonderboy-hs-v*-linux-x86_64.tar.gz` | `./wonderboy-hs`   |
+| **macOS** (Apple Silicon) | `wonderboy-hs-v*-macos-arm64.tar.gz`  | `./wonderboy-hs`   |
+| **Windows**               | `wonderboy-hs-v*-windows-x86_64.zip`  | `wonderboy-hs.cmd` |
+
+En macOS, si Gatekeeper bloquea el binario la primera vez: clic derecho → **Abrir**, o
+`xattr -cr wonderboy-hs-bin` desde la carpeta descomprimida.
+
+**Requisitos de runtime**
+
+- **Linux:** OpenGL y GLUT (`sudo apt install libgl1-mesa-glx freeglut3` en Debian/Ubuntu).
+- **macOS / Windows:** drivers gráficos del sistema (sin pasos extra en la mayoría de los casos).
+
+### Controles
+
+| Acción                   | Teclas                           |
+| ------------------------ | -------------------------------- |
+| Mover                    | ← → o **A** / **D**              |
+| Saltar                   | ↑ o **W** (borde al presionar)   |
+| Atacar (espada)          | **Espacio** (borde al presionar) |
+| Arrojar arma             | **X** (borde al presionar)       |
+| Confirmar menú           | **Enter** o **Espacio**          |
+| Salir                    | **Esc**                          |
+| Mostrar hitboxes (debug) | **F1**                           |
+
+### Publicar una nueva versión
+
+Creá y pusheá un tag de versión; el workflow `release.yml` compila en Linux, macOS y Windows,
+corre los tests, sube los bundles a GitHub Releases y (si está configurado) publica en itch.io:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+**Configuración de itch.io (una sola vez)**
+
+1. Creá la página del juego en [itch.io](https://itch.io/game/new) (Kind of project: **Downloadable**).
+2. En itch.io → **Settings** → **API**, generá una clave y guardala como secreto de repositorio
+   `BUTLER_API_KEY` en GitHub (**Settings** → **Secrets and variables** → **Actions**).
+3. En el mismo menú, agregá variables de repositorio:
+   - `ITCH_USER` — tu usuario de itch.io (p. ej. `lgonzalezrouco`)
+   - `ITCH_GAME` — slug del juego en la URL (p. ej. `wonderboy` para `usuario.itch.io/wonderboy`)
+
+Si `ITCH_USER` o `ITCH_GAME` están vacías, el job de itch.io se omite y solo se publica en GitHub
+Releases.
+
+## Desarrollo (desde el código fuente)
+
+Requisitos: **GHC 9.6.7** y **Cabal 3.12** ([GHCup](https://www.haskell.org/ghcup/)).
+En Linux también hacen falta las libs de OpenGL/GLUT (ver [docs/dependencies-and-tooling.md](docs/dependencies-and-tooling.md)).
 
 ```bash
 cabal build all --enable-tests
