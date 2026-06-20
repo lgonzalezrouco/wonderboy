@@ -90,7 +90,7 @@ hudPanelWidth :: Float
 hudPanelWidth = 280
 
 hudPanelHeight :: Float
-hudPanelHeight = 180
+hudPanelHeight = 220
 
 hudLabelScale :: Float
 hudLabelScale = 0.2
