@@ -82,7 +82,7 @@ jobs:
           mkdir -p "${BUNDLE}/levels" "${BUNDLE}/assets"
           cp -r levels/* "${BUNDLE}/levels/"
           cp -r assets/* "${BUNDLE}/assets/"
-          BIN="$(cabal list-bin exe:wonderboy-hs)"
+          BIN="$(cabal list-bin exe:wonderboy-hs -O2)"
           cp "${BIN}" "${BUNDLE}/wonderboy-hs-bin"
           chmod +x "${BUNDLE}/wonderboy-hs-bin"
           {
@@ -107,7 +107,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $bundle, "$bundle\levels", "$bundle\assets" | Out-Null
           Copy-Item -Recurse -Force "levels\*" "$bundle\levels\"
           Copy-Item -Recurse -Force "assets\*" "$bundle\assets\"
-          $bin = cabal list-bin exe:wonderboy-hs
+          $bin = cabal list-bin exe:wonderboy-hs -O2
           Copy-Item -Force $bin "$bundle\wonderboy-hs.exe"
           @(
             '@echo off',
