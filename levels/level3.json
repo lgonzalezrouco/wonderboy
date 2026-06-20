@@ -3,7 +3,7 @@
   "spawn": { "x": -200, "y": 24 },
   "platforms": [
     { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 600 },
-    { "pos": { "x": -260, "y": 0 }, "width": 315, "height": 8 },
+    { "pos": { "x": -280, "y": 0 }, "width": 335, "height": 8 },
     { "pos": { "x": 170, "y": 0 }, "width": 175, "height": 8 },
     { "pos": { "x": 460, "y": 0 }, "width": 175, "height": 8 },
     { "pos": { "x": 660, "y": 52 }, "width": 70, "height": 8 },
