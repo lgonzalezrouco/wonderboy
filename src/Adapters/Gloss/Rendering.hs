@@ -10,7 +10,7 @@ import Data.Maybe (isNothing)
 import Graphics.Gloss.Data.Color (Color, makeColor)
 import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectangleSolid, rectangleWire, text)
 
-import Adapters.Gloss.Camera (cameraXForWorld)
+import Adapters.Gloss.Camera (cameraXForWorld, worldHorizontalSpan)
 import Adapters.Gloss.Config (
   cameraY,
   crumblingPlatformColor,
@@ -207,6 +207,10 @@ platformVisualHeight = 35
 floorVisualDepth :: Float
 floorVisualDepth = 190
 
+-- | Margen para decidir si una pared toca el borde derecho del mapa (px lógicos).
+wallEdgeEpsilon :: Float
+wallEdgeEpsilon = 1
+
 pickupVisualHeight :: Float
 pickupVisualHeight = 28
 
@@ -277,9 +281,12 @@ backgroundHeight = fromIntegral windowHeight
 renderWorldLayer :: SpriteCatalog -> Int -> Bool -> CombatParams -> World -> Picture
 renderWorldLayer catalog renderTick showHitboxes combatParams w =
   let cameraX = cameraXForWorld w
+      -- Borde derecho del mapa: la única pared que se dibuja es la del final
+      -- (la que toca este borde); las demás quedan invisibles.
+      rightEdge = snd <$> worldHorizontalSpan w
    in Translate (-cameraX) (-cameraY) $
         pictures
-          [ pictures (map (renderPlatform catalog) (worldPlatforms w))
+          [ pictures (map (renderPlatform catalog rightEdge) (worldPlatforms w))
           , pictures (map (renderMovingPlatform catalog) (worldMovingPlatforms w))
           , pictures (map renderCrumblingPlatform (worldCrumblingPlatforms w))
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
@@ -338,11 +345,18 @@ renderFallingHazard h
   | fallingHazardIsActive h = aabbToPicture fallingHazardColor (fallingHazardAabb h)
   | otherwise = Blank
 
-renderPlatform :: SpriteCatalog -> Platform -> Picture
-renderPlatform catalog platform =
+renderPlatform :: SpriteCatalog -> Maybe Float -> Platform -> Picture
+renderPlatform catalog rightEdge platform =
   case platformKind box of
     FloorPlatform -> renderGroundPlatform catalog box
-    WallPlatform -> renderWallPlatform catalog box
+    WallPlatform
+      -- La pared del final (la que toca el borde derecho del mapa) sí se dibuja,
+      -- como una columna de tierra enganchada al piso (ver 'renderFinalWall').
+      | isFinalWall -> renderFinalWall catalog box
+      -- El resto de las paredes son barreras de colisión invisibles: solo frenan
+      -- al jugador en los bordes. La cámara ya queda clampeada a esos bordes
+      -- (ver 'Adapters.Gloss.Camera'), así que no hace falta dibujarlas.
+      | otherwise -> Blank
     LedgePlatform ->
       case platformSprites catalog box of
         (leftSprite, Just midSprite, rightSprite) ->
@@ -350,6 +364,8 @@ renderPlatform catalog platform =
         _ -> aabbToPicture platformColor box
  where
   box = platformAabb platform
+  -- Es la pared del final si su lado derecho coincide con el borde del mapa.
+  isFinalWall = maybe False (\edge -> aabbMaxX box >= edge - wallEdgeEpsilon) rightEdge
 
 data PlatformKind
   = FloorPlatform
@@ -389,22 +405,21 @@ renderGroundFill catalog box =
         (aabbMaxY box - floorVisualDepth)
         (aabbMaxY box - platformVisualHeight)
 
-renderWallPlatform :: SpriteCatalog -> Aabb -> Picture
-renderWallPlatform catalog box =
-  case (scTileGrassCenter catalog, scTileGrassMid catalog) of
-    (Just fillSprite, Just topSprite) ->
-      pictures
-        [ tileRect
-            fillSprite
-            (aabbMinX box)
-            (aabbMaxX box)
-            (aabbMinY box)
-            (aabbMaxY box - platformVisualHeight)
-        , tileStrip Nothing topSprite Nothing box
-        ]
-    (Just fillSprite, Nothing) ->
-      tileRect fillSprite (aabbMinX box) (aabbMaxX box) (aabbMinY box) (aabbMaxY box)
-    _ -> aabbToPicture platformColor box
+{- | Pared del final del mapa: columna de tierra hasta el tope (sin franja de
+pasto) que además baja por debajo de su base para engancharse con la capa de
+tierra del piso adyacente y no dejar una costura en la esquina.
+-}
+renderFinalWall :: SpriteCatalog -> Aabb -> Picture
+renderFinalWall catalog box =
+  case scTileGrassCenter catalog of
+    Nothing -> aabbToPicture platformColor box
+    Just fillSprite ->
+      tileRect
+        fillSprite
+        (aabbMinX box)
+        (aabbMaxX box)
+        (aabbMinY box - floorVisualDepth)
+        (aabbMaxY box)
 
 platformSprites :: SpriteCatalog -> Aabb -> (Maybe Sprite, Maybe Sprite, Maybe Sprite)
 platformSprites catalog box

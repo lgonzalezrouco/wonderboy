@@ -2,7 +2,7 @@
   "minScore": 300,
   "spawn": { "x": -200, "y": 24 },
   "platforms": [
-    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 200 },
+    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 600 },
     { "pos": { "x": -260, "y": 0 }, "width": 385, "height": 8 },
     { "pos": { "x": 228, "y": 0 }, "width": 210, "height": 8 },
     { "pos": { "x": 556, "y": 0 }, "width": 140, "height": 8 },
