@@ -67,9 +67,11 @@ data-files:
     assets/sprites/enemies/bat-idle.bmp
     assets/sprites/enemies/golem-idle.bmp
     assets/sprites/enemies/golem-walk.bmp
+    assets/sprites/enemies/archer-idle.bmp
     assets/sprites/enemies/snail-idle.bmp
     assets/sprites/enemies/snail-walk.bmp
     assets/sprites/pickups/gem-yellow.bmp
+    assets/sprites/projectiles/projectile-rock.bmp
     assets/sprites/player/player-hurt.bmp
     assets/sprites/player/player-idle.bmp
     assets/sprites/player/player-jump.bmp
@@ -85,9 +87,12 @@ data-files:
     assets/sprites/player/player-walk-10.bmp
     assets/sprites/player/player-walk-11.bmp
     assets/sprites/tiles/bridge.bmp
+    assets/sprites/tiles/door-closed-mid.bmp
+    assets/sprites/tiles/door-closed-top.bmp
     assets/sprites/tiles/grass-half-left.bmp
     assets/sprites/tiles/grass-half-mid.bmp
     assets/sprites/tiles/grass-half-right.bmp
+    assets/sprites/tiles/grass-center.bmp
     assets/sprites/tiles/grass-left.bmp
     assets/sprites/tiles/grass-mid.bmp
     assets/sprites/tiles/grass-right.bmp
@@ -175,6 +180,7 @@ library
       , Domain.Logic.BossCatalog
       , Domain.Logic.BossPhase
       , Domain.Logic.BuildWorld
+      , Adapters.Gloss.Camera
       , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.UpdateGame
@@ -243,6 +249,7 @@ test-suite wonderboy-hs-test
       , Domain.BossArenaTest
       , Domain.CrumblingPlatformTest
       , Domain.StepTest
+      , Adapters.Gloss.CameraTest
       , Domain.LevelLoadTest
       , Domain.LevelFlowTest
       , UseCases.UpdateGameTest
