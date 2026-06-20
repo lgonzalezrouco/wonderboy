@@ -70,6 +70,7 @@ data-files:
     assets/sprites/enemies/archer-idle.bmp
     assets/sprites/enemies/snail-idle.bmp
     assets/sprites/enemies/snail-walk.bmp
+    assets/sprites/hazards/weight.bmp
     assets/sprites/pickups/gem-yellow.bmp
     assets/sprites/projectiles/projectile-rock.bmp
     assets/sprites/player/player-hurt.bmp

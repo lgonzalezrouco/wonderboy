@@ -220,6 +220,9 @@ playerProjectileVisualHeight = 28
 enemyProjectileVisualHeight :: Float
 enemyProjectileVisualHeight = 24
 
+fallingHazardVisualHeight :: Float
+fallingHazardVisualHeight = 34
+
 exitDoorGap :: Float
 exitDoorGap = 12
 
@@ -292,7 +295,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
-          , pictures (map renderFallingHazard (worldFallingHazards w))
+          , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
@@ -340,10 +343,15 @@ projectileVisualHeight proj = case projectileOwner proj of
   PlayerProjectile -> playerProjectileVisualHeight
   EnemyProjectile -> enemyProjectileVisualHeight
 
-renderFallingHazard :: FallingHazard -> Picture
-renderFallingHazard h
-  | fallingHazardIsActive h = aabbToPicture fallingHazardColor (fallingHazardAabb h)
-  | otherwise = Blank
+renderFallingHazard :: SpriteCatalog -> FallingHazard -> Picture
+renderFallingHazard catalog h
+  | not (fallingHazardIsActive h) = Blank
+  | otherwise =
+      case scFallingHazard catalog of
+        Nothing -> aabbToPicture fallingHazardColor box
+        Just sprite -> drawSpriteCenteredAtHeight box fallingHazardVisualHeight sprite
+ where
+  box = fallingHazardAabb h
 
 renderPlatform :: SpriteCatalog -> Maybe Float -> Platform -> Picture
 renderPlatform catalog rightEdge platform =

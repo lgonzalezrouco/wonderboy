@@ -61,6 +61,7 @@ data SpriteCatalog = SpriteCatalog
   , scBossBat :: Maybe Sprite
   , scProjectileRock :: Maybe Sprite
   , scTileGrassCenter :: Maybe Sprite
+  , scFallingHazard :: Maybe Sprite
   , scHudLife :: Maybe Sprite
   , scHudLifeX :: Maybe Sprite
   , scHudHeartFull :: Maybe Sprite
@@ -102,6 +103,7 @@ loadSpriteCatalog =
     <*> loadSprite "assets/sprites/bosses/boss-bat.bmp"
     <*> loadSprite "assets/sprites/projectiles/projectile-rock.bmp"
     <*> loadSprite "assets/sprites/tiles/grass-center.bmp"
+    <*> loadSprite "assets/sprites/hazards/weight.bmp"
     <*> loadSprite "assets/sprites/ui/life-p1.bmp"
     <*> loadSprite "assets/sprites/ui/life-x.bmp"
     <*> loadSprite "assets/sprites/ui/heart-full.bmp"
