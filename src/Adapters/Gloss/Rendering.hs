@@ -472,8 +472,9 @@ renderCrumblingPlatform cp =
 renderBossArenaWalls :: World -> Picture
 renderBossArenaWalls w =
   case worldBossArena w of
-    Just arena | bossArenaWallsActive w ->
-      pictures (map renderArenaWall (bossArenaWallPlatforms arena))
+    Just arena
+      | bossArenaWallsActive w ->
+          pictures (map renderArenaWall (bossArenaWallPlatforms arena))
     _ -> Blank
  where
   renderArenaWall plat = aabbToPicture bossArenaWallColor (platformAabb plat)

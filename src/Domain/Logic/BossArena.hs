@@ -72,9 +72,10 @@ playerWithinBossArena w =
 bossArenaWallsActive :: World -> Bool
 bossArenaWallsActive w =
   case worldBossArena w of
-    Just arena | hasLivingBoss w ->
-      worldBossArenaEngaged w
-        || playerInsideBossArena arena (worldPlayer w)
+    Just arena
+      | hasLivingBoss w ->
+          worldBossArenaEngaged w
+            || playerInsideBossArena arena (worldPlayer w)
     _ -> False
 
 -- | 'True' mientras el jefe vive y el jugador ya se comprometió con la arena.
@@ -104,13 +105,14 @@ advanceBossArenaEngagement w =
 clampPlayerInBossArena :: World -> Player -> Player
 clampPlayerInBossArena w p =
   case worldBossArena w of
-    Just arena | bossArenaSealed w ->
-      let footX = posX (playerPos p)
-          (minFootX, maxFootX) = arenaFootXLimits arena
-          clamped = max minFootX (min maxFootX footX)
-       in if clamped == footX
-            then p
-            else p{playerPos = translate (clamped - footX) 0 (playerPos p)}
+    Just arena
+      | bossArenaSealed w ->
+          let footX = posX (playerPos p)
+              (minFootX, maxFootX) = arenaFootXLimits arena
+              clamped = max minFootX (min maxFootX footX)
+           in if clamped == footX
+                then p
+                else p{playerPos = translate (clamped - footX) 0 (playerPos p)}
     _ -> p
 
 -- | Añade paredes de arena a la lista de colisión del jugador si aplica.

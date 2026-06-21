@@ -50,7 +50,7 @@ demoLevelPaths :: [FilePath]
   , "levels/level2.json"
   , "levels/level3.json"
   ] -}
-demoLevelPaths = [ "levels/level3.json"]
+demoLevelPaths = ["levels/level3.json"]
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState

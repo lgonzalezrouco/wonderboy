@@ -32,8 +32,9 @@ cameraXForWorld world =
 bossArenaCameraSpan :: World -> Maybe (Float, Float)
 bossArenaCameraSpan w =
   case worldBossArena w of
-    Just arena | bossArenaSealed w ->
-      Just (bossArenaLeft arena, bossArenaRight arena)
+    Just arena
+      | bossArenaSealed w ->
+          Just (bossArenaLeft arena, bossArenaRight arena)
     _ -> Nothing
 
 -- | Clamp a target camera X so the viewport stays inside the world span.

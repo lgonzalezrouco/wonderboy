@@ -12,8 +12,8 @@ import Domain.Fixtures (
   testLifeParams,
   testParams,
  )
-import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Logic.BossArena (playerMayDamageEnemy)
+import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Logic.LevelFlow (canCompleteLevel)
 import Domain.Logic.Step (step)
 import Domain.Model.BossArena (BossArena (..), BossArenaDef (..), mkBossArena)
