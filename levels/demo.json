@@ -2,19 +2,21 @@
   "minScore": 450,
   "spawn": { "x": -180, "y": 80 },
   "platforms": [
-    { "pos": { "x": -240, "y": 0 }, "width": 1220, "height": 8 },
-    { "pos": { "x": -55, "y": 64 }, "width": 96, "height": 8 },
-    { "pos": { "x": 120, "y": 88 }, "width": 88, "height": 8 },
-    { "pos": { "x": 320, "y": 64 }, "width": 96, "height": 8 },
-    { "pos": { "x": 505, "y": 96 }, "width": 96, "height": 8 },
-    { "pos": { "x": 690, "y": 72 }, "width": 104, "height": 8 },
-    { "pos": { "x": 850, "y": 64 }, "width": 88, "height": 8 }
+    { "pos": { "x": -275, "y": 0 }, "width": 35, "height": 600 },
+    { "pos": { "x": -275, "y": 0 }, "width": 1260, "height": 8 },
+    { "pos": { "x": 980, "y": 0 }, "width": 35, "height": 220 },
+    { "pos": { "x": -55, "y": 64 }, "width": 105, "height": 8 },
+    { "pos": { "x": 120, "y": 88 }, "width": 105, "height": 8 },
+    { "pos": { "x": 320, "y": 64 }, "width": 105, "height": 8 },
+    { "pos": { "x": 505, "y": 96 }, "width": 105, "height": 8 },
+    { "pos": { "x": 690, "y": 72 }, "width": 105, "height": 8 },
+    { "pos": { "x": 850, "y": 64 }, "width": 105, "height": 8 }
   ],
   "movingPlatforms": [
     {
       "id": 1,
       "pos": { "x": 230, "y": 88 },
-      "width": 69,
+      "width": 70,
       "height": 8,
       "endA": { "x": 230, "y": 88 },
       "endB": { "x": 300, "y": 88 },
@@ -24,7 +26,7 @@
     {
       "id": 2,
       "pos": { "x": 600, "y": 96 },
-      "width": 69,
+      "width": 70,
       "height": 8,
       "endA": { "x": 600, "y": 96 },
       "endB": { "x": 600, "y": 128 },

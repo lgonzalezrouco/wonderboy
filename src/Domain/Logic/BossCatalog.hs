@@ -57,8 +57,8 @@ golemKingDefinition =
         , bossHeight = bgsHeight s
         , bossPhases =
             [ spawnPhase (patrolHorizontal 20 (frames 120))
-            , healthPhase 0.66 (reactiveFsm 100 25 25 12)
-            , healthPhase 0.33 (reactiveFsm 100 45 45 16)
+            , healthPhase 0.66 (reactiveFsm 350 25 25 12)
+            , healthPhase 0.33 (reactiveFsm 350 45 45 16)
             ]
         }
 

@@ -44,9 +44,9 @@ stepHazards = resolveFallingHazards testLifeParams testCombatParams dtFrame
 worldWithHazard :: FallingHazard -> World -> World
 worldWithHazard h w = w{worldFallingHazards = [h]}
 
--- | Steps until a hazard at y=100 crosses the floorWorld despawn line (y < -64).
+-- | Steps until a hazard at y=100 crosses the floorWorld despawn line (y < -264).
 stepsToDespawn :: Int
-stepsToDespawn = 86
+stepsToDespawn = 190
 
 stepHazardsTimes :: Int -> World -> World
 stepHazardsTimes n w = foldl (\w' _ -> stepHazards w') w ([1 .. n] :: [Int])
@@ -76,7 +76,7 @@ unit_hazardFallsOneFrame =
 unit_oneShotDespawnsBelowFloor :: Assertion
 unit_oneShotDespawnsBelowFloor =
   let w0 = worldWithHazard testHazard floorWorld
-   in worldFallingHazards (stepHazardsTimes 120 w0) @?= []
+   in worldFallingHazards (stepHazardsTimes 200 w0) @?= []
 
 unit_loopWaitsAtSpawn :: Assertion
 unit_loopWaitsAtSpawn =
@@ -101,8 +101,8 @@ unit_loopFallsAgainAfterDelay =
 unit_hazardDamagesOnDespawnFrame :: Assertion
 unit_hazardDamagesOnDespawnFrame =
   let
-    -- Foot y just above floorWorld despawn line (-64); one frame crosses below it.
-    footY = -62.09
+    -- Foot y just above floorWorld despawn line (-264); one frame crosses below it.
+    footY = -262.09
     hazard =
       spawnFallingHazard 1 (position 0 footY) 32 32 120 Nothing
     w' = stepHazards (overlapWorld (position 0 footY) hazard)

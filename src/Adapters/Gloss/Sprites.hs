@@ -48,14 +48,20 @@ data SpriteCatalog = SpriteCatalog
   , scTileMovingRight :: Maybe Sprite
   , scTileBridge :: Maybe Sprite
   , scExitSign :: Maybe Sprite
+  , scExitDoorTop :: Maybe Sprite
+  , scExitDoorMid :: Maybe Sprite
   , scSnailIdle :: Maybe Sprite
   , scSnailWalk :: Maybe Sprite
   , scBatIdle :: Maybe Sprite
   , scBatFly :: Maybe Sprite
   , scGolemIdle :: Maybe Sprite
   , scGolemWalk :: Maybe Sprite
+  , scArcherIdle :: Maybe Sprite
   , scBossGolem :: Maybe Sprite
   , scBossBat :: Maybe Sprite
+  , scProjectileRock :: Maybe Sprite
+  , scTileGrassCenter :: Maybe Sprite
+  , scFallingHazard :: Maybe Sprite
   , scHudLife :: Maybe Sprite
   , scHudLifeX :: Maybe Sprite
   , scHudHeartFull :: Maybe Sprite
@@ -84,14 +90,20 @@ loadSpriteCatalog =
     <*> loadSprite "assets/sprites/tiles/grass-half-right.bmp"
     <*> loadSprite "assets/sprites/tiles/bridge.bmp"
     <*> loadSprite "assets/sprites/tiles/sign-exit.bmp"
+    <*> loadSprite "assets/sprites/tiles/door-closed-top.bmp"
+    <*> loadSprite "assets/sprites/tiles/door-closed-mid.bmp"
     <*> loadSprite "assets/sprites/enemies/snail-idle.bmp"
     <*> loadSprite "assets/sprites/enemies/snail-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-idle.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-fly.bmp"
     <*> loadSprite "assets/sprites/enemies/golem-idle.bmp"
     <*> loadSprite "assets/sprites/enemies/golem-walk.bmp"
+    <*> loadSprite "assets/sprites/enemies/archer-idle.bmp"
     <*> loadSprite "assets/sprites/bosses/boss-golem.bmp"
     <*> loadSprite "assets/sprites/bosses/boss-bat.bmp"
+    <*> loadSprite "assets/sprites/projectiles/projectile-rock.bmp"
+    <*> loadSprite "assets/sprites/tiles/grass-center.bmp"
+    <*> loadSprite "assets/sprites/hazards/weight.bmp"
     <*> loadSprite "assets/sprites/ui/life-p1.bmp"
     <*> loadSprite "assets/sprites/ui/life-x.bmp"
     <*> loadSprite "assets/sprites/ui/heart-full.bmp"
@@ -161,7 +173,7 @@ enemySprite catalog renderFrame enemy =
       patrolSprite renderFrame (scBatIdle catalog) (scBatFly catalog)
     GolemKind ->
       patrolSprite renderFrame (scGolemIdle catalog) (scGolemWalk catalog)
-    ArcherKind -> scSnailIdle catalog
+    ArcherKind -> scArcherIdle catalog <|> scGolemIdle catalog
     BossGolemKind -> scBossGolem catalog
     BossBatKind -> scBossBat catalog <|> scBatFly catalog
  where

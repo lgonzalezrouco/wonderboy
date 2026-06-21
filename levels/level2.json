@@ -2,24 +2,24 @@
   "minScore": 500,
   "spawn": { "x": -200, "y": 24 },
   "platforms": [
-    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 200 },
-    { "pos": { "x": -260, "y": 0 }, "width": 360, "height": 8 },
-    { "pos": { "x": 195, "y": 0 }, "width": 200, "height": 8 },
-    { "pos": { "x": 700, "y": 56 }, "width": 110, "height": 8 },
-    { "pos": { "x": 850, "y": 0 }, "width": 300, "height": 8 },
-    { "pos": { "x": 1500, "y": 0 }, "width": 300, "height": 8 },
-    { "pos": { "x": 1895, "y": 0 }, "width": 260, "height": 8 },
-    { "pos": { "x": 2345, "y": 0 }, "width": 300, "height": 8 },
-    { "pos": { "x": 2737, "y": 0 }, "width": 393, "height": 8 },
+    { "pos": { "x": -280, "y": 0 }, "width": 20, "height": 600 },
+    { "pos": { "x": -280, "y": 0 }, "width": 370, "height": 8 },
+    { "pos": { "x": 195, "y": 0 }, "width": 210, "height": 8 },
+    { "pos": { "x": 700, "y": 56 }, "width": 105, "height": 8 },
+    { "pos": { "x": 850, "y": 0 }, "width": 315, "height": 8 },
+    { "pos": { "x": 1500, "y": 0 }, "width": 315, "height": 8 },
+    { "pos": { "x": 1895, "y": 0 }, "width": 245, "height": 8 },
+    { "pos": { "x": 2345, "y": 0 }, "width": 315, "height": 8 },
+    { "pos": { "x": 2737, "y": 0 }, "width": 385, "height": 8 },
     { "pos": { "x": 3110, "y": 0 }, "width": 20, "height": 200 }
   ],
   "movingPlatforms": [
-    { "id": 1, "pos": { "x": 420, "y": 8 }, "width": 80, "height": 12, "endA": { "x": 420, "y": 8 }, "endB": { "x": 420, "y": 110 }, "speed": 30, "startTowardB": true },
-    { "id": 2, "pos": { "x": 1170, "y": 44 }, "width": 96, "height": 12, "endA": { "x": 1170, "y": 44 }, "endB": { "x": 1404, "y": 44 }, "speed": 46, "startTowardB": true },
-    { "id": 3, "pos": { "x": 2175, "y": 40 }, "width": 90, "height": 12, "endA": { "x": 2175, "y": 40 }, "endB": { "x": 2255, "y": 40 }, "speed": 34, "startTowardB": true }
+    { "id": 1, "pos": { "x": 420, "y": 8 }, "width": 105, "height": 12, "endA": { "x": 420, "y": 8 }, "endB": { "x": 420, "y": 110 }, "speed": 30, "startTowardB": true },
+    { "id": 2, "pos": { "x": 1170, "y": 44 }, "width": 105, "height": 12, "endA": { "x": 1170, "y": 44 }, "endB": { "x": 1404, "y": 44 }, "speed": 46, "startTowardB": true },
+    { "id": 3, "pos": { "x": 2175, "y": 40 }, "width": 105, "height": 12, "endA": { "x": 2175, "y": 40 }, "endB": { "x": 2255, "y": 40 }, "speed": 34, "startTowardB": true }
   ],
   "crumblingPlatforms": [
-    { "id": 1, "pos": { "x": 540, "y": 120 }, "width": 120, "height": 8 }
+    { "id": 1, "pos": { "x": 570, "y": 120 }, "width": 105, "height": 8 }
   ],
   "enemies": [
     { "id": 1, "kind": "snail", "pos": { "x": -60, "y": 8 } },
@@ -38,7 +38,7 @@
     { "id": 3, "pos": { "x": 250, "y": 16 }, "value": 75 },
     { "id": 4, "pos": { "x": 600, "y": 128 }, "value": 100 },
     { "id": 5, "pos": { "x": 920, "y": 16 }, "value": 75 },
-    { "id": 6, "pos": { "x": 1080, "y": 16 }, "value": 75 },
+    { "id": 6, "pos": { "x": 1110, "y": 16 }, "value": 75 },
     { "id": 7, "pos": { "x": 1620, "y": 16 }, "value": 75 },
     { "id": 8, "pos": { "x": 1960, "y": 16 }, "value": 75 },
     { "id": 9, "pos": { "x": 2420, "y": 16 }, "value": 75 },

@@ -10,6 +10,7 @@ import Data.Maybe (isNothing)
 import Graphics.Gloss.Data.Color (Color, makeColor)
 import Graphics.Gloss.Data.Picture (Picture (..), circleSolid, pictures, rectangleSolid, rectangleWire, text)
 
+import Adapters.Gloss.Camera (cameraXForWorld, worldHorizontalSpan)
 import Adapters.Gloss.Config (
   cameraY,
   crumblingPlatformColor,
@@ -66,7 +67,11 @@ import Domain.Model.Player (
   playerInvincibilityFrames,
   playerPos,
  )
-import Domain.Model.Projectile (Projectile, projectileAabb)
+import Domain.Model.Projectile (
+  Projectile (projectileOwner),
+  ProjectileOwner (..),
+  projectileAabb,
+ )
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
@@ -85,7 +90,7 @@ hudPanelWidth :: Float
 hudPanelWidth = 280
 
 hudPanelHeight :: Float
-hudPanelHeight = 180
+hudPanelHeight = 220
 
 hudLabelScale :: Float
 hudLabelScale = 0.2
@@ -199,6 +204,31 @@ entitySpritePadding = 0.0
 platformVisualHeight :: Float
 platformVisualHeight = 35
 
+floorVisualDepth :: Float
+floorVisualDepth = 190
+
+-- | Margen para decidir si una pared toca el borde derecho del mapa (px lógicos).
+wallEdgeEpsilon :: Float
+wallEdgeEpsilon = 1
+
+pickupVisualHeight :: Float
+pickupVisualHeight = 28
+
+playerProjectileVisualHeight :: Float
+playerProjectileVisualHeight = 28
+
+enemyProjectileVisualHeight :: Float
+enemyProjectileVisualHeight = 24
+
+fallingHazardVisualHeight :: Float
+fallingHazardVisualHeight = 34
+
+exitDoorGap :: Float
+exitDoorGap = 12
+
+exitSignVisualHeight :: Float
+exitSignVisualHeight = 42
+
 attackCueHeight :: Float
 attackCueHeight = 34
 
@@ -253,16 +283,19 @@ backgroundHeight = fromIntegral windowHeight
 -- | Capa del mundo con transformación de cámara.
 renderWorldLayer :: SpriteCatalog -> Int -> Bool -> CombatParams -> World -> Picture
 renderWorldLayer catalog renderTick showHitboxes combatParams w =
-  let playerX = posX (playerPos (worldPlayer w))
-   in Translate (-playerX) (-cameraY) $
+  let cameraX = cameraXForWorld w
+      -- Borde derecho del mapa: la única pared que se dibuja es la del final
+      -- (la que toca este borde); las demás quedan invisibles.
+      rightEdge = snd <$> worldHorizontalSpan w
+   in Translate (-cameraX) (-cameraY) $
         pictures
-          [ pictures (map (renderPlatform catalog) (worldPlatforms w))
+          [ pictures (map (renderPlatform catalog rightEdge) (worldPlatforms w))
           , pictures (map (renderMovingPlatform catalog) (worldMovingPlatforms w))
           , pictures (map renderCrumblingPlatform (worldCrumblingPlatforms w))
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
-          , pictures (map renderProjectile (worldProjectiles w))
-          , pictures (map renderFallingHazard (worldFallingHazards w))
+          , pictures (map (renderProjectile catalog) (worldProjectiles w))
+          , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
@@ -291,27 +324,110 @@ renderEnemy catalog renderTick e =
 renderPickup :: SpriteCatalog -> Pickup -> Picture
 renderPickup catalog pickup =
   case scPickupGem catalog of
-    Nothing -> aabbToPicture pickupColor box
-    Just sprite -> drawSpriteInAabb box sprite
+    Nothing -> aabbCenteredPicture pickupColor pickupVisualHeight box
+    Just sprite -> drawSpriteCenteredAtHeight box pickupVisualHeight sprite
  where
   box = pickupAabb pickup
 
-renderProjectile :: Projectile -> Picture
-renderProjectile proj = aabbToPicture projectileColor (projectileAabb proj)
+renderProjectile :: SpriteCatalog -> Projectile -> Picture
+renderProjectile catalog proj =
+  case scProjectileRock catalog of
+    Nothing -> aabbCenteredPicture projectileColor visualHeight box
+    Just sprite -> drawSpriteCenteredAtHeight box visualHeight sprite
+ where
+  box = projectileAabb proj
+  visualHeight = projectileVisualHeight proj
 
-renderFallingHazard :: FallingHazard -> Picture
-renderFallingHazard h
-  | fallingHazardIsActive h = aabbToPicture fallingHazardColor (fallingHazardAabb h)
-  | otherwise = Blank
+projectileVisualHeight :: Projectile -> Float
+projectileVisualHeight proj = case projectileOwner proj of
+  PlayerProjectile -> playerProjectileVisualHeight
+  EnemyProjectile -> enemyProjectileVisualHeight
 
-renderPlatform :: SpriteCatalog -> Platform -> Picture
-renderPlatform catalog platform =
-  case platformSprites catalog box of
-    (leftSprite, Just midSprite, rightSprite) ->
-      tileStrip leftSprite midSprite rightSprite box
-    _ -> aabbToPicture platformColor (platformAabb platform)
+renderFallingHazard :: SpriteCatalog -> FallingHazard -> Picture
+renderFallingHazard catalog h
+  | not (fallingHazardIsActive h) = Blank
+  | otherwise =
+      case scFallingHazard catalog of
+        Nothing -> aabbToPicture fallingHazardColor box
+        Just sprite -> drawSpriteCenteredAtHeight box fallingHazardVisualHeight sprite
+ where
+  box = fallingHazardAabb h
+
+renderPlatform :: SpriteCatalog -> Maybe Float -> Platform -> Picture
+renderPlatform catalog rightEdge platform =
+  case platformKind box of
+    FloorPlatform -> renderGroundPlatform catalog box
+    WallPlatform
+      -- La pared del final (la que toca el borde derecho del mapa) sí se dibuja,
+      -- como una columna de tierra enganchada al piso (ver 'renderFinalWall').
+      | isFinalWall -> renderFinalWall catalog box
+      -- El resto de las paredes son barreras de colisión invisibles: solo frenan
+      -- al jugador en los bordes. La cámara ya queda clampeada a esos bordes
+      -- (ver 'Adapters.Gloss.Camera'), así que no hace falta dibujarlas.
+      | otherwise -> Blank
+    LedgePlatform ->
+      case platformSprites catalog box of
+        (leftSprite, Just midSprite, rightSprite) ->
+          tileStrip leftSprite midSprite rightSprite box
+        _ -> aabbToPicture platformColor box
  where
   box = platformAabb platform
+  -- Es la pared del final si su lado derecho coincide con el borde del mapa.
+  isFinalWall = maybe False (\edge -> aabbMaxX box >= edge - wallEdgeEpsilon) rightEdge
+
+data PlatformKind
+  = FloorPlatform
+  | WallPlatform
+  | LedgePlatform
+
+platformKind :: Aabb -> PlatformKind
+platformKind box
+  | aabbMinY box <= 0
+  , platformHeight' > platformWidth' * 2 =
+      WallPlatform
+  | aabbMinY box <= 0 = FloorPlatform
+  | otherwise = LedgePlatform
+ where
+  platformWidth' = aabbMaxX box - aabbMinX box
+  platformHeight' = aabbMaxY box - aabbMinY box
+
+renderGroundPlatform :: SpriteCatalog -> Aabb -> Picture
+renderGroundPlatform catalog box =
+  case platformSprites catalog box of
+    (leftSprite, Just midSprite, rightSprite) ->
+      pictures
+        [ tileStrip leftSprite midSprite rightSprite box
+        , renderGroundFill catalog box
+        ]
+    _ -> aabbToPicture platformColor box
+
+renderGroundFill :: SpriteCatalog -> Aabb -> Picture
+renderGroundFill catalog box =
+  case scTileGrassCenter catalog of
+    Nothing -> Blank
+    Just sprite ->
+      tileRect
+        sprite
+        (aabbMinX box)
+        (aabbMaxX box)
+        (aabbMaxY box - floorVisualDepth)
+        (aabbMaxY box - platformVisualHeight)
+
+{- | Pared del final del mapa: columna de tierra hasta el tope (sin franja de
+pasto) que además baja por debajo de su base para engancharse con la capa de
+tierra del piso adyacente y no dejar una costura en la esquina.
+-}
+renderFinalWall :: SpriteCatalog -> Aabb -> Picture
+renderFinalWall catalog box =
+  case scTileGrassCenter catalog of
+    Nothing -> aabbToPicture platformColor box
+    Just fillSprite ->
+      tileRect
+        fillSprite
+        (aabbMinX box)
+        (aabbMaxX box)
+        (aabbMinY box - floorVisualDepth)
+        (aabbMaxY box)
 
 platformSprites :: SpriteCatalog -> Aabb -> (Maybe Sprite, Maybe Sprite, Maybe Sprite)
 platformSprites catalog box
@@ -334,11 +450,34 @@ renderCrumblingPlatform cp =
 
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
-  case scExitSign catalog of
-    Nothing -> aabbToPicture hudMutedColor box
-    Just sprite -> drawSpriteBottomCenter box sprite
+  pictures
+    [ renderExitDoor catalog box
+    , renderExitSign catalog box
+    ]
  where
   box = exitZoneAabb exitZone
+
+renderExitSign :: SpriteCatalog -> Aabb -> Picture
+renderExitSign catalog box =
+  case scExitSign catalog of
+    Nothing -> aabbToPicture hudMutedColor box
+    Just sprite ->
+      drawSpriteBottomCenterAtHeight
+        signX
+        (aabbMinY box)
+        exitSignVisualHeight
+        sprite
+ where
+  signX = aabbMinX box - exitDoorGap - exitSignVisualHeight / 2
+
+renderExitDoor :: SpriteCatalog -> Aabb -> Picture
+renderExitDoor catalog box =
+  case (scExitDoorTop catalog, scExitDoorMid catalog) of
+    (Just topSprite, Just midSprite) ->
+      drawStackedDoorBottomCenter box topSprite midSprite
+    (_, Just midSprite) ->
+      drawSpriteBottomCenter box midSprite
+    _ -> Blank
 
 -- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
 renderHitboxOverlay :: CombatParams -> World -> Picture
@@ -620,6 +759,12 @@ aabbToPicture color box =
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleSolid w h))
 
+aabbCenteredPicture :: Color -> Float -> Aabb -> Picture
+aabbCenteredPicture color visualHeight box =
+  let cx = (aabbMinX box + aabbMaxX box) / 2
+      cy = (aabbMinY box + aabbMaxY box) / 2
+   in Translate cx cy (Color color (rectangleSolid visualHeight visualHeight))
+
 -- | Contorno de una caja de colisión (solo borde, sin rellenar el interior).
 aabbOutline :: Color -> Aabb -> Picture
 aabbOutline color box =
@@ -648,15 +793,32 @@ drawEntitySprite facing box sprite =
    in Translate cx cy $
         Scale faceScale spriteScale (spritePicture sprite)
 
-drawSpriteInAabb :: Aabb -> Sprite -> Picture
-drawSpriteInAabb box sprite =
-  let boxW = max 1 (aabbMaxX box - aabbMinX box)
-      boxH = max 1 (aabbMaxY box - aabbMinY box)
-      spriteScale = min (boxW / spriteWidth sprite) (boxH / spriteHeight sprite)
+drawSpriteCenteredAtHeight :: Aabb -> Float -> Sprite -> Picture
+drawSpriteCenteredAtHeight box targetHeight sprite =
+  let spriteScale = targetHeight / spriteHeight sprite
       cx = (aabbMinX box + aabbMaxX box) / 2
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy $
         Scale spriteScale spriteScale (spritePicture sprite)
+
+drawStackedDoorBottomCenter :: Aabb -> Sprite -> Sprite -> Picture
+drawStackedDoorBottomCenter box topSprite midSprite =
+  pictures
+    [ Translate cx (bottomY + midH / 2) $
+        Scale spriteScale spriteScale (spritePicture midSprite)
+    , Translate cx (bottomY + midH + topH / 2) $
+        Scale spriteScale spriteScale (spritePicture topSprite)
+    ]
+ where
+  boxW = max 1 (aabbMaxX box - aabbMinX box)
+  boxH = max 1 (aabbMaxY box - aabbMinY box)
+  doorW = max (spriteWidth topSprite) (spriteWidth midSprite)
+  doorH = spriteHeight topSprite + spriteHeight midSprite
+  spriteScale = min (boxW / doorW) (boxH / doorH)
+  midH = spriteHeight midSprite * spriteScale
+  topH = spriteHeight topSprite * spriteScale
+  cx = (aabbMinX box + aabbMaxX box) / 2
+  bottomY = aabbMinY box
 
 drawSpriteBottomCenter :: Aabb -> Sprite -> Picture
 drawSpriteBottomCenter box sprite =
@@ -666,6 +828,14 @@ drawSpriteBottomCenter box sprite =
       renderedH = spriteHeight sprite * spriteScale
       cx = (aabbMinX box + aabbMaxX box) / 2
       cy = aabbMinY box + renderedH / 2
+   in Translate cx cy $
+        Scale spriteScale spriteScale (spritePicture sprite)
+
+drawSpriteBottomCenterAtHeight :: Float -> Float -> Float -> Sprite -> Picture
+drawSpriteBottomCenterAtHeight cx bottomY targetHeight sprite =
+  let spriteScale = targetHeight / spriteHeight sprite
+      renderedH = spriteHeight sprite * spriteScale
+      cy = bottomY + renderedH / 2
    in Translate cx cy $
         Scale spriteScale spriteScale (spritePicture sprite)
 
@@ -681,21 +851,24 @@ drawSpriteCover targetW targetH sprite =
 
 tileStrip :: Maybe Sprite -> Sprite -> Maybe Sprite -> Aabb -> Picture
 tileStrip leftSprite midSprite rightSprite box =
-  pictures (leftPieces ++ midPieces ++ rightPieces)
+  if width <= 0
+    then Blank
+    else pictures stripPieces
  where
-  spriteScale = platformVisualHeight / spriteHeight midSprite
-  tileW = spriteWidth midSprite * spriteScale
-  tileH = spriteHeight midSprite * spriteScale
+  spriteScaleY = platformVisualHeight / spriteHeight midSprite
+  naturalTileW = spriteWidth midSprite * spriteScaleY
   topY = aabbMaxY box
-  centerY = topY - tileH / 2
   minX = aabbMinX box
   maxX = aabbMaxX box
   width = max 0 (maxX - minX)
-  tileCount = max 1 (ceiling (width / tileW) :: Int)
+  tileCount = max 1 (ceiling (width / naturalTileW) :: Int)
+  tileW = width / fromIntegral tileCount
+  tileH = platformVisualHeight
+  centerY = topY - tileH / 2
   tileAt :: Int -> Sprite -> Picture
   tileAt i sprite =
     Translate (minX + tileW / 2 + fromIntegral i * tileW) centerY $
-      Scale spriteScale spriteScale (spritePicture sprite)
+      Scale (tileW / spriteWidth sprite) spriteScaleY (spritePicture sprite)
   leftPieces = maybe [] (\sprite -> [tileAt 0 sprite]) leftSprite
   rightPieces =
     maybe
@@ -707,3 +880,32 @@ tileStrip leftSprite midSprite rightSprite box =
   midPieces =
     [ tileAt i midSprite | i <- [midStart .. midEnd], i >= 0, i < tileCount
     ]
+  stripPieces
+    | tileCount == 1 = [tileAt 0 midSprite]
+    | otherwise = leftPieces ++ midPieces ++ rightPieces
+
+tileRect :: Sprite -> Float -> Float -> Float -> Float -> Picture
+tileRect sprite minX maxX minY maxY =
+  if width <= 0 || height <= 0
+    then Blank
+    else
+      pictures
+        [ tileAt ix iy
+        | ix <- [0 .. tileCountX - 1]
+        , iy <- [0 .. tileCountY - 1]
+        ]
+ where
+  spriteScaleY = platformVisualHeight / spriteHeight sprite
+  naturalTileW = spriteWidth sprite * spriteScaleY
+  naturalTileH = spriteHeight sprite * spriteScaleY
+  width = max 0 (maxX - minX)
+  height = max 0 (maxY - minY)
+  tileCountX = max 1 (ceiling (width / naturalTileW) :: Int)
+  tileCountY = max 1 (ceiling (height / naturalTileH) :: Int)
+  tileW = width / fromIntegral tileCountX
+  tileH = height / fromIntegral tileCountY
+  tileAt ix iy =
+    Translate
+      (minX + tileW / 2 + fromIntegral ix * tileW)
+      (maxY - tileH / 2 - fromIntegral iy * tileH)
+      (Scale (tileW / spriteWidth sprite) (tileH / spriteHeight sprite) (spritePicture sprite))

@@ -119,9 +119,6 @@ throwSpawnPos body facing width height =
 isPlayerOwned :: Projectile -> Bool
 isPlayerOwned proj = projectileOwner proj == PlayerProjectile
 
-isEnemyOwned :: Projectile -> Bool
-isEnemyOwned proj = projectileOwner proj == EnemyProjectile
-
 advanceProjectile :: PhysicsParams -> DeltaTime -> Projectile -> Projectile
 advanceProjectile pp dt proj =
   case projectileMotion proj of
@@ -170,15 +167,22 @@ resolveHits tp cp w =
  where
   step (player, enemies, flying, removed) proj =
     let box = projectileAabb proj
-     in if isEnemyOwned proj && hitsPlayer box player
-          then (damagePlayer cp player, enemies, flying, removed)
-          else case find (aabbOverlaps box . enemyAabb) enemies of
-            Just e ->
-              let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
-                  enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
-               in (player, enemies', flying, removed || isPlayerOwned proj)
-            Nothing ->
-              (player, enemies, proj : flying, removed)
+     in case projectileOwner proj of
+          -- Los proyectiles enemigos (p. ej. del arquero) solo dañan al jugador;
+          -- nunca a otros enemigos. Sin esto habría fuego amigo entre enemigos.
+          EnemyProjectile ->
+            if hitsPlayer box player
+              then (damagePlayer cp player, enemies, flying, removed)
+              else (player, enemies, proj : flying, removed)
+          -- Los proyectiles del jugador solo dañan enemigos.
+          PlayerProjectile ->
+            case find (aabbOverlaps box . enemyAabb) enemies of
+              Just e ->
+                let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
+                    enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
+                 in (player, enemies', flying, True)
+              Nothing ->
+                (player, enemies, proj : flying, removed)
 
 hitsPlayer :: Aabb -> Player -> Bool
 hitsPlayer box player = aabbOverlaps box (playerAabb player)
