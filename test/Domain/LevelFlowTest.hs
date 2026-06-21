@@ -49,6 +49,7 @@ worldInExit =
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
     , worldBossArena = Nothing
+    , worldBossArenaEngaged = False
     }
 
 worldAwayFromExit :: World

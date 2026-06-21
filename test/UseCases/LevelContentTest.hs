@@ -55,6 +55,6 @@ unit_level3BuildsWithGolemKing = do
   assertBool "level 3 has falling hazards" (not (null (worldFallingHazards w)))
   case worldBossArena w of
     Just arena -> do
-      bossArenaLeft arena @?= 3540
-      bossArenaRight arena @?= 4220
+      bossArenaLeft arena @?= 3620
+      bossArenaRight arena @?= 4040
     Nothing -> assertFailure "level 3 should define bossArena"

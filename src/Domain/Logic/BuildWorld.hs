@@ -76,6 +76,7 @@ buildWorld lvl = do
       , worldFallingHazards = hazards
       , worldCrumblingPlatforms = crumbling
       , worldBossArena = bossArena
+      , worldBossArenaEngaged = False
       }
 
 checkUniqueIds :: [Int] -> Text -> Either LevelBuildError ()

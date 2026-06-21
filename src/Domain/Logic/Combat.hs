@@ -9,6 +9,7 @@ module Domain.Logic.Combat (
 )
 where
 
+import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.PlayerLife (applyDamage)
 import Domain.Model.Enemy (Enemy (..), enemyAabb)
 import Domain.Model.Player (
@@ -92,7 +93,9 @@ resolveMelee cp w =
               hitbox = meleeHitbox cp body (playerFacing p)
               hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
               applyMeleeHit e
-                | hitsEnemy e = e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
+                | hitsEnemy e
+                , playerMayDamageEnemy w e =
+                    e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
                 | otherwise = e
            in w{worldEnemies = filter (not . isDepleted . enemyHealth) (map applyMeleeHit (worldEnemies w))}
 

@@ -28,7 +28,7 @@ data GameView = GameView
   , gvScore :: Score
   -- ^ Puntuación del nivel actual (run-state, proyectada desde 'GameState').
   , gvBossHealth :: Maybe BossHealth
-  -- ^ Salud del jefe vivo, si hay uno en el nivel.
+  -- ^ Salud del jefe vivo cuando el jugador está en la arena (si el nivel define una).
   , gvCombatParams :: CombatParams
   -- ^ Parámetros de combate (proyectados desde config) para debug de hitboxes en el adaptador.
   , gvLevelIndex :: Int
@@ -37,5 +37,7 @@ data GameView = GameView
   -- ^ Puntuación actual y mínima cuando el jugador está en la salida sin alcanzar el umbral.
   , gvBossExitHint :: Bool
   -- ^ Hint de jefe vivo en la salida con puntuación suficiente.
+  , gvBossArenaSealed :: Bool
+  -- ^ Arena de jefe activa: jugador confinado hasta derrotar al jefe.
   }
   deriving (Eq, Show)

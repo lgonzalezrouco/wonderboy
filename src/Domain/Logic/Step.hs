@@ -5,7 +5,7 @@ module Domain.Logic.Step (
 )
 where
 
-import Domain.Logic.BossArena (appendBossArenaWallsForPlayer)
+import Domain.Logic.BossArena (advanceBossArenaEngagement, appendBossArenaWallsForPlayer, clampPlayerInBossArena)
 import Domain.Logic.Collision (resolveEnemyPlatforms, resolvePlayerPlatforms)
 import Domain.Logic.CrumblingPlatforms (
   advanceCrumblingPlatforms,
@@ -83,12 +83,11 @@ step params life dt input w =
         appendBossArenaWallsForPlayer w' (appendPlayerSolidCrumbling basePlats crumbling)
       enemyPlats = appendEnemySolidCrumbling basePlats crumbling
       p4 = integrateAndCollide dt p3 playerPlats vyAtCollide
+      p5 = clampPlayerInBossArena w' p4
       enemies' =
         map (integrateAndCollideEnemy params dt enemyPlats) (worldEnemies w')
-   in w'
-        { worldPlayer = p4
-        , worldEnemies = enemies'
-        }
+      w1 = advanceBossArenaEngagement w'{worldPlayer = p5, worldEnemies = enemies'}
+   in w1
 
 {- | Integra y resuelve colisiones en sub-pasos para reducir túnel AABB en sólidos finos.
 

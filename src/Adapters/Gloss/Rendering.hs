@@ -41,6 +41,7 @@ import Adapters.Gloss.Sprites (
   enemySprite,
   playerSprite,
  )
+import Domain.Logic.BossArena (bossArenaWallPlatforms, bossArenaWallsActive)
 import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
@@ -264,6 +265,7 @@ renderFrame catalog renderTick showHitboxes gv =
           ]
     , renderHud catalog gv showHitboxes
     , renderBossBar gv
+    , renderBossArenaBanner gv
     , renderGameOverOverlay gv
     , renderLevelCompleteOverlay gv
     , renderVictoryOverlay gv
@@ -306,6 +308,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
+          , renderBossArenaWalls w
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
           ]
@@ -465,6 +468,19 @@ renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
 
+-- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
+renderBossArenaWalls :: World -> Picture
+renderBossArenaWalls w =
+  case worldBossArena w of
+    Just arena | bossArenaWallsActive w ->
+      pictures (map renderArenaWall (bossArenaWallPlatforms arena))
+    _ -> Blank
+ where
+  renderArenaWall plat = aabbToPicture bossArenaWallColor (platformAabb plat)
+
+bossArenaWallColor :: Color
+bossArenaWallColor = makeColor 0.95 0.45 0.2 0.55
+
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
   pictures
@@ -611,6 +627,16 @@ renderBossBar gv =
                   ]
             ]
 
+renderBossArenaBanner :: GameView -> Picture
+renderBossArenaBanner gv
+  | gvBossArenaSealed gv =
+      let halfH = fromIntegral windowHeight / 2
+          bannerY = halfH - bossBarTopOffset - 28
+       in Translate 0 bannerY $
+            Scale hudHintScale hudHintScale $
+              Color hudBossColor (text "ARENA SEALED")
+  | otherwise = Blank
+
 renderGameOverOverlay :: GameView -> Picture
 renderGameOverOverlay gv
   | gvPhase gv /= GameOver = Blank
@@ -658,6 +684,7 @@ renderExitHints gv x y =
             ++ ")"
         )
     Nothing
+      | gvBossArenaSealed gv -> hudHint x y "Arena sealed - defeat the boss"
       | gvBossExitHint gv -> hudHint x y "Defeat the boss to leave"
       | otherwise -> Blank
 

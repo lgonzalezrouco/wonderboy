@@ -45,11 +45,12 @@ import UseCases.UpdateGame (updateGame)
 
 -- | Catálogo del demo (tres niveles). Añadir rutas aquí o pasar otra lista a 'runGameWith'.
 demoLevelPaths :: [FilePath]
-demoLevelPaths =
+{- demoLevelPaths =
   [ "levels/level1.json"
   , "levels/level2.json"
   , "levels/level3.json"
-  ]
+  ] -}
+demoLevelPaths = [ "levels/level3.json"]
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState
