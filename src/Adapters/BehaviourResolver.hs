@@ -26,6 +26,7 @@ where
 
 -- Grupo 1 — stdlib / base
 import Control.Exception (SomeException, try)
+import Data.List (find)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -240,15 +241,14 @@ promptText kind hint =
 {- | Extrae la primera palabra del primer bloque de /texto/ de la respuesta,
 normalizada a minúsculas y sin espacios alrededor.
 
-Trabaja en la mónada 'Maybe': primero filtra los bloques con @type == "text"@
-(ignorando @thinking@, @tool_use@ u otros que no traen texto), toma el primero,
-desempaqueta su @text@ opcional y toma su primera palabra con 'listToMaybe' (o
-'Nothing' si quedó vacío). Tolera respuestas que agreguen texto de más pese al
-prompt.
+Trabaja en la mónada 'Maybe': 'find' toma el primer bloque con @type == "text"@
+(ignorando @thinking@, @tool_use@ u otros que no traen texto), desempaqueta su
+@text@ opcional y toma su primera palabra con 'listToMaybe' (o 'Nothing' si
+quedó vacío). Tolera respuestas que agreguen texto de más pese al prompt.
 -}
 firstWord :: AnthropicResponse -> Maybe Text
 firstWord resp = do
-  block <- listToMaybe (filter ((== "text") . acType) (arContent resp))
+  block <- find ((== "text") . acType) (arContent resp)
   t <- acText block
   listToMaybe (T.words (T.toLower (T.strip t)))
 
