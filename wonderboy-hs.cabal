@@ -185,6 +185,8 @@ library
       , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.UpdateGame
+      , UseCases.Ports.BehaviourResolverPort
+      , UseCases.ResolveBehaviours
       , Frameworks.Gloss.GameLoop
     other-modules:
         Adapters.Gloss.Config
@@ -193,6 +195,7 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
+      , Adapters.BehaviourResolver
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -204,6 +207,9 @@ library
       , gloss >=1.13 && <1.15
       , mtl >=2.3 && <2.4
       , text >=2.0 && <2.2
+      , http-client >=0.7 && <0.8
+      , http-client-tls >=0.3 && <0.4
+      , http-types >=0.12 && <0.13
 
 executable wonderboy-hs
     import:           warnings, deps
@@ -256,6 +262,7 @@ test-suite wonderboy-hs-test
       , UseCases.UpdateGameTest
       , UseCases.LoadLevelTest
       , UseCases.LevelContentTest
+      , UseCases.ResolveBehavioursTest
       , Paths_wonderboy_hs
 
     autogen-modules:
