@@ -1,4 +1,4 @@
--- | Resolución AABB jugador–plataforma (eje Y, luego eje X).
+-- | Resolución AABB jugador–plataforma por el eje de menor penetración.
 module Domain.Logic.Collision (
   resolvePlayerPlatforms,
   resolveEnemyPlatforms,
@@ -82,13 +82,19 @@ resolveEnemyAgainst vyBefore e plat =
         then resolveEnemyOverlap vyBefore e box solid
         else e
 
+-- | Versión enemigo de 'resolveOverlap': mismo eje de menor penetración.
 resolveEnemyOverlap :: Float -> Enemy -> Aabb -> Aabb -> Enemy
-resolveEnemyOverlap vyBefore e box solid =
-  let eY = resolveEnemyAxisY vyBefore e box solid
-      box' = enemyAabb eY
-   in if eY /= e || restingOnTop box' solid || touchingCeiling box' solid
-        then eY
-        else resolveEnemyAxisX eY box' solid
+resolveEnemyOverlap vyBefore e box solid
+  | overlapX + epsilon < overlapY = resolveEnemyAxisX e box solid
+  | otherwise =
+      let eY = resolveEnemyAxisY vyBefore e box solid
+          box' = enemyAabb eY
+       in if eY /= e || restingOnTop box' solid || touchingCeiling box' solid
+            then eY
+            else resolveEnemyAxisX eY box' solid
+ where
+  overlapX = uncurry min (separationsX box solid)
+  overlapY = uncurry min (separationsY box solid)
 
 resolveEnemyAxisY :: Float -> Enemy -> Aabb -> Aabb -> Enemy
 resolveEnemyAxisY vyBefore e box solid
@@ -171,13 +177,34 @@ resolveAgainst _vyBefore p plat =
         then resolveOverlap (velY (playerVel p)) p box solid
         else p
 
+{- | Resuelve un solapamiento jugador–sólido por el __eje de menor penetración__.
+
+POR QUÉ menor penetración y no "Y primero, X después": resolver siempre el eje
+vertical confunde un choque /lateral/ con un aterrizaje o un golpe de techo.
+Saltando contra una pared (@vyBefore > 0@) eso entra por 'bumpCeiling' y clava al
+jugador hacia abajo @cabeza − base@ px, atravesando el piso (el "teletransporte");
+corriendo contra el costado de una plataforma (@vyBefore <= 0@) entra por
+'landOnTop' y lo sube encima (el "auto-salto"). Comparando ambas penetraciones,
+una colisión lateral (penetración horizontal chica) se empuja en X y una de
+suelo/techo (penetración vertical chica) se empuja en Y.
+
+El sesgo @overlapX + epsilon < overlapY@ desempata a favor de Y (suelo/techo): en
+una plataforma, ante penetraciones casi iguales conviene tratar el contacto como
+apoyo y no como pared. Cuando el eje elegido es Y pero la regla 'vyBefore' no mueve
+nada (ni apoya ni topa), se recurre a X para no dejar al jugador incrustado.
+-}
 resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
-resolveOverlap vyBefore p box solid =
-  let pY = resolveAxisY vyBefore p box solid
-      box' = playerAabb pY
-   in if pY /= p || restingOnTop box' solid || touchingCeiling box' solid
-        then pY
-        else resolveAxisX pY box' solid
+resolveOverlap vyBefore p box solid
+  | overlapX + epsilon < overlapY = resolveAxisX p box solid
+  | otherwise =
+      let pY = resolveAxisY vyBefore p box solid
+          box' = playerAabb pY
+       in if pY /= p || restingOnTop box' solid || touchingCeiling box' solid
+            then pY
+            else resolveAxisX pY box' solid
+ where
+  overlapX = uncurry min (separationsX box solid)
+  overlapY = uncurry min (separationsY box solid)
 
 resolveAxisY :: Float -> Player -> Aabb -> Aabb -> Player
 resolveAxisY vyBefore p box solid
