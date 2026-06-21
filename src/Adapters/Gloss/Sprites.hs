@@ -11,22 +11,28 @@ where
 import Control.Applicative ((<|>))
 import Control.Exception (AsyncException, SomeException, fromException, throwIO, try)
 import Data.Maybe (catMaybes)
+import Data.Word (Word8)
 import System.IO (hPutStrLn, stderr)
 
-import Codec.BMP (readBMP)
+import Codec.BMP (BMP, bmpDimensions, packRGBA32ToBMP32, readBMP, unpackBMPToRGBA32)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Graphics.Gloss.Data.Bitmap (bitmapDataOfBMP, bitmapOfBMP, bitmapSize)
 import Graphics.Gloss.Data.Picture (Picture)
 
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.Player (Player (..))
-import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Velocity (velX, velY)
 import Paths_wonderboy_hs (getDataFileName)
 
 -- | Bitmap cargado junto con su tamaño original en píxeles.
 data Sprite = Sprite
   { spritePicture :: Picture
+  -- ^ Bitmap en su color original.
+  , spriteHurtPicture :: Picture
+  -- ^ Variante teñida de rojo para el estado de daño. En sprites sin tinte
+  --   coincide con 'spritePicture' (se comparte el mismo 'Picture', sin costo extra).
   , spriteWidth :: Float
   , spriteHeight :: Float
   }
@@ -37,7 +43,6 @@ data SpriteCatalog = SpriteCatalog
   , scBackgroundCastle :: Maybe Sprite
   , scPlayerIdle :: Maybe Sprite
   , scPlayerJump :: Maybe Sprite
-  , scPlayerHurt :: Maybe Sprite
   , scPlayerWalk :: [Sprite]
   , scPickupGem :: Maybe Sprite
   , scTileGrassLeft :: Maybe Sprite
@@ -77,9 +82,8 @@ loadSpriteCatalog =
   SpriteCatalog
     <$> loadSprite "assets/sprites/backgrounds/grasslands.bmp"
     <*> loadSprite "assets/sprites/backgrounds/castle.bmp"
-    <*> loadSprite "assets/sprites/player/player-idle.bmp"
-    <*> loadSprite "assets/sprites/player/player-jump.bmp"
-    <*> loadSprite "assets/sprites/player/player-hurt.bmp"
+    <*> loadHurtableSprite "assets/sprites/player/player-idle.bmp"
+    <*> loadHurtableSprite "assets/sprites/player/player-jump.bmp"
     <*> loadWalkSprites
     <*> loadSprite "assets/sprites/pickups/gem-yellow.bmp"
     <*> loadSprite "assets/sprites/tiles/grass-left.bmp"
@@ -116,12 +120,23 @@ loadWalkSprites :: IO [Sprite]
 loadWalkSprites =
   catMaybes
     <$> traverse
-      (\i -> loadSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp"))
+      (\i -> loadHurtableSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp"))
       [1 .. 11 :: Int]
 
--- | Lee un BMP y deriva ancho/alto con 'bitmapSize' (sin dimensiones hardcodeadas).
+-- | Carga un sprite sin variante de daño: la versión teñida reusa el bitmap normal.
 loadSprite :: FilePath -> IO (Maybe Sprite)
-loadSprite relPath = do
+loadSprite = loadSpriteWith Nothing
+
+-- | Carga un sprite del jugador con su variante de daño teñida de rojo.
+loadHurtableSprite :: FilePath -> IO (Maybe Sprite)
+loadHurtableSprite = loadSpriteWith (Just tintRedBMP)
+
+{- | Lee un BMP y deriva ancho/alto con 'bitmapSize' (sin dimensiones hardcodeadas).
+La transformación opcional produce la variante de daño a partir del mismo BMP; si es
+'Nothing', esa variante reusa el 'Picture' normal y no se construye un segundo bitmap.
+-}
+loadSpriteWith :: Maybe (BMP -> BMP) -> FilePath -> IO (Maybe Sprite)
+loadSpriteWith tintHurt relPath = do
   path <- getDataFileName relPath
   loaded <- try (readBMP path)
   case loaded of
@@ -132,14 +147,45 @@ loadSprite relPath = do
     Right (Right bmp) ->
       let bitmapData = bitmapDataOfBMP bmp
           (width, height) = bitmapSize bitmapData
+          normalPicture = bitmapOfBMP bmp
+          hurtPicture = maybe normalPicture (\tint -> bitmapOfBMP (tint bmp)) tintHurt
        in pure
             ( Just
                 Sprite
-                  { spritePicture = bitmapOfBMP bmp
+                  { spritePicture = normalPicture
+                  , spriteHurtPicture = hurtPicture
                   , spriteWidth = fromIntegral width
                   , spriteHeight = fromIntegral height
                   }
             )
+
+-- | Intensidad de la mezcla hacia rojo puro (0 = sin cambio, 1 = rojo plano).
+tintStrength :: Float
+tintStrength = 0.6
+
+{- | Tiñe de rojo un BMP preservando dimensiones y canal alfa: solo cambia los
+canales de color, así la silueta y la transparencia del sprite quedan intactas.
+-}
+tintRedBMP :: BMP -> BMP
+tintRedBMP bmp =
+  let (width, height) = bmpDimensions bmp
+   in packRGBA32ToBMP32 width height (tintRedRGBA (unpackBMPToRGBA32 bmp))
+
+-- | Mezcla cada píxel RGBA hacia rojo puro, dejando intacto el alfa.
+tintRedRGBA :: ByteString -> ByteString
+tintRedRGBA = BS.pack . tintPixels . BS.unpack
+ where
+  tintPixels (r : g : b : a : rest) =
+    tintChannel 255 r : tintChannel 0 g : tintChannel 0 b : a : tintPixels rest
+  tintPixels remainder = remainder
+
+-- | Acerca un canal de color hacia 'target' según 'tintStrength'.
+tintChannel :: Word8 -> Word8 -> Word8
+tintChannel target component =
+  round
+    ( fromIntegral component * (1 - tintStrength)
+        + fromIntegral target * tintStrength
+    )
 
 spriteLoadFailure :: FilePath -> SomeException -> IO (Maybe Sprite)
 spriteLoadFailure relPath err =
@@ -149,11 +195,16 @@ spriteLoadFailure relPath err =
       hPutStrLn stderr ("Warning: failed to load sprite " <> relPath <> ": " <> show err)
       pure Nothing
 
--- | Sprite del jugador según estado visible y contador de render.
+{- | Sprite del jugador según estado visible y contador de render.
+
+El estado de daño NO elige un sprite propio: durante la invencibilidad el jugador
+sigue animándose con su sprite de movimiento normal (idle/caminar/salto, que cicla
+con 'renderFrame'). El efecto de "recibió daño" lo aporta sólo el tinte rojo con
+parpadeo en 'Adapters.Gloss.Rendering.renderPlayer'; así la animación no se congela
+en un único frame mientras dura la invencibilidad.
+-}
 playerSprite :: SpriteCatalog -> Int -> Player -> Maybe Sprite
 playerSprite catalog renderFrame player
-  | hasFramesLeft (playerInvincibilityFrames player) =
-      scPlayerHurt catalog <|> movementSprite
   | not (playerOnGround player) =
       scPlayerJump catalog <|> movementSprite
   | otherwise = movementSprite
