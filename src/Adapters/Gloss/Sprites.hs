@@ -16,7 +16,7 @@ import System.IO (hPutStrLn, stderr)
 
 import Codec.BMP (BMP, bmpDimensions, packRGBA32ToBMP32, readBMP, unpackBMPToRGBA32)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Graphics.Gloss.Data.Bitmap (bitmapDataOfBMP, bitmapOfBMP, bitmapSize)
 import Graphics.Gloss.Data.Picture (Picture)
 
