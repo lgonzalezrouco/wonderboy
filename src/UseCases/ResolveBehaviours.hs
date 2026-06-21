@@ -29,6 +29,7 @@ where
 -- Grupo 1 — stdlib / base
 import Control.Monad (join)
 import Data.List (nub)
+import Data.Text qualified as T
 
 -- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (
@@ -49,14 +50,16 @@ resolveLevelBehaviours ::
   (BehaviourResolverPort m) => LevelDefinition -> m LevelDefinition
 resolveLevelBehaviours def = do
   -- Pares distintos (kind, hint) que necesitan resolución: solo enemigos sin
-  -- preset explícito (`Nothing <- [...]`) y con hint presente (`Just h <- [...]`).
-  -- `nub` deduplica para no consultar dos veces el mismo par.
+  -- preset explícito (`Nothing <- [...]`), con hint presente (`Just h <- [...]`)
+  -- y no en blanco (`not (T.null (T.strip h))`, para no gastar una consulta a la
+  -- API en una pista vacía o de solo espacios). `nub` deduplica el mismo par.
   let needs =
         nub
           [ (enemyDefKind e, h)
           | e <- levelEnemies def
           , Nothing <- [enemyDefBehaviourPreset e]
           , Just h <- [enemyDefBehaviourHint e]
+          , not (T.null (T.strip h))
           ]
   -- Una consulta por par distinto; se construye la tabla [((kind, hint), Maybe arch)].
   resolved <-

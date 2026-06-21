@@ -135,6 +135,13 @@ unit_unknownHintStaysNothing :: Assertion
 unit_unknownHintStaysNothing =
   firstPreset [mkEnemy 1 Nothing (Just "blah blah desconocido")] @?= Nothing
 
+{- | Caso 4b: un hint en blanco (solo espacios) se ignora antes de consultar al
+resolver; el preset queda 'Nothing' (caerá al default del kind en el build).
+-}
+unit_blankHintStaysNothing :: Assertion
+unit_blankHintStaysNothing =
+  firstPreset [mkEnemy 1 Nothing (Just "   ")] @?= Nothing
+
 {- | Caso 5: dos enemigos con el mismo par @(kind, hint)@ → ambos quedan resueltos
 al mismo arquetipo (la dedup interna no debe perder ninguna asignación).
 -}

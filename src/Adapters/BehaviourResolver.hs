@@ -32,12 +32,13 @@ import Data.Text.Encoding (encodeUtf8)
 import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
 
+import Data.Set qualified as Set
 import Data.Text qualified as T
 
 -- Grupo 2 — terceros
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON (..), decode, encode, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), decode, encode, object, withObject, (.:), (.:?), (.=))
 import Network.HTTP.Client (
   Manager,
   RequestBody (RequestBodyLBS),
@@ -45,6 +46,7 @@ import Network.HTTP.Client (
   httpLbs,
   method,
   parseRequest,
+  redactHeaders,
   requestBody,
   requestHeaders,
  )
@@ -173,6 +175,11 @@ resolveOne env kind hint = do
                 , ("content-type", "application/json")
                 ]
             , requestBody = RequestBodyLBS (encode body)
+            , -- La API key viaja en el header `x-api-key`. `redactHeaders` hace que
+              -- el `Show` del `Request` (que puede aparecer dentro de una
+              -- `HttpException` y terminar en stderr vía `show err`) lo enmascare,
+              -- evitando filtrar el secreto en los logs de error.
+              redactHeaders = Set.fromList ["x-api-key"]
             }
     httpLbs req (reManager env)
   case result of
@@ -191,7 +198,7 @@ resolveOne env kind hint = do
     object
       [ "model" .= reModel env
       , "max_tokens" .= (16 :: Int)
-      , "temperature" .= (0 :: Int)
+      , "temperature" .= (0.0 :: Double)
       , "messages"
           .= [ object
                 [ "role" .= ("user" :: Text)
@@ -230,18 +237,20 @@ promptText kind hint =
     <> ") de un plataformero 2D. Respondé SOLO una palabra: patrol, chase o guard. Pista: "
     <> hint
 
-{- | Extrae la primera palabra del primer bloque de texto de la respuesta,
+{- | Extrae la primera palabra del primer bloque de /texto/ de la respuesta,
 normalizada a minúsculas y sin espacios alrededor.
 
-Trabaja en la mónada 'Maybe': 'listToMaybe' sobre @content@ corta si no hay
-bloques de texto, y 'listToMaybe' sobre @T.words@ toma la primera palabra (o
-'Nothing' si el texto quedó vacío), tolerando respuestas que agreguen texto de
-más pese al prompt.
+Trabaja en la mónada 'Maybe': primero filtra los bloques con @type == "text"@
+(ignorando @thinking@, @tool_use@ u otros que no traen texto), toma el primero,
+desempaqueta su @text@ opcional y toma su primera palabra con 'listToMaybe' (o
+'Nothing' si quedó vacío). Tolera respuestas que agreguen texto de más pese al
+prompt.
 -}
 firstWord :: AnthropicResponse -> Maybe Text
 firstWord resp = do
-  block <- listToMaybe (arContent resp)
-  listToMaybe (T.words (T.toLower (T.strip (acText block))))
+  block <- listToMaybe (filter ((== "text") . acType) (arContent resp))
+  t <- acText block
+  listToMaybe (T.words (T.toLower (T.strip t)))
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la respuesta de la API (FromJSON parcial, solo lo que usamos)
@@ -253,8 +262,18 @@ Modelamos únicamente los campos que consumimos; el resto del JSON se ignora.
 -}
 newtype AnthropicResponse = AnthropicResponse {arContent :: [AnthropicContent]}
 
--- | Un bloque de @content@; solo nos interesa su campo @text@.
-newtype AnthropicContent = AnthropicContent {acText :: Text}
+{- | Un bloque del array @content@. Modelamos el discriminador @type@ y un @text@
+/opcional/: la Messages API puede devolver bloques sin texto (p. ej. @thinking@
+o @tool_use@, según el modelo configurado), y un 'FromJSON' que exigiera @text@
+haría fallar el decode de __toda__ la respuesta. Con @text@ opcional esos bloques
+se parsean sin romper y luego se descartan filtrando por @type == "text"@.
+-}
+data AnthropicContent = AnthropicContent
+  { acType :: Text
+  -- ^ Discriminador del bloque (@"text"@, @"thinking"@, @"tool_use"@, …).
+  , acText :: Maybe Text
+  -- ^ Texto del bloque cuando @type == "text"@; 'Nothing' en los demás.
+  }
 
 instance FromJSON AnthropicResponse where
   parseJSON =
@@ -264,7 +283,7 @@ instance FromJSON AnthropicResponse where
 instance FromJSON AnthropicContent where
   parseJSON =
     withObject "AnthropicContent" $ \o ->
-      AnthropicContent <$> o .: "text"
+      AnthropicContent <$> o .: "type" <*> o .:? "text"
 
 -- | Predicado: ¿el código de status HTTP está en el rango de éxito 2xx?
 inRange2xx :: Int -> Bool

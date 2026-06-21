@@ -203,6 +203,7 @@ library
       , aeson >=2.1 && <2.3
       , bmp == 1.2.*
       , bytestring >=0.11 && <0.13
+      , containers >=0.6 && <0.8
       , free >=5.2 && <5.3
       , gloss >=1.13 && <1.15
       , mtl >=2.3 && <2.4
