@@ -816,9 +816,9 @@ renderAttackBlade catalog phase angle =
   Rotate angle $
     Translate 0 (-(bladeHeight / 2)) $
       Scale 1 (-1) $
-      case scHudAttackSword catalog of
-        Nothing -> Color hudAttackColor (rectangleSolid 6 bladeHeight)
-        Just sprite -> drawSpriteAtHeight bladeHeight sprite
+        case scHudAttackSword catalog of
+          Nothing -> Color hudAttackColor (rectangleSolid 6 bladeHeight)
+          Just sprite -> drawSpriteAtHeight bladeHeight sprite
  where
   bladeHeight = attackCueHeight * (1 + 0.08 * sin (pi * phase))
 
