@@ -189,6 +189,7 @@ library
       , UseCases.Ports.BehaviourResolverPort
       , UseCases.ResolveBehaviours
       , Frameworks.Gloss.GameLoop
+      , Adapters.BehaviourResolver
     other-modules:
         Adapters.Gloss.Config
       , Adapters.Gloss.Input
@@ -196,7 +197,6 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
-      , Adapters.BehaviourResolver
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -270,6 +270,7 @@ test-suite wonderboy-hs-test
       , Domain.ScaleHealthTest
       , Domain.EnemyDefJsonTest
       , Domain.BuildEnemyTuningTest
+      , Adapters.ResolverReplyTest
       , Paths_wonderboy_hs
 
     autogen-modules:
