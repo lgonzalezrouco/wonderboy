@@ -93,6 +93,7 @@ mkEnemy eid preset hint =
     , enemyDefPos = position 0 0
     , enemyDefBehaviourPreset = preset
     , enemyDefBehaviourHint = hint
+    , enemyDefBehaviourTuning = Nothing
     }
 
 -- | Nivel con la lista de enemigos dada, resuelto; devuelve los enemigos finales.
