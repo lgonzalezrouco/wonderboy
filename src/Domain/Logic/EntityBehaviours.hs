@@ -225,7 +225,7 @@ patrulla, cooldown) y los parámetros de proyectil NO se tocan. @toughness×@ no
 aplica acá: es salud, y se aplica al construir el enemigo ('Domain.Logic.BuildWorld').
 -}
 applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
-applyTuning t motion = case motion of
+applyTuning tuning motion = case motion of
   PatrolMotion s leg -> PatrolMotion (s * spd) leg
   ReactiveMotion cs rs cr sr ->
     ReactiveMotion (cs * spd) (rs * spd) (cr * rch) (sr * rch)
@@ -234,8 +234,8 @@ applyTuning t motion = case motion of
   ArcherMotion shootRange cd projSpeed projLife w h ->
     ArcherMotion (shootRange * rch) cd projSpeed projLife w h
  where
-  spd = unMultiplier (tuningSpeed t)
-  rch = unMultiplier (tuningReach t)
+  spd = unMultiplier (tuningSpeed tuning)
+  rch = unMultiplier (tuningReach tuning)
 
 {- | Programa de comportamiento para un arquetipo con tuning aplicado.
 

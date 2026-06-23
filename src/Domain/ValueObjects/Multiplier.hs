@@ -23,6 +23,10 @@ minMultiplier, maxMultiplier :: Float
 minMultiplier = 0.3
 maxMultiplier = 3.0
 
+-- | Factor neutro (1.0): no cambia nada.
+identityMultiplier :: Multiplier
+identityMultiplier = Multiplier 1.0
+
 {- | Construye un 'Multiplier' clampeando a @[minMultiplier, maxMultiplier]@.
 
 Los valores no finitos ('NaN', '±∞' — posibles si el modelo devuelve basura) caen a
@@ -33,10 +37,6 @@ mkMultiplier :: Float -> Multiplier
 mkMultiplier x
   | isNaN x || isInfinite x = identityMultiplier
   | otherwise = Multiplier (max minMultiplier (min maxMultiplier x))
-
--- | Factor neutro (1.0): no cambia nada.
-identityMultiplier :: Multiplier
-identityMultiplier = Multiplier 1.0
 
 -- | Extrae el factor como 'Float'.
 unMultiplier :: Multiplier -> Float

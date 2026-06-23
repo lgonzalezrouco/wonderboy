@@ -30,6 +30,9 @@ unit_nanFallsToIdentity = mkMultiplier (0 / 0) @?= identityMultiplier
 unit_infinityFallsToIdentity :: Assertion
 unit_infinityFallsToIdentity = mkMultiplier (1 / 0) @?= identityMultiplier
 
+unit_negativeInfinityFallsToIdentity :: Assertion
+unit_negativeInfinityFallsToIdentity = mkMultiplier (-(1 / 0)) @?= identityMultiplier
+
 unit_identityIsOne :: Assertion
 unit_identityIsOne = unMultiplier identityMultiplier @?= 1.0
 

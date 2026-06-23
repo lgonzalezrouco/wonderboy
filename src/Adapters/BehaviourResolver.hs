@@ -27,6 +27,7 @@ module Adapters.BehaviourResolver (
   resolveLevelIO,
   ResolverReply (..),
   resolvedFromReply,
+  extractJsonObject,
 )
 where
 
@@ -184,6 +185,23 @@ debugLog env msg
   | otherwise = pure ()
 
 -- ---------------------------------------------------------------------------
+-- Extracción de JSON del texto del modelo
+-- ---------------------------------------------------------------------------
+
+{- | Extrae el primer objeto JSON de un texto que puede venir envuelto en cercas
+markdown (@```json ... ```@) o con prosa alrededor: toma el substring desde el
+primer @{@ hasta el último @}@. Devuelve 'Nothing' si no hay un par de llaves.
+Endurece el happy path ante modelos que no respetan "respondé SOLO JSON".
+-}
+extractJsonObject :: Text -> Maybe Text
+extractJsonObject t =
+  let afterOpen = T.dropWhile (/= '{') t
+      (beforeClose, _) = T.breakOnEnd "}" afterOpen
+   in if T.null afterOpen || T.null beforeClose
+        then Nothing
+        else Just beforeClose
+
+-- ---------------------------------------------------------------------------
 -- Consulta individual a la API
 -- ---------------------------------------------------------------------------
 
@@ -265,8 +283,9 @@ resolveOne env kind hint = do
     pure Nothing
 
   -- Parsea el cuerpo, extrae el texto del modelo y lo decodifica como
-  -- 'ResolverReply'. Cada paso deja una traza de debug para seguir en vivo
-  -- la decisión del clasificador.
+  -- 'ResolverReply'. Primero extrae el objeto JSON del texto (puede venir
+  -- envuelto en cercas markdown o con prosa), luego decodifica. Cada paso
+  -- deja una traza de debug para seguir en vivo la decisión del clasificador.
   interpretBody bs =
     case decode @AnthropicResponse bs of
       Nothing -> warn "JSON de respuesta inesperado"
@@ -274,24 +293,27 @@ resolveOne env kind hint = do
         case replyText resp of
           Nothing -> warn "respuesta sin texto"
           Just t ->
-            case decode @ResolverReply (BL.fromStrict (encodeUtf8 t)) of
-              Nothing -> warn ("JSON del modelo no parseable: " <> T.unpack t)
-              Just reply ->
-                case resolvedFromReply reply of
-                  Nothing -> warn ("arquetipo no reconocido: " <> T.unpack (rrArchetype reply))
-                  Just rb -> do
-                    debugLog env ("resuelto: " <> show (rbArchetype rb) <> " tuning=" <> showTuning (rbTuning rb))
-                    pure (Just rb)
+            case extractJsonObject t of
+              Nothing -> warn "respuesta sin objeto JSON"
+              Just jsonText ->
+                case decode @ResolverReply (BL.fromStrict (encodeUtf8 jsonText)) of
+                  Nothing -> warn ("JSON del modelo no parseable: " <> T.unpack jsonText)
+                  Just reply ->
+                    case resolvedFromReply reply of
+                      Nothing -> warn ("arquetipo no reconocido: " <> T.unpack (rrArchetype reply))
+                      Just rb -> do
+                        debugLog env ("resuelto: " <> show (rbArchetype rb) <> " tuning=" <> showTuning (rbTuning rb))
+                        pure (Just rb)
 
   -- Helper de debug: muestra los tres multiplicadores sin exponer la API key.
   showTuning :: BehaviourTuning -> String
-  showTuning t =
+  showTuning tuning =
     "speed="
-      <> show (unMultiplier (tuningSpeed t))
+      <> show (unMultiplier (tuningSpeed tuning))
       <> " reach="
-      <> show (unMultiplier (tuningReach t))
+      <> show (unMultiplier (tuningReach tuning))
       <> " toughness="
-      <> show (unMultiplier (tuningToughness t))
+      <> show (unMultiplier (tuningToughness tuning))
 
 {- | Prompt para el clasificador: pide UN objeto JSON con el arquetipo y los tres
 multiplicadores de gameplay. @1.0@ = normal, @<1@ = menos, @>1@ = más. Incluye el

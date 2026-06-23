@@ -6,9 +6,10 @@ factores, default-ea los ausentes a 1.0, y descarta arquetipos no reconocidos.
 module Adapters.ResolverReplyTest where
 
 import Data.Maybe (isNothing)
+import Data.Text (Text)
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
-import Adapters.BehaviourResolver (ResolverReply (..), resolvedFromReply)
+import Adapters.BehaviourResolver (ResolverReply (..), extractJsonObject, resolvedFromReply)
 import Domain.Model.LevelDefinition (
   BehaviourArchetype (ChaseArchetype),
   ResolvedBehaviour (..),
@@ -39,3 +40,28 @@ unit_unknownArchetypeIsNothing =
   assertBool "arquetipo desconocido => Nothing" (isNothing (resolvedFromReply reply))
  where
   reply = ResolverReply "rampage" (Just 1.0) (Just 1.0) (Just 1.0)
+
+-- ---------------------------------------------------------------------------
+-- Tests de extractJsonObject
+-- ---------------------------------------------------------------------------
+
+{- | JSON envuelto en cercas markdown: 'extractJsonObject' devuelve el objeto
+sin las cercas ni la prosa.
+-}
+unit_extractJsonObject_markdownFences :: Assertion
+unit_extractJsonObject_markdownFences =
+  extractJsonObject "```json\n{\"archetype\":\"chase\"}\n```"
+    @?= Just ("{\"archetype\":\"chase\"}" :: Text)
+
+{- | JSON precedido y seguido de prosa: 'extractJsonObject' extrae solo el
+substring entre el primer @{@ y el último @}@.
+-}
+unit_extractJsonObject_prose :: Assertion
+unit_extractJsonObject_prose =
+  extractJsonObject "Aquí está: {\"speed\":1.0} listo."
+    @?= Just ("{\"speed\":1.0}" :: Text)
+
+-- | Sin llaves: 'extractJsonObject' devuelve 'Nothing'.
+unit_extractJsonObject_noBraces :: Assertion
+unit_extractJsonObject_noBraces =
+  assertBool "sin llaves => Nothing" (isNothing (extractJsonObject "sin json aquí"))
