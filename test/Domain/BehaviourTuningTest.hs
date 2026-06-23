@@ -5,6 +5,7 @@ module Domain.BehaviourTuningTest where
 
 import Test.Tasty.HUnit (Assertion, (@?=))
 
+import Domain.ValueObjects.Amplifier (identityAmplifier)
 import Domain.ValueObjects.BehaviourTuning (
   BehaviourTuning (..),
   identityTuning,
@@ -42,4 +43,4 @@ unit_identityTuningIsAllOnes =
   , tuningReach identityTuning
   , tuningToughness identityTuning
   )
-    @?= (identityMultiplier, identityMultiplier, identityMultiplier)
+    @?= (identityMultiplier, identityAmplifier, identityAmplifier)

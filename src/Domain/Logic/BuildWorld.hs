@@ -43,10 +43,10 @@ import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.Amplifier (unAmplifier)
 import Domain.ValueObjects.BehaviourTuning (identityTuning, tuningToughness)
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (scaleHealth)
-import Domain.ValueObjects.Multiplier (unMultiplier)
 import Domain.ValueObjects.Score (score)
 
 -- | Construye el mundo inicial del nivel a partir de la definición autoral.
@@ -148,9 +148,9 @@ buildEnemy def
     case enemyDefBehaviourPreset d of
       Just archetype -> programForArchetypeTuned (enemyDefKind d) archetype tuning
       Nothing -> defaultProgramForKind (enemyDefKind d)
-  -- toughness× escala la salud al spawnear (piso 1 en 'scaleHealth').
+  -- toughness× amplifica la salud al spawnear (piso 1 HP en 'scaleHealth', redundante con el piso del Amplifier).
   tuneHealth e =
-    let hp = scaleHealth (unMultiplier (tuningToughness tuning)) (enemyMaxHealth e)
+    let hp = scaleHealth (unAmplifier (tuningToughness tuning)) (enemyMaxHealth e)
      in e{enemyHealth = hp, enemyMaxHealth = hp}
 
 buildBossEnemy :: EnemyDef -> Either LevelBuildError Enemy

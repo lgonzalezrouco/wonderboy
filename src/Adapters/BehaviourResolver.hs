@@ -68,6 +68,7 @@ import Domain.Model.LevelDefinition (
   ResolvedBehaviour (..),
   parseBehaviourArchetype,
  )
+import Domain.ValueObjects.Amplifier (Amplifier, identityAmplifier, mkAmplifier, unAmplifier)
 import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
 import Domain.ValueObjects.Multiplier (Multiplier, identityMultiplier, mkMultiplier, unMultiplier)
 import UseCases.Ports.BehaviourResolverPort (
@@ -311,13 +312,14 @@ resolveOne env kind hint = do
     "speed="
       <> show (unMultiplier (tuningSpeed tuning))
       <> " reach="
-      <> show (unMultiplier (tuningReach tuning))
+      <> show (unAmplifier (tuningReach tuning))
       <> " toughness="
-      <> show (unMultiplier (tuningToughness tuning))
+      <> show (unAmplifier (tuningToughness tuning))
 
 {- | Prompt para el clasificador: pide UN objeto JSON con el arquetipo y los tres
-multiplicadores de gameplay. @1.0@ = normal, @<1@ = menos, @>1@ = más. Incluye el
-tipo de enemigo como contexto para que el modelo ajuste sus sugerencias.
+multiplicadores de gameplay. @speed@ admite @<1@ (más lento) y @>1@ (más rápido); @reach@ y
+@toughness@ son @>= 1.0@ (1.0 = base del arquetipo; solo suben). Incluye el tipo de enemigo
+como contexto para que el modelo ajuste sus sugerencias.
 -}
 promptText :: EnemyKind -> Text -> Text
 promptText kind hint =
@@ -326,8 +328,8 @@ promptText kind hint =
     <> ") con esta descripción, devolvé SOLO un objeto JSON (sin texto extra) con:\n"
     <> "  \"archetype\": \"patrol\" | \"chase\" | \"guard\" (la forma de moverse),\n"
     <> "  \"speed\": número (1.0 normal, <1 más lento, >1 más rápido),\n"
-    <> "  \"reach\": número (1.0 normal, >1 detecta y persigue más lejos, <1 solo de cerca),\n"
-    <> "  \"toughness\": número (1.0 normal, >1 más vida, <1 más frágil).\n"
+    <> "  \"reach\": número >= 1.0 (1.0 = alcance base del arquetipo, >1 detecta y persigue más lejos),\n"
+    <> "  \"toughness\": número >= 1.0 (1.0 = vida base, >1 más resistente),\n"
     <> "Descripción: "
     <> hint
 
@@ -369,12 +371,13 @@ instance FromJSON ResolverReply where
         <*> o .:? "reach"
         <*> o .:? "toughness"
 
-{- | Mapeo puro respuesta → 'ResolvedBehaviour'. El arquetipo debe ser reconocible
-(si no, 'Nothing' y el build cae al default del kind); cada factor ausente o raro
-cae a 1.0 vía 'mkMultiplier'.
+{- | Mapeo puro respuesta → 'ResolvedBehaviour'. El arquetipo debe ser reconocible (si no,
+'Nothing' y el build cae al default del kind); @speed@ ausente/raro cae a 1.0 vía
+'mkMultiplier', y @reach@/@toughness@ ausentes, raros o por debajo de 1.0 caen a 1.0 vía
+'mkAmplifier' (solo amplifican).
 
-El módulo exporta esta función para que el test-suite la verifique directamente,
-sin necesidad de invocar la API.
+El módulo exporta esta función para que el test-suite la verifique directamente, sin
+necesidad de invocar la API.
 -}
 resolvedFromReply :: ResolverReply -> Maybe ResolvedBehaviour
 resolvedFromReply r =
@@ -383,9 +386,11 @@ resolvedFromReply r =
     Right arch -> Just (ResolvedBehaviour arch tuning)
  where
   tuning =
-    BehaviourTuning (mul (rrSpeed r)) (mul (rrReach r)) (mul (rrToughness r))
-  mul :: Maybe Double -> Multiplier
-  mul = maybe identityMultiplier (mkMultiplier . realToFrac)
+    BehaviourTuning (mulSpeed (rrSpeed r)) (amp (rrReach r)) (amp (rrToughness r))
+  mulSpeed :: Maybe Double -> Multiplier
+  mulSpeed = maybe identityMultiplier (mkMultiplier . realToFrac)
+  amp :: Maybe Double -> Amplifier
+  amp = maybe identityAmplifier (mkAmplifier . realToFrac)
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la respuesta de la API (FromJSON parcial, solo lo que usamos)

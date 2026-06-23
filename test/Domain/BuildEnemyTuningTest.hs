@@ -12,9 +12,10 @@ import Domain.Model.LevelDefinition (
   BehaviourArchetype (ChaseArchetype),
   EnemyDef (..),
  )
+import Domain.ValueObjects.Amplifier (identityAmplifier, mkAmplifier)
 import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
 import Domain.ValueObjects.Health (healthPoints)
-import Domain.ValueObjects.Multiplier (identityMultiplier, mkMultiplier)
+import Domain.ValueObjects.Multiplier (identityMultiplier)
 import Domain.ValueObjects.Position (position)
 
 unit_buildScalesHealthByToughness :: Assertion
@@ -29,7 +30,7 @@ unit_buildScalesHealthByToughness =
       , enemyDefBehaviourPreset = Just ChaseArchetype
       , enemyDefBehaviourHint = Nothing
       , enemyDefBehaviourTuning =
-          Just (BehaviourTuning identityMultiplier identityMultiplier (mkMultiplier 3.0))
+          Just (BehaviourTuning identityMultiplier identityAmplifier (mkAmplifier 3.0))
       }
 
 {- | 'enemyHealth' (salud actual) también refleja el tuning: un enemigo que nace con
@@ -47,7 +48,7 @@ unit_buildScalesCurrentHealthByToughness =
       , enemyDefBehaviourPreset = Just ChaseArchetype
       , enemyDefBehaviourHint = Nothing
       , enemyDefBehaviourTuning =
-          Just (BehaviourTuning identityMultiplier identityMultiplier (mkMultiplier 3.0))
+          Just (BehaviourTuning identityMultiplier identityAmplifier (mkAmplifier 3.0))
       }
 
 {- | Enemigo sin tuning (path de identidad): 'enemyHealth' mantiene la salud base (1 HP

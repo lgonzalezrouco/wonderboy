@@ -14,8 +14,9 @@ import Domain.Model.LevelDefinition (
   BehaviourArchetype (ChaseArchetype),
   ResolvedBehaviour (..),
  )
+import Domain.ValueObjects.Amplifier (identityAmplifier, unAmplifier)
 import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
-import Domain.ValueObjects.Multiplier (identityMultiplier, unMultiplier)
+import Domain.ValueObjects.Multiplier (unMultiplier)
 
 unit_clampsAndMapsArchetype :: Assertion
 unit_clampsAndMapsArchetype =
@@ -31,9 +32,23 @@ unit_clampsSpeedToMax =
 
 unit_missingNumbersDefaultToIdentity :: Assertion
 unit_missingNumbersDefaultToIdentity =
-  fmap (tuningReach . rbTuning) (resolvedFromReply reply) @?= Just identityMultiplier
+  fmap (tuningReach . rbTuning) (resolvedFromReply reply) @?= Just identityAmplifier
  where
   reply = ResolverReply "guard" Nothing Nothing Nothing
+
+-- | reach < 1 del modelo se clampa al piso 1.0 (los Amplifier solo potencian).
+unit_reachBelowOneClampsToBase :: Assertion
+unit_reachBelowOneClampsToBase =
+  fmap (unAmplifier . tuningReach . rbTuning) (resolvedFromReply reply) @?= Just 1.0
+ where
+  reply = ResolverReply "guard" Nothing (Just 0.3) Nothing
+
+-- | toughness < 1 del modelo se clampa al piso 1.0.
+unit_toughnessBelowOneClampsToBase :: Assertion
+unit_toughnessBelowOneClampsToBase =
+  fmap (unAmplifier . tuningToughness . rbTuning) (resolvedFromReply reply) @?= Just 1.0
+ where
+  reply = ResolverReply "guard" Nothing Nothing (Just 0.4)
 
 unit_unknownArchetypeIsNothing :: Assertion
 unit_unknownArchetypeIsNothing =

@@ -41,6 +41,7 @@ import Domain.Model.EntityBehaviour (
   (>>>),
  )
 import Domain.Model.LevelDefinition (BehaviourArchetype (..))
+import Domain.ValueObjects.Amplifier (unAmplifier)
 import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
 import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft)
 import Domain.ValueObjects.Multiplier (unMultiplier)
@@ -219,10 +220,11 @@ motionForArchetype kind archetype =
 
 {- | Modula un 'EnemyMotionStats' con los multiplicadores de la IA.
 
-@speed×@ escala todas las velocidades de movimiento; @reach×@ escala los rangos
-(@chaseRange@, @spawnRadius@, y @shootRange@ del archer). Los 'Frames' (tramos de
-patrulla, cooldown) y los parámetros de proyectil NO se tocan. @toughness×@ no se
-aplica acá: es salud, y se aplica al construir el enemigo ('Domain.Logic.BuildWorld').
+@speed×@ escala todas las velocidades de movimiento (puede acelerar o frenar); @reach×@
+amplifica los rangos (@chaseRange@, @spawnRadius@, y @shootRange@ del archer) sin reducirlos
+nunca (piso 1.0). Los 'Frames' (tramos de patrulla, cooldown) y los parámetros de proyectil
+NO se tocan. @toughness×@ no se aplica acá: es salud, y se aplica al construir el enemigo
+('Domain.Logic.BuildWorld').
 -}
 applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
 applyTuning tuning motion = case motion of
@@ -235,7 +237,7 @@ applyTuning tuning motion = case motion of
     ArcherMotion (shootRange * rch) cd projSpeed projLife w h
  where
   spd = unMultiplier (tuningSpeed tuning)
-  rch = unMultiplier (tuningReach tuning)
+  rch = unAmplifier (tuningReach tuning)
 
 {- | Programa de comportamiento para un arquetipo con tuning aplicado.
 
