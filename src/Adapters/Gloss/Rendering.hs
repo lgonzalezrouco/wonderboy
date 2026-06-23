@@ -301,7 +301,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
    in Translate (-cameraX) (-cameraY) $
         pictures
           [ pictures (map (renderPlatform catalog rightEdge) (worldPlatforms w))
-          , pictures (map (renderMovingPlatform catalog) (worldMovingPlatforms w))
+          , pictures (map (renderMovingPlatform catalog cameraX) (worldMovingPlatforms w))
           , pictures (map renderCrumblingPlatform (worldCrumblingPlatforms w))
           , pictures (map (renderEnemy catalog renderTick) (worldEnemies w))
           , pictures (map (renderPickup catalog) (worldPickups w))
@@ -456,13 +456,29 @@ platformSprites catalog box
   | otherwise =
       (scTileMovingLeft catalog, scTileMovingMid catalog, scTileMovingRight catalog)
 
-renderMovingPlatform :: SpriteCatalog -> MovingPlatform -> Picture
-renderMovingPlatform catalog platform =
+renderMovingPlatform :: SpriteCatalog -> Float -> MovingPlatform -> Picture
+renderMovingPlatform catalog cameraX platform =
   case scTileBridge catalog <|> scTileMovingMid catalog of
     Nothing -> aabbToPicture movingPlatformColor box
-    Just sprite -> tileStrip Nothing sprite Nothing box
+    Just sprite -> drawMovingPlatformSprite cameraX box sprite
  where
   box = movingPlatformAabb platform
+
+drawMovingPlatformSprite :: Float -> Aabb -> Sprite -> Picture
+drawMovingPlatformSprite cameraX box sprite =
+  Translate cx cy $
+    Scale (width / spriteWidth sprite) (platformVisualHeight / spriteHeight sprite) (spritePicture sprite)
+ where
+  -- Draw moving platforms as one bitmap: tiled bridge sprites can shimmer at seams.
+  width = aabbMaxX box - aabbMinX box
+  cx = snapWorldCoord cameraX ((aabbMinX box + aabbMaxX box) / 2)
+  cy = snapWorldCoord cameraY (aabbMaxY box - platformVisualHeight / 2)
+
+snapWorldCoord :: Float -> Float -> Float
+snapWorldCoord cameraCoord worldCoord =
+  cameraCoord + fromIntegral (round screenCoord :: Int) / renderZoom
+ where
+  screenCoord = (worldCoord - cameraCoord) * renderZoom
 
 renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
