@@ -33,7 +33,9 @@ import Domain.Model.LevelDefinition (
   EnemyDef (..),
   LevelDefinition (..),
   RectDef (..),
+  ResolvedBehaviour (..),
  )
+import Domain.ValueObjects.BehaviourTuning (identityTuning)
 import Domain.ValueObjects.Position (position)
 import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
 import UseCases.ResolveBehaviours (resolveLevelBehaviours)
@@ -56,9 +58,13 @@ cannedTable =
   , ("guards the gate", GuardArchetype)
   ]
 
--- | El stub ignora el 'EnemyKind' y resuelve por 'lookup' en la tabla canned.
+{- | El stub ignora el 'EnemyKind' y resuelve por 'lookup' en la tabla canned.
+Envuelve el arquetipo en 'ResolvedBehaviour' con 'identityTuning' para
+satisfacer el nuevo tipo de retorno del puerto.
+-}
 instance BehaviourResolverPort Stub where
-  resolveBehaviourHint _ hint = Stub (lookup hint cannedTable)
+  resolveBehaviourHint _ hint =
+    Stub (fmap (`ResolvedBehaviour` identityTuning) (lookup hint cannedTable))
 
 -- | Corre el orquestador en la mónada pura del stub y extrae el resultado.
 resolve :: LevelDefinition -> LevelDefinition

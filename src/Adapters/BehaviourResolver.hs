@@ -58,10 +58,11 @@ import Network.HTTP.Types.Status (statusCode)
 -- Grupo 3 — proyecto
 import Domain.Model.EnemyKind (EnemyKind)
 import Domain.Model.LevelDefinition (
-  BehaviourArchetype,
   LevelDefinition,
+  ResolvedBehaviour (..),
   parseBehaviourArchetype,
  )
+import Domain.ValueObjects.BehaviourTuning (identityTuning)
 import UseCases.Ports.BehaviourResolverPort (
   BehaviourResolverPort (..),
   runNoResolver,
@@ -187,7 +188,7 @@ respuesta. /Cualquier/ desvío (excepción de red, status no-2xx, JSON inesperad
 texto no reconocido) se convierte en 'Nothing' más un warning a 'stderr': nunca
 propaga una excepción que pudiera abortar la carga del nivel.
 -}
-resolveOne :: ResolverEnv -> EnemyKind -> Text -> IO (Maybe BehaviourArchetype)
+resolveOne :: ResolverEnv -> EnemyKind -> Text -> IO (Maybe ResolvedBehaviour)
 resolveOne env kind hint = do
   -- Trazas de entrada (solo con debug on): qué par se resuelve y con qué prompt.
   -- Ver el prompt exacto ayuda a entender por qué el modelo respondió lo que respondió.
@@ -252,7 +253,7 @@ resolveOne env kind hint = do
 
   -- `try @SomeException (httpLbs ...)` ya garantiza no propagar; si algo falla,
   -- devolvemos `Nothing` con un aviso a stderr para que el operador lo vea.
-  warn :: String -> IO (Maybe BehaviourArchetype)
+  warn :: String -> IO (Maybe ResolvedBehaviour)
   warn msg = do
     hPutStrLn stderr ("[behaviour-resolver] " <> msg <> "; uso arquetipo por defecto.")
     pure Nothing
@@ -271,7 +272,10 @@ resolveOne env kind hint = do
               Left _ -> warn ("arquetipo no reconocido: " <> T.unpack w)
               Right arch -> do
                 debugLog env ("arquetipo resuelto: " <> show arch)
-                pure (Just arch)
+                -- Envoltura temporal con `identityTuning` (sin ajuste de
+                -- multiplicadores): el Task 7 reemplaza esto con el parseo
+                -- real de los multiplicadores desde el JSON de la API.
+                pure (Just (ResolvedBehaviour arch identityTuning))
 
 {- | Prompt para el clasificador: instruye al modelo a responder EXACTAMENTE una
 palabra (@patrol@, @chase@ o @guard@), sin puntuación ni explicación, e incluye
