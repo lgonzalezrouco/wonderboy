@@ -11,6 +11,8 @@ module Domain.Logic.EntityBehaviours (
   defaultProgramForKind,
   programForArchetype,
   motionForArchetype,
+  applyTuning,
+  programForArchetypeTuned,
 )
 where
 
@@ -39,7 +41,9 @@ import Domain.Model.EntityBehaviour (
   (>>>),
  )
 import Domain.Model.LevelDefinition (BehaviourArchetype (..))
+import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
 import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft)
+import Domain.ValueObjects.Multiplier (unMultiplier)
 import Domain.ValueObjects.Velocity (velocity)
 
 {- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
@@ -212,6 +216,37 @@ motionForArchetype kind archetype =
         FlyingReactiveMotion speed (speed * returnSpeedFactor) range hold speed homePatrolLeg
     | otherwise =
         ReactiveMotion speed (speed * returnSpeedFactor) range hold
+
+{- | Modula un 'EnemyMotionStats' con los multiplicadores de la IA.
+
+@speed×@ escala todas las velocidades de movimiento; @reach×@ escala los rangos
+(@chaseRange@, @spawnRadius@, y @shootRange@ del archer). Los 'Frames' (tramos de
+patrulla, cooldown) y los parámetros de proyectil NO se tocan. @toughness×@ no se
+aplica acá: es salud, y se aplica al construir el enemigo ('Domain.Logic.BuildWorld').
+-}
+applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
+applyTuning t motion = case motion of
+  PatrolMotion s leg -> PatrolMotion (s * spd) leg
+  ReactiveMotion cs rs cr sr ->
+    ReactiveMotion (cs * spd) (rs * spd) (cr * rch) (sr * rch)
+  FlyingReactiveMotion cs rs cr sr ps leg ->
+    FlyingReactiveMotion (cs * spd) (rs * spd) (cr * rch) (sr * rch) (ps * spd) leg
+  ArcherMotion shootRange cd projSpeed projLife w h ->
+    ArcherMotion (shootRange * rch) cd projSpeed projLife w h
+ where
+  spd = unMultiplier (tuningSpeed t)
+  rch = unMultiplier (tuningReach t)
+
+{- | Programa de comportamiento para un arquetipo con tuning aplicado.
+
+Compone la forma ('motionForArchetype') con los números de la IA ('applyTuning') y
+los interpreta con la maquinaria de FSM existente ('programForMotion'). Es el punto
+único por donde el build construye el comportamiento de un enemigo resuelto.
+-}
+programForArchetypeTuned ::
+  EnemyKind -> BehaviourArchetype -> BehaviourTuning -> BehaviourProgram
+programForArchetypeTuned kind archetype tuning =
+  programForMotion (applyTuning tuning (motionForArchetype kind archetype))
 
 {- | Velocidad de movimiento característica de una clase, leída de su motion natural.
 
