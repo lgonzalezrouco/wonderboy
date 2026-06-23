@@ -44,6 +44,7 @@ floorWorld =
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
     , worldBossArena = Nothing
+    , worldBossArenaEngaged = False
     }
 
 unit_attackEdgeStartsWindow :: Assertion

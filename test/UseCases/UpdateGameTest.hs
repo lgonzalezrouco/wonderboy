@@ -70,6 +70,7 @@ unit_updateGameDtZeroSkipsBehaviour =
       , worldFallingHazards = []
       , worldCrumblingPlatforms = []
       , worldBossArena = Nothing
+      , worldBossArenaEngaged = False
       }
 
 unit_updateGamePatrolReversesVelocity :: Assertion
@@ -90,6 +91,7 @@ unit_updateGamePatrolReversesVelocity =
           , worldFallingHazards = []
           , worldCrumblingPlatforms = []
           , worldBossArena = Nothing
+          , worldBossArenaEngaged = False
           }
       gs0 = initialGameState defaultConfig w0
       gsLeft = runTicks 1 gs0

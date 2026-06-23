@@ -12,6 +12,7 @@ import Domain.Fixtures (
   testLifeParams,
   testParams,
  )
+import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Logic.LevelFlow (canCompleteLevel)
 import Domain.Logic.Step (step)
@@ -49,6 +50,7 @@ arenaFloorWorld :: World
 arenaFloorWorld =
   floorWorld
     { worldBossArena = Just testArena
+    , worldBossArenaEngaged = False
     , worldEnemies = [livingBoss]
     }
 
@@ -90,6 +92,51 @@ unit_hybridWinAfterBossDefeated =
   assertBool
     "can complete after boss defeated"
     (canCompleteLevel (score 0) defeatedBossWorld)
+
+unit_bossDamageRequiresArenaEntry :: Assertion
+unit_bossDamageRequiresArenaEntry = do
+  let outside =
+        arenaFloorWorld
+          { worldPlayer = spawnPlayer (health 3) (position 40 8)
+          }
+      inside =
+        arenaFloorWorld
+          { worldPlayer = spawnPlayer (health 3) (position 100 8)
+          }
+  assertBool
+    "boss immune to player outside arena"
+    (not (playerMayDamageEnemy outside livingBoss))
+  assertBool
+    "boss vulnerable once player is inside arena"
+    (playerMayDamageEnemy inside livingBoss)
+
+unit_playerCanEnterArenaFromOutside :: Assertion
+unit_playerCanEnterArenaFromOutside = do
+  let footX = bossArenaLeft testArena + playerWidth / 2 - 20
+      w0 =
+        arenaFloorWorld
+          { worldPlayer = spawnPlayer (health 3) (position footX 8)
+          }
+      w1 = stepArenaTimes 30 (noInput{inputRight = True}) w0
+      minFootX = bossArenaLeft testArena + playerWidth / 2
+  assertBool
+    "player can walk into arena from outside while boss lives"
+    (posX (playerPos (worldPlayer w1)) > minFootX + 1e-3)
+
+unit_engagedPlayerCannotEscapeThroughJump :: Assertion
+unit_engagedPlayerCannotEscapeThroughJump = do
+  let minFootX = bossArenaLeft testArena + playerWidth / 2
+      footX = minFootX + 4
+      w0 =
+        arenaFloorWorld
+          { worldBossArenaEngaged = True
+          , worldPlayer = spawnPlayer (health 3) (position footX 8)
+          }
+      jumpLeft = noInput{inputLeft = True, inputJump = True}
+      w1 = stepArenaTimes 90 jumpLeft w0
+  assertBool
+    "engaged player cannot jump past left arena wall"
+    (posX (playerPos (worldPlayer w1)) >= minFootX - 1e-3)
 
 unit_leftWallBlocksPlayer :: Assertion
 unit_leftWallBlocksPlayer = do

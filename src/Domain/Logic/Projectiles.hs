@@ -6,6 +6,7 @@ where
 
 import Data.List (find)
 
+import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.CrumblingPlatforms (appendPlayerSolidCrumbling)
 import Domain.Logic.MovingPlatforms (allCollisionPlatforms)
 import Domain.Logic.PlayerLife (applyDamage)
@@ -177,10 +178,13 @@ resolveHits tp cp w =
           -- Los proyectiles del jugador solo dañan enemigos.
           PlayerProjectile ->
             case find (aabbOverlaps box . enemyAabb) enemies of
-              Just e ->
-                let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
-                    enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
-                 in (player, enemies', flying, True)
+              Just e
+                | playerMayDamageEnemy w e ->
+                    let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
+                        enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
+                     in (player, enemies', flying, True)
+                | otherwise ->
+                    (player, enemies, proj : flying, removed)
               Nothing ->
                 (player, enemies, proj : flying, removed)
 

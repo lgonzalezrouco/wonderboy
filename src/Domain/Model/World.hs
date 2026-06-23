@@ -56,6 +56,8 @@ data World = World
   , worldFallingHazards :: [FallingHazard]
   , worldCrumblingPlatforms :: [CrumblingPlatform]
   , worldBossArena :: Maybe BossArena
+  , worldBossArenaEngaged :: Bool
+  -- ^ Jugador comprometido con la arena: las paredes siguen hasta derrotar al jefe.
   }
   deriving (Eq, Show, Generic)
 
@@ -85,4 +87,5 @@ initialWorld =
         , worldFallingHazards = []
         , worldCrumblingPlatforms = []
         , worldBossArena = Nothing
+        , worldBossArenaEngaged = False
         }

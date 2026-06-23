@@ -71,6 +71,7 @@ respawnPlayerAt lp spawn w =
         { worldPlayer =
             p{playerInvincibilityFrames = lpRespawnInvincibilityFrames lp}
         , worldProjectiles = []
+        , worldBossArenaEngaged = False
         }
 
 -- | Resuelve muerte cuando la salud ya es 0.
