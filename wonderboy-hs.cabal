@@ -139,6 +139,8 @@ library
       , Domain.ValueObjects.Damage
       , Domain.ValueObjects.Health
       , Domain.ValueObjects.HealthRatio
+      , Domain.ValueObjects.Multiplier
+      , Domain.ValueObjects.BehaviourTuning
       , Domain.ValueObjects.BossHealth
       , Domain.ValueObjects.Lives
       , Domain.ValueObjects.Score
@@ -264,6 +266,7 @@ test-suite wonderboy-hs-test
       , UseCases.LoadLevelTest
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
+      , Domain.BehaviourTuningTest
       , Paths_wonderboy_hs
 
     autogen-modules:
