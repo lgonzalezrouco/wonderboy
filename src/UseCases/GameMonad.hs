@@ -50,6 +50,7 @@ import Control.Monad.State (MonadState, StateT, runStateT)
 
 -- Grupo 3 — proyecto
 
+import Domain.Logic.BossArena (bossArenaSealed, playerWithinBossArena)
 import Domain.Logic.LevelFlow (findLivingBoss, showBossExitHint, showExitScoreHint)
 import Domain.Model.Enemy (enemyHealth, enemyMaxHealth)
 import Domain.Model.GamePhase (GamePhase (..))
@@ -279,13 +280,16 @@ gameViewFromState cfg gs =
               then Just (s, worldMinScore w)
               else Nothing
         , gvBossExitHint = showBossExitHint s w
+        , gvBossArenaSealed = bossArenaSealed w
         }
 
 -- | Proyecta salud del jefe vivo para el HUD (como máximo un jefe por nivel).
 bossHealthFromWorld :: World -> Maybe BossHealth
-bossHealthFromWorld w = do
-  e <- findLivingBoss w
-  pure (bossHealth (enemyHealth e) (enemyMaxHealth e))
+bossHealthFromWorld w
+  | not (playerWithinBossArena w) = Nothing
+  | otherwise = do
+      e <- findLivingBoss w
+      pure (bossHealth (enemyHealth e) (enemyMaxHealth e))
 
 -- ---------------------------------------------------------------------------
 -- La mónada GameM

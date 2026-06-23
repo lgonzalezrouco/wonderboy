@@ -42,6 +42,7 @@ minimalWorld =
     , worldFallingHazards = []
     , worldCrumblingPlatforms = []
     , worldBossArena = Nothing
+    , worldBossArenaEngaged = False
     }
 
 worldWithEnemy :: Enemy -> World

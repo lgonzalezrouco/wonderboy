@@ -73,7 +73,6 @@ data-files:
     assets/sprites/hazards/weight.bmp
     assets/sprites/pickups/gem-yellow.bmp
     assets/sprites/projectiles/projectile-rock.bmp
-    assets/sprites/player/player-hurt.bmp
     assets/sprites/player/player-idle.bmp
     assets/sprites/player/player-jump.bmp
     assets/sprites/player/player-walk-01.bmp

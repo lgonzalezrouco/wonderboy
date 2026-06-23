@@ -41,6 +41,7 @@ import Adapters.Gloss.Sprites (
   enemySprite,
   playerSprite,
  )
+import Domain.Logic.BossArena (bossArenaWallPlatforms, bossArenaWallsActive)
 import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
@@ -238,8 +239,17 @@ attackCueGap = 7
 attackCueLift :: Float
 attackCueLift = 24
 
-damageFlashColor :: Color
-damageFlashColor = makeColor 1.0 0.15 0.1 0.38
+-- | Color del cuerpo durante el destello de daño (solo fallback si falta el sprite).
+damageBodyColor :: Color
+damageBodyColor = makeColor 1.0 0.2 0.2 1.0
+
+-- | Cada cuántos frames de render alterna el destello de daño (parpadeo).
+damageFlashStride :: Int
+damageFlashStride = 8
+
+-- | Fase \"encendida\" del parpadeo de daño según el contador de render.
+damageFlashOn :: Int -> Bool
+damageFlashOn tick = even (tick `div` damageFlashStride)
 
 hitboxFootRadius :: Float
 hitboxFootRadius = 3.0
@@ -255,6 +265,7 @@ renderFrame catalog renderTick showHitboxes gv =
           ]
     , renderHud catalog gv showHitboxes
     , renderBossBar gv
+    , renderBossArenaBanner gv
     , renderGameOverOverlay gv
     , renderLevelCompleteOverlay gv
     , renderVictoryOverlay gv
@@ -297,6 +308,7 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
+          , renderBossArenaWalls w
           , renderPlayer catalog renderTick (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
           ]
@@ -305,13 +317,21 @@ renderPlayer :: SpriteCatalog -> Int -> Player -> Picture
 renderPlayer catalog renderTick p =
   pictures
     [ case playerSprite catalog renderTick p of
-        Nothing -> aabbToPicture playerColor box
-        Just sprite -> drawEntitySprite (playerFacing p) box sprite
-    , renderPlayerDamageFlash p box
+        Nothing -> aabbToPicture bodyColor box
+        Just sprite ->
+          drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
     , renderPlayerAttackCue catalog p box
     ]
  where
   box = playerAabb p
+  -- Mientras dura la invencibilidad por daño parpadea la silueta teñida de rojo,
+  -- alternando con el sprite normal para el clásico destello de "recibió daño".
+  hurtFlash =
+    hasFramesLeft (playerInvincibilityFrames p) && damageFlashOn renderTick
+  bodyPicture sprite =
+    if hurtFlash then spriteHurtPicture sprite else spritePicture sprite
+  -- Fallback sin sprite: el rectángulo del cuerpo también se tiñe al recibir daño.
+  bodyColor = if hurtFlash then damageBodyColor else playerColor
 
 renderEnemy :: SpriteCatalog -> Int -> Enemy -> Picture
 renderEnemy catalog renderTick e =
@@ -447,6 +467,20 @@ renderMovingPlatform catalog platform =
 renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
+
+-- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
+renderBossArenaWalls :: World -> Picture
+renderBossArenaWalls w =
+  case worldBossArena w of
+    Just arena
+      | bossArenaWallsActive w ->
+          pictures (map renderArenaWall (bossArenaWallPlatforms arena))
+    _ -> Blank
+ where
+  renderArenaWall plat = aabbToPicture bossArenaWallColor (platformAabb plat)
+
+bossArenaWallColor :: Color
+bossArenaWallColor = makeColor 0.95 0.45 0.2 0.55
 
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
@@ -594,6 +628,16 @@ renderBossBar gv =
                   ]
             ]
 
+renderBossArenaBanner :: GameView -> Picture
+renderBossArenaBanner gv
+  | gvBossArenaSealed gv =
+      let halfH = fromIntegral windowHeight / 2
+          bannerY = halfH - bossBarTopOffset - 28
+       in Translate 0 bannerY $
+            Scale hudHintScale hudHintScale $
+              Color hudBossColor (text "ARENA SEALED")
+  | otherwise = Blank
+
 renderGameOverOverlay :: GameView -> Picture
 renderGameOverOverlay gv
   | gvPhase gv /= GameOver = Blank
@@ -641,6 +685,7 @@ renderExitHints gv x y =
             ++ ")"
         )
     Nothing
+      | gvBossArenaSealed gv -> hudHint x y "Arena sealed - defeat the boss"
       | gvBossExitHint gv -> hudHint x y "Defeat the boss to leave"
       | otherwise -> Blank
 
@@ -707,17 +752,6 @@ renderAttackIcon catalog =
     Nothing -> Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
     Just sprite -> drawSpriteAtHeight 20 sprite
 
-renderPlayerDamageFlash :: Player -> Aabb -> Picture
-renderPlayerDamageFlash p box
-  | not (hasFramesLeft (playerInvincibilityFrames p)) = Blank
-  | otherwise =
-      Translate cx cy $
-        Color damageFlashColor $
-          rectangleSolid (aabbMaxX box - aabbMinX box) (aabbMaxY box - aabbMinY box)
- where
-  cx = (aabbMinX box + aabbMaxX box) / 2
-  cy = (aabbMinY box + aabbMaxY box) / 2
-
 renderPlayerAttackCue :: SpriteCatalog -> Player -> Aabb -> Picture
 renderPlayerAttackCue catalog p box
   | not (hasFramesLeft (playerAttackFrames p)) = Blank
@@ -781,6 +815,13 @@ renderFootAnchor pos color =
 
 drawEntitySprite :: Facing -> Aabb -> Sprite -> Picture
 drawEntitySprite facing box sprite =
+  drawEntitySpriteWith facing box sprite (spritePicture sprite)
+
+{- | Como 'drawEntitySprite' pero con el 'Picture' a dibujar dado explícitamente,
+para poder elegir entre el bitmap normal y la variante de daño teñida.
+-}
+drawEntitySpriteWith :: Facing -> Aabb -> Sprite -> Picture -> Picture
+drawEntitySpriteWith facing box sprite picture =
   let availableW = max 1 (aabbMaxX box - aabbMinX box - entitySpritePadding)
       availableH = max 1 (aabbMaxY box - aabbMinY box - entitySpritePadding)
       spriteScale = min (availableW / spriteWidth sprite) (availableH / spriteHeight sprite)
@@ -791,7 +832,7 @@ drawEntitySprite facing box sprite =
         FacingLeft -> -spriteScale
         FacingRight -> spriteScale
    in Translate cx cy $
-        Scale faceScale spriteScale (spritePicture sprite)
+        Scale faceScale spriteScale picture
 
 drawSpriteCenteredAtHeight :: Aabb -> Float -> Sprite -> Picture
 drawSpriteCenteredAtHeight box targetHeight sprite =
