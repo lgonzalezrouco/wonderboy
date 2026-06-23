@@ -1,4 +1,89 @@
 \section{Introducción}
 \label{sec:introduccion}
 
-Esta es la sección de introducción.
+\subsection{Presentación general}
+\label{subsec:intro-presentacion}
+
+Este trabajo implementa un videojuego de plataformas en 2D. El núcleo del sistema es una simulación
+discreta por \emph{frame}: en cada paso se recibe un \emph{delta time} y una entrada externa,
+y se produce un nuevo \emph{world}, instantánea del estado en el \emph{game plane} con el
+\emph{player}, los \emph{enemy}, las plataformas y los ítems aún presentes en el nivel.
+El contenido estático de cada etapa proviene de una \emph{level definition} cargada antes de
+jugar; durante la partida el motor actualiza ese \emph{world} frame a frame.
+
+La interacción con el \emph{medio} ocurre en la frontera del
+sistema: entrada del usuario, lectura de datos externos y renderizado en tiempo real. Esas
+responsabilidades quedan fuera del núcleo de simulación; la lógica de juego se expresa como
+transformaciones puras sobre el \emph{world}, mientras que la orquestación de estado global,
+configuración y efectos se delega a capas superiores del motor.
+
+\subsection{Motivación}
+\label{subsec:intro-motivacion}
+
+El objetivo central del trabajo es demostrar, en un dominio no trivial, los conceptos
+vistos en la materia: funciones puras, composición con tipos algebraicos, abstracción y
+manejo de efectos con mónadas. Un juego de plataformas resulta un caso de estudio exigente
+porque combina estado global, actualización continua y entrada en tiempo real.
+
+Elegimos un videojuego también por una razón práctica: la retroalimentación visual hace
+tangible el comportamiento del programa. Cada \emph{frame} se puede observar de inmediato;
+un error en física, colisiones o comportamiento de un \emph{enemy} se manifiesta en pantalla
+sin depender de trazas o dumps de estado. Eso acorta el ciclo de validación y mantiene el
+foco en la corrección del modelo, no solo en que el código compile.
+
+\subsection{Objetivos}
+\label{subsec:intro-objetivos}
+
+\textbf{Objetivo general.}
+Demostrar conceptos de Programación Funcional mediante la construcción de un videojuego de
+plataformas~2D jugable, con un motor modular que separa simulación pura, orquestación con
+mónadas e integración con el entorno externo.
+
+\textbf{Objetivos específicos.}
+
+\begin{enumerate}
+  \item Implementar un juego~2D jugable con las mecánicas centrales del dominio: movimiento
+    del \emph{player} con gravedad y salto, apoyo sobre plataformas estáticas y móviles,
+    recolección de ítems con efecto sobre puntaje, y combate básico con ataques
+    cuerpo a cuerpo y a distancia. El \emph{run} debe soportar pérdida de vidas,
+    \emph{respawn} en un \emph{spawn point} y condición de victoria al alcanzar la
+    \emph{exit zone} con el puntaje mínimo exigido por la \emph{level definition}.
+
+  \item Diseñar un motor modular por capas (\texttt{Domain}, \texttt{UseCases},
+    \texttt{Adapters}, \texttt{Frameworks}), de modo que la simulación viva en un núcleo
+    puro sin \texttt{IO}, la orquestación del \emph{frame} quede en casos de uso, y la
+    entrada, el reloj y el dibujado se concentren en adaptadores concretos. La transición
+    central del motor se expresa como una función pura de paso sobre el \emph{world}.
+
+  \item Modelar comportamientos de \emph{entity} (en particular \emph{enemy}) mediante un
+    DSL basado en \emph{free monad}: el AST describe acciones como desplazarse, esperar o
+    atacar, y un intérprete puro en el dominio las ejecuta sobre el \emph{world}. Esa
+    separación permite combinar patrones de IA (patrullaje, persecución, disparo a
+    distancia) sin mezclar lógica de comportamiento con física ni con efectos del entorno.
+
+  \item Orquestar el estado global del juego, la configuración de física y parámetros de
+    partida, y los errores recuperables al cargar datos, con una pila monádica en
+    \texttt{UseCases/} (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
+    tiempo real interpreta el paso de simulación, aplica la entrada del \emph{player} y
+    mantiene el \emph{run} entre niveles.
+
+  \item Cargar \emph{level definition} y parámetros desde archivos JSON serializados: geometría
+    de plataformas, \emph{spawn point}, colocación de \emph{enemy} e ítems, \emph{exit zone},
+    \emph{hazard} y constantes de movimiento.
+\end{enumerate}
+
+Como complemento propio del equipo, se publicó una versión ejecutable del juego en
+itch.io para facilitar su prueba fuera del entorno de desarrollo.
+
+\subsection{Metodología de trabajo}
+\label{subsec:intro-metodologia}
+
+El desarrollo siguió un enfoque incremental por funcionalidad: primero movimiento y física
+del \emph{player}, luego plataformas y colisiones, después ítems y combate, enemigos con
+comportamiento programable, y por último carga de niveles desde datos externos. Cada
+iteración cerraba un ciclo completo (modelo de dominio, integración en el \emph{frame} y
+prueba manual en el juego) antes de avanzar al siguiente bloque.
+
+Esa secuencia permitió mantener el núcleo de simulación estable mientras se sumaban
+capacidades al \emph{world} y al \emph{run}. Las decisiones de diseño más relevantes se
+documentan en el cuerpo del informe.
