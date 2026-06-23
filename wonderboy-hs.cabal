@@ -242,6 +242,7 @@ test-suite wonderboy-hs-test
 
     other-modules:
         Domain.AabbTest
+      , Domain.ArchetypeMotionTest
       , Domain.HealthRatioTest
       , Domain.BossPhaseTest
       , Domain.BehaviourTest
