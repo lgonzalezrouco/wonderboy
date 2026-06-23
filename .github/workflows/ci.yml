@@ -21,7 +21,7 @@ jobs:
       GHC_VERSION: "9.6.7"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install OpenGL / GLUT (Gloss on Linux)
         if: runner.os == 'Linux'
@@ -36,9 +36,11 @@ jobs:
           sudo chown -R "$USER:$USER" /usr/local/.ghcup
 
       - name: Cache GHC (ghcup)
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
-          path: /usr/local/.ghcup
+          path: |
+            /usr/local/.ghcup
+            ~/.ghcup
           key: ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}
           restore-keys: |
             ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-
@@ -50,15 +52,27 @@ jobs:
           cabal-version: "3.12"
           cabal-update: false
 
-      - name: Cache Cabal store and build dir
-        uses: actions/cache@v4
+      - name: Cache Cabal package index
+        uses: actions/cache@v6
         with:
-          path: |
-            ~/.cabal/store
-            dist-newstyle
-          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-${{ hashFiles('**/*.cabal') }}
+          path: ~/.cabal/packages
+          key: cabal-packages-${{ runner.os }}
           restore-keys: |
-            ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-
+            cabal-packages-${{ runner.os }}
+
+      - name: Cache Cabal store
+        uses: actions/cache@v6
+        with:
+          path: ~/.cabal/store
+          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-store-${{ hashFiles('cabal.project', '**/*.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-store-
+
+      - name: Cache Cabal build dir
+        uses: actions/cache@v6
+        with:
+          path: dist-newstyle
+          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-dist-ci-${{ hashFiles('cabal.project', '**/*.cabal', 'src/**', 'app/**', 'test/**') }}
 
       - name: Cabal update
         run: cabal update
@@ -75,7 +89,15 @@ jobs:
       - name: Build Haddock (catch broken docs early)
         run: cabal haddock all --enable-documentation --haddock-html --haddock-quickjump
 
+      - name: Cache Fourmolu
+        id: cache-fourmolu
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/bin/fourmolu
+          key: fourmolu-0.16.2.0-megaparsec-lt9.8-${{ runner.os }}
+
       - name: Install Fourmolu
+        if: steps.cache-fourmolu.outputs.cache-hit != 'true'
         run: |
           # megaparsec-9.8.0 drops the foldl' import but still uses it; that
           # breaks on GHC 9.6 (foldl' is not in Prelude until GHC 9.10).
@@ -84,10 +106,27 @@ jobs:
             --overwrite-policy=always \
             --installdir="$HOME/.local/bin" \
             --install-method=copy
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache HLint
+        id: cache-hlint
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/bin/hlint
+          key: hlint-3.8-${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}
+
+      - name: Install HLint
+        if: steps.cache-hlint.outputs.cache-hit != 'true'
+        run: |
+          cabal install hlint-3.8 \
+            --overwrite-policy=always \
+            --installdir="$HOME/.local/bin" \
+            --install-method=copy
+
+      - name: Add tool binaries to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: HLint
-        run: curl -sSL https://raw.github.com/ndmitchell/hlint/master/misc/run.sh | sh -s src app test
+        run: hlint src app test
 
       - name: Fourmolu (check only)
         run: fourmolu --mode check src app test
