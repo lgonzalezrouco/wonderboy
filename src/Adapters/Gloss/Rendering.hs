@@ -785,7 +785,7 @@ posePlayerForAttack combatParams p box body =
         rotateAround
           (aabbCenterX box)
           (aabbMinY box)
-          (-faceScale * attackBodyLean phase)
+          (-(faceScale * attackBodyLean phase))
           body
  where
   faceScale = facingScale (playerFacing p)
@@ -814,7 +814,7 @@ renderPlayerAttackCue catalog combatParams p box =
 renderAttackBlade :: SpriteCatalog -> Float -> Float -> Picture
 renderAttackBlade catalog phase angle =
   Rotate angle $
-    Translate 0 (-bladeHeight / 2) $
+    Translate 0 (-(bladeHeight / 2)) $
       Scale 1 (-1) $
       case scHudAttackSword catalog of
         Nothing -> Color hudAttackColor (rectangleSolid 6 bladeHeight)
@@ -866,7 +866,7 @@ attackBodyLungeOffset :: Float -> Float
 attackBodyLungeOffset phase = attackBodyLunge * sin (pi * phase)
 
 attackSparkColor :: Float -> Color
-attackSparkColor alpha = makeColor 1.0 0.96 0.62 alpha
+attackSparkColor = makeColor 1.0 0.96 0.62
 
 facingScale :: Facing -> Float
 facingScale facing =
