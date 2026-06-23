@@ -1,0 +1,43 @@
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{graphicx}
+
+\geometry{a4paper, margin=2.5cm}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue,
+}
+
+\lstdefinelanguage{Haskell}{
+  morekeywords={
+    data, newtype, type, class, instance, where, let, in, do, case, of, if, then, else,
+    module, import, qualified, as, deriving, default
+  },
+  sensitive=true,
+  morecomment=[l]{--},
+  morecomment=[s]{-}{-},
+  morestring=[b]",
+}
+
+\lstset{
+  language=Haskell,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  stringstyle=\ttfamily,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  tabsize=2,
+  literate={::}{{$\colon\colon$}}2 {->}{{$\rightarrow$}}1,
+}
