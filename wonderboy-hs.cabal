@@ -140,6 +140,7 @@ library
       , Domain.ValueObjects.Health
       , Domain.ValueObjects.HealthRatio
       , Domain.ValueObjects.Multiplier
+      , Domain.ValueObjects.Amplifier
       , Domain.ValueObjects.BehaviourTuning
       , Domain.ValueObjects.BossHealth
       , Domain.ValueObjects.Lives
@@ -267,6 +268,7 @@ test-suite wonderboy-hs-test
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
       , Domain.BehaviourTuningTest
+      , Domain.AmplifierTest
       , Domain.ScaleHealthTest
       , Domain.EnemyDefJsonTest
       , Domain.BuildEnemyTuningTest
