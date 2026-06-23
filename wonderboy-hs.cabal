@@ -269,6 +269,7 @@ test-suite wonderboy-hs-test
       , Domain.BehaviourTuningTest
       , Domain.ScaleHealthTest
       , Domain.EnemyDefJsonTest
+      , Domain.BuildEnemyTuningTest
       , Paths_wonderboy_hs
 
     autogen-modules:
