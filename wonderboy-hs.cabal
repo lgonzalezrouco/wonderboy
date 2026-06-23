@@ -267,6 +267,7 @@ test-suite wonderboy-hs-test
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
       , Domain.BehaviourTuningTest
+      , Domain.ScaleHealthTest
       , Paths_wonderboy_hs
 
     autogen-modules:
