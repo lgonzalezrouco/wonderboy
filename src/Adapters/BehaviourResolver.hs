@@ -29,10 +29,11 @@ import Control.Exception (SomeException, try)
 import Data.List (find)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding (decodeUtf8Lenient, encodeUtf8)
 import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
 
+import Data.ByteString.Lazy qualified as BL
 import Data.Set qualified as Set
 import Data.Text qualified as T
 
@@ -86,6 +87,10 @@ data ResolverEnv = ResolverEnv
   -- ^ 'Manager' TLS reutilizado entre consultas (pooling de conexiones).
   , reBaseUrl :: String
   -- ^ Endpoint de la Messages API (string porque 'parseRequest' lo espera así).
+  , reDebug :: Bool
+  -- ^ Modo debug: si está activo (@WONDERBOY_RESOLVER_DEBUG@ no vacío) cada
+  -- consulta vuelca trazas detalladas a 'stderr' (par resuelto, prompt, cuerpo
+  -- crudo y arquetipo). Apagado por defecto.
   }
 
 {- | Mónada concreta del adapter: @ReaderT ResolverEnv IO@.
@@ -140,6 +145,10 @@ resolveLevelIO def = do
       pure (runNoResolver (resolveLevelBehaviours def))
     Just key -> do
       mModel <- lookupEnv "WONDERBOY_RESOLVER_MODEL"
+      -- Modo debug opcional: con `WONDERBOY_RESOLVER_DEBUG` seteada a cualquier
+      -- valor no vacío se vuelcan trazas detalladas a stderr. Apagado por defecto,
+      -- así la salida normal (y el CI) quedan limpios.
+      mDebug <- lookupEnv "WONDERBOY_RESOLVER_DEBUG"
       manager <- newTlsManager
       let env =
             ResolverEnv
@@ -147,8 +156,25 @@ resolveLevelIO def = do
               , reModel = maybe defaultModel T.pack mModel
               , reManager = manager
               , reBaseUrl = "https://api.anthropic.com/v1/messages"
+              , reDebug = maybe False (not . null) mDebug
               }
+      -- Primera traza: confirma que el resolver está activo y con qué modelo apunta.
+      debugLog
+        env
+        ("activo; modelo=" <> T.unpack (reModel env) <> " endpoint=" <> reBaseUrl env)
       runReaderT (runAnthropicResolver (resolveLevelBehaviours def)) env
+
+{- | Traza de depuración a 'stderr', condicionada al flag 'reDebug'.
+
+Con @WONDERBOY_RESOLVER_DEBUG@ activa escribe una línea con prefijo
+@[behaviour-resolver:debug]@; en operación normal es un no-op silencioso. __Nunca__
+incluye 'reApiKey', así que las trazas son seguras de pegar en un reporte. El
+prefijo las distingue de los warnings de fallback (@[behaviour-resolver]@).
+-}
+debugLog :: ResolverEnv -> String -> IO ()
+debugLog env msg
+  | reDebug env = hPutStrLn stderr ("[behaviour-resolver:debug] " <> msg)
+  | otherwise = pure ()
 
 -- ---------------------------------------------------------------------------
 -- Consulta individual a la API
@@ -163,6 +189,10 @@ propaga una excepción que pudiera abortar la carga del nivel.
 -}
 resolveOne :: ResolverEnv -> EnemyKind -> Text -> IO (Maybe BehaviourArchetype)
 resolveOne env kind hint = do
+  -- Trazas de entrada (solo con debug on): qué par se resuelve y con qué prompt.
+  -- Ver el prompt exacto ayuda a entender por qué el modelo respondió lo que respondió.
+  debugLog env ("consultando: kind=" <> show kind <> " hint=" <> show hint)
+  debugLog env ("prompt: " <> T.unpack (promptText kind hint))
   -- `parseRequest` falla en `IO` si la URL es inválida; al ser una constante del
   -- código no debería ocurrir, pero lo cubrimos con el mismo `try` que la llamada.
   result <- try @SomeException $ do
@@ -187,7 +217,14 @@ resolveOne env kind hint = do
     Left err -> warn ("falla de red: " <> show err)
     Right resp
       -- Solo 2xx trae un cuerpo que valga la pena parsear.
-      | inRange2xx (statusCode (responseStatus resp)) ->
+      | inRange2xx (statusCode (responseStatus resp)) -> do
+          debugLog
+            env
+            ( "status "
+                <> show (statusCode (responseStatus resp))
+                <> "; cuerpo crudo: "
+                <> previewBody (responseBody resp)
+            )
           interpretBody (responseBody resp)
       | otherwise ->
           warn ("status inesperado: " <> show (statusCode (responseStatus resp)))
@@ -208,6 +245,11 @@ resolveOne env kind hint = do
              ]
       ]
 
+  -- Preview legible (UTF-8 tolerante, truncada) del cuerpo crudo de la respuesta,
+  -- para las trazas de debug. Truncar evita volcar respuestas largas a la consola.
+  previewBody :: BL.ByteString -> String
+  previewBody = T.unpack . T.take 600 . decodeUtf8Lenient . BL.toStrict
+
   -- `try @SomeException (httpLbs ...)` ya garantiza no propagar; si algo falla,
   -- devolvemos `Nothing` con un aviso a stderr para que el operador lo vea.
   warn :: String -> IO (Maybe BehaviourArchetype)
@@ -215,17 +257,21 @@ resolveOne env kind hint = do
     hPutStrLn stderr ("[behaviour-resolver] " <> msg <> "; uso arquetipo por defecto.")
     pure Nothing
 
-  -- Parsea el cuerpo, extrae el primer bloque de texto y lo normaliza.
+  -- Parsea el cuerpo, extrae el primer bloque de texto y lo normaliza. Cada paso
+  -- deja una traza de debug para poder seguir en vivo la decisión del clasificador.
   interpretBody bs =
     case decode @AnthropicResponse bs of
       Nothing -> warn "JSON de respuesta inesperado"
       Just resp ->
         case firstWord resp of
           Nothing -> warn "respuesta sin texto"
-          Just w ->
+          Just w -> do
+            debugLog env ("palabra cruda: " <> show w)
             case parseBehaviourArchetype w of
               Left _ -> warn ("arquetipo no reconocido: " <> T.unpack w)
-              Right arch -> pure (Just arch)
+              Right arch -> do
+                debugLog env ("arquetipo resuelto: " <> show arch)
+                pure (Just arch)
 
 {- | Prompt para el clasificador: instruye al modelo a responder EXACTAMENTE una
 palabra (@patrol@, @chase@ o @guard@), sin puntuación ni explicación, e incluye
