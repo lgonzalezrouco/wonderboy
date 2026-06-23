@@ -14,7 +14,9 @@ import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Sprites (SpriteCatalog, loadSpriteCatalog)
 import Adapters.Gloss.Time (capDeltaTime)
 import Adapters.LevelFile (readLevelFile)
+import Adapters.LevelGenerator (generateCatalogIO)
 import Domain.Model.GamePhase (GamePhase (..), isSimulationFrozen)
+import Domain.Model.LevelDefinition (LevelDefinition)
 import Domain.Model.World (World)
 import Domain.ValueObjects.DeltaTime (isFrozen)
 import Graphics.Gloss (Display (InWindow), Picture)
@@ -26,6 +28,7 @@ import Graphics.Gloss.Interface.IO.Game (
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
 import Paths_wonderboy_hs (getDataFileName)
+import System.Environment (lookupEnv)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStrLn, stderr)
 import UseCases.GameMonad (
@@ -44,19 +47,25 @@ import UseCases.GameMonad (
 import UseCases.LoadLevel (decodeLevelDefinition, worldFromDefinition)
 import UseCases.UpdateGame (updateGame)
 
+import Data.Text qualified as T
+
 -- | Catálogo del demo (tres niveles). Añadir rutas aquí o pasar otra lista a 'runGameWith'.
 demoLevelPaths :: [FilePath]
-{- demoLevelPaths =
+demoLevelPaths =
   [ "levels/level1.json"
   , "levels/level2.json"
   , "levels/level3.json"
-  ] -}
-demoLevelPaths = ["levels/level3.json"]
+  ]
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState
   { appConfig :: GameConfig
-  , appLevelPaths :: [FilePath]
+  -- ^ Configuración del run (incluye el conteo de niveles del catálogo).
+  , appLevelDefs :: [LevelDefinition]
+  -- ^ Catálogo de niveles ya resuelto en memoria (generados por IA o leídos de
+  -- disco). Pre-cargarlos al arrancar evita 'IO' de generación entre niveles:
+  -- cada transición solo aplica el build puro ('worldFromDefinition') sobre la
+  -- definición ya validada en su índice.
   , appGameState :: GameState
   , appSprites :: SpriteCatalog
   , appRenderFrame :: Int
@@ -71,30 +80,93 @@ data AppState = AppState
 runGame :: IO ()
 runGame = runGameWith demoLevelPaths
 
--- | Arranca la ventana Gloss con un catálogo de niveles arbitrario (>= 1 ruta).
+{- | Arranca la ventana Gloss con un catálogo de niveles arbitrario (>= 1 ruta).
+
+Pre-carga TODO el catálogo de definiciones de nivel antes de abrir la ventana,
+porque la generación por IA es 'IO' y costosa: hacerla una vez al inicio (y no en
+cada transición) deja el resto del bucle puro sobre definiciones ya validadas en
+memoria.
+
+Las @paths@ siguen siendo el catálogo de archivos fijos: fijan el conteo de
+niveles del run y sirven de fallback granular para cualquier nivel que la IA no
+pueda generar.
+-}
 runGameWith :: [FilePath] -> IO ()
 runGameWith paths = do
   let cfg = configForLevelCatalog paths
-  world <- loadWorldFromCatalog paths 0
+  defs <- buildLevelCatalog paths
+  world <- loadWorldFromCatalog defs 0
   sprites <- loadSpriteCatalog
   playIO
     (InWindow "Wonder Boy" (windowWidth, windowHeight) (100, 100))
     backgroundColor
     60
-    (initialAppState cfg paths sprites world)
+    (initialAppState cfg defs sprites world)
     drawFrame
     handleEvent
     advanceFrame
 
--- | Lee y construye el mundo desde una ruta del catálogo (índice 0-based).
-loadWorldFromCatalog :: [FilePath] -> Int -> IO World
-loadWorldFromCatalog paths idx =
-  case paths !!? idx of
-    Nothing -> exitWithError ("invalid level index: " ++ show idx)
-    Just relPath -> loadWorld relPath
+{- | Arma el catálogo de definiciones de nivel del run, con o sin generación IA.
 
-loadWorld :: FilePath -> IO World
-loadWorld relPath = do
+Si @WONDERBOY_GENERATE_LEVELS@ está seteada (cualquier valor no vacío), pide el
+catálogo a la IA con el tema opcional de @WONDERBOY_WORLD_PROMPT@ y empareja el
+resultado con las @paths@ por índice: cada nivel generado ('Just') se usa tal
+cual y cada hueco ('Nothing') cae al archivo fijo correspondiente (fallback
+granular). Si la generación está apagada, lee las definiciones de los archivos.
+
+Tras armar el catálogo, corre el behaviour-resolver sobre cada definición
+('resolveLevelIO'): es un no-op para los niveles generados (que no traen
+@behaviourHint@) y resuelve las pistas autorales de los niveles leídos de disco.
+-}
+buildLevelCatalog :: [FilePath] -> IO [LevelDefinition]
+buildLevelCatalog paths = do
+  genOn <- lookupEnv "WONDERBOY_GENERATE_LEVELS"
+  theme <- lookupEnv "WONDERBOY_WORLD_PROMPT"
+  defs <-
+    if isEnabled genOn
+      then do
+        -- Generación activa: una consulta a la IA por nivel; el tema (si lo hay)
+        -- se propaga a los tres perfiles dentro de `generateCatalogIO`.
+        generated <- generateCatalogIO (T.pack <$> theme)
+        -- Empareja generados con archivos por índice: cada `Nothing` cae al
+        -- `level{N}.json` fijo, así un nivel que la IA no produjo no rompe el run.
+        traverse resolveSlot (zip [0 ..] (padTo (length paths) generated))
+      else
+        -- Generación apagada: comportamiento previo, todo desde archivos fijos.
+        traverse loadDefFromFile paths
+  -- El behaviour-resolver corre igual en ambos caminos: no-op para generados,
+  -- resuelve hints para los leídos de disco.
+  traverse resolveLevelIO defs
+ where
+  -- ¿La env var de activación está presente y no vacía?
+  isEnabled = maybe False (not . null)
+
+  -- Para el índice `i`: usa la definición generada si existe; si no, cae al
+  -- archivo fijo `paths !! i` (fallback granular).
+  resolveSlot :: (Int, Maybe LevelDefinition) -> IO LevelDefinition
+  resolveSlot (_, Just def) = pure def
+  resolveSlot (i, Nothing) =
+    case paths !!? i of
+      Just relPath -> loadDefFromFile relPath
+      Nothing -> exitWithError ("invalid level index for fallback: " ++ show i)
+
+{- | Rellena la lista de niveles generados hasta el largo del catálogo de
+archivos, completando con 'Nothing' (que dispara el fallback granular).
+
+La IA debería devolver tantos niveles como perfiles, pero protegemos contra una
+lista más corta para que el @zip@ con las @paths@ cubra todos los índices.
+-}
+padTo :: Int -> [Maybe a] -> [Maybe a]
+padTo n xs = take n (xs ++ repeat Nothing)
+
+{- | Lee y decodifica una definición de nivel desde un archivo del catálogo.
+
+Resuelve la ruta empaquetada por Cabal, lee el archivo y lo decodifica. A
+diferencia de la generación (que degrada a fallback), un archivo fijo ilegible o
+malformado es un error de configuración del juego: se sale con 'exitWithError'.
+-}
+loadDefFromFile :: FilePath -> IO LevelDefinition
+loadDefFromFile relPath = do
   path <- getDataFileName relPath
   readResult <- readLevelFile path
   case readResult of
@@ -102,11 +174,23 @@ loadWorld relPath = do
     Right txt ->
       case decodeLevelDefinition txt of
         Left (GameError err) -> exitWithError err
-        Right def -> do
-          resolved <- resolveLevelIO def
-          case worldFromDefinition resolved of
-            Left (GameError err) -> exitWithError err
-            Right world -> pure world
+        Right def -> pure def
+
+{- | Construye el mundo desde una definición del catálogo pre-cargado (índice
+0-based).
+
+Toma la 'LevelDefinition' ya resuelta en memoria y aplica el build puro
+('worldFromDefinition'). Un índice fuera de rango o un build fallido son errores
+de configuración: se sale con 'exitWithError'.
+-}
+loadWorldFromCatalog :: [LevelDefinition] -> Int -> IO World
+loadWorldFromCatalog defs idx =
+  case defs !!? idx of
+    Nothing -> exitWithError ("invalid level index: " ++ show idx)
+    Just def ->
+      case worldFromDefinition def of
+        Left (GameError err) -> exitWithError err
+        Right world -> pure world
 
 exitWithError :: String -> IO a
 exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
@@ -120,12 +204,12 @@ exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
   go 0 (x : _) = Just x
   go k (_ : xs') = go (k - 1) xs'
 
--- | Estado inicial a partir de un mundo cargado.
-initialAppState :: GameConfig -> [FilePath] -> SpriteCatalog -> World -> AppState
-initialAppState cfg paths sprites world =
+-- | Estado inicial a partir de un mundo cargado y el catálogo pre-cargado.
+initialAppState :: GameConfig -> [LevelDefinition] -> SpriteCatalog -> World -> AppState
+initialAppState cfg defs sprites world =
   AppState
     { appConfig = cfg
-    , appLevelPaths = paths
+    , appLevelDefs = defs
     , appGameState = initialGameState cfg world
     , appSprites = sprites
     , appRenderFrame = 0
@@ -182,9 +266,9 @@ handleConfirm state =
   case gsPhase (appGameState state) of
     Playing -> pure state
     LevelComplete -> do
-      let paths = appLevelPaths state
+      let defs = appLevelDefs state
           nextIdx = gsLevelIndex (appGameState state)
-      world <- loadWorldFromCatalog paths nextIdx
+      world <- loadWorldFromCatalog defs nextIdx
       pure $
         resetInputState
           state
@@ -195,7 +279,7 @@ handleConfirm state =
 
 restartFromLevelOne :: AppState -> IO AppState
 restartFromLevelOne state = do
-  world <- loadWorldFromCatalog (appLevelPaths state) 0
+  world <- loadWorldFromCatalog (appLevelDefs state) 0
   pure $
     resetInputState
       state{appGameState = restartRun (appConfig state) world}
