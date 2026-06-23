@@ -22,7 +22,7 @@ unit_clampsAndMapsArchetype :: Assertion
 unit_clampsAndMapsArchetype =
   fmap rbArchetype (resolvedFromReply reply) @?= Just ChaseArchetype
  where
-  reply = ResolverReply "chase" (Just 9.0) (Just 0.5) (Just 1.0)
+  reply = ResolverReply "chase" (Just 9.0) (Just 2.0) (Just 1.0)
 
 unit_clampsSpeedToMax :: Assertion
 unit_clampsSpeedToMax =

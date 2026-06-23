@@ -1,5 +1,6 @@
-{- | Tests de los value objects de tuning: 'Multiplier' clampea su factor a un rango
-seguro y 'identityTuning' es el "sin ajuste" (todo ×1.0).
+{- | Tests del value object 'Multiplier' (clampea su factor a un rango seguro) y de
+'identityTuning' (el "sin ajuste": speed y los dos amplificadores en ×1.0). El clamp de
+'Amplifier' se prueba en 'Domain.AmplifierTest'.
 -}
 module Domain.BehaviourTuningTest where
 
