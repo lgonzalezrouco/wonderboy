@@ -1,4 +1,252 @@
 \section{Detalles de Diseño}
 \label{sec:detalles-diseno}
 
-Esta es la sección de detalles de diseño.
+Este capítulo desarrolla los algoritmos que el capítulo~\ref{sec:solucion-propuesta}
+presentó a alto nivel: el orden exacto de un \emph{frame}, la física y las
+colisiones, el DSL de comportamiento, las reglas de combate, la carga de niveles y
+la estrategia de pruebas.
+
+\subsection{Pipeline de un frame}
+\label{subsec:pipeline-frame}
+
+Un \emph{frame} en juego recorre dos niveles. Primero,
+\texttt{advanceFrame} (sección~\ref{subsec:solucion-nucleo}): si el \emph{delta time}
+no está congelado, \texttt{runBehaviourStep} fija la cinemática de cada
+\emph{enemy} y \texttt{step} actualiza plataformas especiales, aplica física y
+resuelve colisiones. Segundo, \texttt{updateGame} encadena transformaciones puras
+sobre el \emph{world} ya movido:
+
+\begin{enumerate}
+  \item combate (contacto y melee del \emph{player})
+  \item proyectiles (lanzamiento del \emph{player} y disparos enemigos)
+  \item \emph{falling hazard}s
+  \item transiciones de fase del jefe
+  \item recolección de ítems y comprobación de victoria híbrida
+  \item \emph{out-of-bounds} y muerte o \emph{respawn}
+\end{enumerate}
+
+En fases \texttt{GameOver}, \texttt{LevelComplete} o \texttt{Victory}, o con
+\emph{delta time} congelado, la simulación no avanza. Si en el mismo \emph{frame}
+aplican victoria y muerte, prevalece la muerte (\texttt{resolveFramePhase}).
+\texttt{updateGame} lee \texttt{GameConfig}, calcula en funciones puras y escribe
+el resultado con \texttt{modify}. No reexpone la pila \texttt{GameM}
+(sección~\ref{subsec:solucion-monadas}). Las subsecciones siguientes detallan cada
+bloque.
+
+\subsection{Física cinemática}
+\label{subsec:fisica}
+
+La cinemática del \emph{player} y de los \emph{enemy} terrestres sigue la misma
+ley en unidades del juego (px, px/s, px/s\textsuperscript{2}). Tras registrar si
+el \emph{player} estaba en el suelo (\texttt{wasOnGround}), el motor aplica en
+orden: input horizontal ($v_x$ según signo del movimiento y velocidad máxima),
+gravedad ($v_y' = v_y - g \cdot \Delta t$), salto (si hubo press de salto y
+\texttt{wasOnGround}, $v_y$ pasa al impulso autorado) e integración de posición
+($\mathit{pos}' = \mathit{pos} + \mathit{vel} \cdot \Delta t$). El salto solo
+cuenta si la tecla se pulsa en ese \emph{frame}, no si permanece apretada.
+
+La física anterior corre una vez por \emph{frame}. Solo la integración y la
+colisión del \emph{player} se subdividen cuando $|v_y| \cdot \Delta t$ supera la
+mitad de la altura del sólido más bajo. El número de sub-pasos se acota entre $1$
+y $16$. Cada sub-paso usa una fracción de $\Delta t$. Así se reduce el túnel AABB
+en plataformas finas sin repetir input ni gravedad. Los \emph{enemy} voladores
+integran posición sin gravedad ni colisión con plataformas. Los terrestres
+reciben gravedad y la misma resolución AABB que el jugador, sin sub-pasos extra.
+
+\subsection{Colisiones AABB}
+\label{subsec:colisiones}
+
+Cada \emph{entity} usa una \emph{collision box} alineada a los ejes. Las
+plataformas se anclan en la esquina inferior izquierda y el \emph{foot position}
+del jugador y de los enemigos cae en el centro del borde inferior de su caja.
+
+Ante un solapamiento jugador--sólido, el motor elige el eje de \emph{menor
+penetración}: empujar en $X$ para choques laterales y en $Y$ para suelo o techo.
+Resolver siempre el eje vertical primero confundiría una pared con un aterrizaje
+(o un techo con un apoyo). Cuando las penetraciones son casi iguales, un sesgo
+favorece $Y$ para tratar el contacto como apoyo.
+
+En el eje vertical interviene \texttt{vyBefore}, la componente vertical \emph{antes}
+de integrar posición. Solo se aterriza o se corrige techo si \texttt{vyBefore}
+$\leq 0$. Si el jugador subía ($\texttt{vyBefore} > 0$), un choque superior se
+trata como golpe de techo, no como piso. Las plataformas se procesan ordenadas por
+borde superior descendente. Se repite hasta ocho pasadas o hasta que no quede
+solapamiento. Los enemigos terrestres comparten la regla. Los voladores la
+ignoran.
+
+\subsection{Plataformas especiales}
+\label{subsec:plataformas-especiales}
+
+\textbf{Plataformas móviles.} Cada una ping-pongea entre dos extremos con ancla
+bottom-left y velocidad constante. Se avanzan antes de la física del
+\emph{player}. Si el jugador está en el suelo y apoyado sobre el tramo superior
+de una móvil, su posición se desplaza con la plataforma ese \emph{frame}
+(\emph{displacement carry}). Al saltar no hereda su velocidad.
+
+\textbf{Plataformas desmoronables.} Permanecen sólidas para el jugador hasta que
+descansa encima. Entonces arranca un contador fijo de frames (15 en la
+implementación actual) y siguen sólidas durante la cuenta. Al terminar, dejan de
+colisionar con el jugador, caen verticalmente y se eliminan bajo la línea de
+muerte. Los enemigos las tratan como sólidas hasta que desaparecen.
+
+\textbf{Arena de jefe.} Campo opcional en la \emph{level definition}. Al cruzar
+el umbral horizontal el \emph{run} marca el engagement. Mientras haya jefe vivo,
+paredes virtuales laterales confinan al \emph{player} dentro de la región. El
+detalle de combate del jefe se resume en la
+sección~\ref{subsec:combate}.
+
+\subsection{DSL de comportamiento}
+\label{subsec:dsl}
+
+Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un \emph{free monad}
+sobre el functor \texttt{EntityAction}. El intérprete \texttt{runBehaviourStep}
+consume \emph{una} instrucción por \emph{frame} y puede leer el \emph{world} para
+sensado. Luego \texttt{step} integra física. Los bucles infinitos (patrullas,
+FSM reactivas) se escriben con \texttt{fix} y recursión en el AST, no con
+mutación.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Primitivas del DSL (un paso por \emph{frame} salvo \texttt{WaitFrames}).}
+  \label{tab:dsl-primitivas}
+  \begin{tabular}{@{}p{4.4cm}p{8.6cm}@{}}
+    \textbf{Instrucción} & \textbf{Efecto en un behaviour step} \\
+    \hline
+    \texttt{SetVelocity} & Fija \texttt{enemyVel}. \\
+    \texttt{WaitFrames} & Mantiene la velocidad y decrementa el contador. \\
+    \texttt{IfPlayerWithinRange} & Elige rama según distancia horizontal al \emph{player}. \\
+    \texttt{IfNearSpawn} & Elige rama según proximidad al spawn anchor. \\
+    \texttt{MoveTowardPlayer} & Velocidad horizontal hacia el \emph{player}. \\
+    \texttt{MoveTowardSpawn} & Velocidad horizontal hacia el spawn anchor. \\
+    \texttt{MoveTowardPlayer2D} & Velocidad en el plano hacia el \emph{player} (voladores). \\
+    \texttt{MoveTowardSpawn2D} & Velocidad en el plano hacia el spawn anchor (voladores). \\
+    \texttt{FacePlayer} & Orienta hacia el \emph{player} y fija velocidad cero. \\
+    \texttt{Shoot} & Dispara si el cooldown lo permite. \\
+  \end{tabular}
+\end{table}
+
+Los programas compuestos viven en \texttt{Domain.Logic.EntityBehaviours}:
+
+\begin{itemize}
+  \item \textbf{Patrulla horizontal} (\texttt{patrolHorizontal}): alterna
+    velocidad $\pm speed$ con esperas de $n$ frames por tramo. Típica del caracol.
+  \item \textbf{FSM reactiva terrestre} (\texttt{reactiveFsm}): si el
+    \emph{player} entra en rango, persigue. Si está cerca del spawn, mira al
+    \emph{player}. Si no, vuelve al spawn. Los presets \texttt{chase} y
+    \texttt{guard} comparten hoy este programa. La diferencia entre clases está en
+    los parámetros de movimiento.
+  \item \textbf{FSM aérea} (\texttt{flyingReactiveFsm}): igual en espíritu, con
+    persecución omnidireccional y patrulla horizontal en el spawn para murciélagos.
+  \item \textbf{Arquero} (\texttt{archerProgram}): en rango, mira y dispara. Fuera
+    de rango, mira y espera.
+\end{itemize}
+
+Al construir el \emph{world}, cada \emph{enemy} recibe
+\texttt{defaultProgramForKind} o \texttt{programForArchetype} si el JSON trae
+\texttt{behaviourPreset}. Un preset incompatible con la clase de movimiento
+degrada a \texttt{idleProgram}. Los jefes ignoran presets y cargan fases desde el
+catálogo interno (sección~\ref{subsec:combate}).
+
+\subsection{Combate y proyectiles}
+\label{subsec:combate}
+
+Tras la física, \texttt{resolveCombat} aplica daño por contacto: cualquier
+solapamiento \emph{collision box} jugador--enemigo daña, sin pisotón. Respeta
+frames de invencibilidad del \emph{player}. El melee extiende la caja del
+\emph{player} según su orientación durante la ventana de ataque. El alcance y el
+daño vienen de \texttt{CombatParams}.
+
+\texttt{resolveProjectiles} integra proyectiles del \emph{player} (lanzamiento con
+cooldown y arco balístico) y \emph{enemy shot}s generados por \texttt{Shoot} en el
+DSL. Colisionan con sólidos y con cuerpos. Al impactar aplican daño y desaparecen.
+Los \emph{falling hazard}s caen a velocidad autorada, dañan por solapamiento y,
+con \texttt{loopDelay} opcional en el JSON, reactivan en el spawn tras una espera.
+
+La victoria híbrida exige solapamiento con la \emph{exit zone}, puntaje mínimo de
+la \emph{level definition} y ausencia de jefe vivo. \texttt{resolveHazardsAndDeath}
+comprueba caída bajo la línea de muerte (derivada de la plataforma más baja) y
+reduce vidas o marca \texttt{GameOver}.
+
+Cada nivel admite como máximo un jefe. A diferencia del resto de enemigos, no
+recibe \texttt{behaviourPreset} en el JSON: un catálogo interno fija umbrales de
+salud y un programa por fase. Tras el combate del \emph{frame},
+\texttt{resolveBossPhases} compara la salud con esos umbrales y, si corresponde,
+sustituye el programa activo del jefe.
+
+\subsection{Niveles}
+\label{subsec:niveles}
+
+La \emph{level definition} es JSON estático: \texttt{minScore}, \texttt{spawn},
+listas de plataformas (estáticas, móviles, desmoronables), \emph{enemy}s con
+\texttt{kind} y \texttt{behaviourPreset} opcional, \emph{pickup}s,
+\emph{falling hazard}s, \texttt{exit} y \texttt{bossArena} opcional. Los
+rectángulos usan \texttt{pos} (bottom-left), \texttt{width} y \texttt{height}.
+
+El caso de uso \texttt{loadLevelFromText} decodifica con Aeson y llama a
+\texttt{buildWorld}, que valida y materializa un \texttt{World} o devuelve
+\texttt{LevelBuildError}. Errores de decode o de construcción se elevan a
+\texttt{GameError} en el borde con \texttt{IO}. El núcleo solo ve
+\texttt{Text}.
+
+Validaciones relevantes: \texttt{minScore} $\geq 0$, identificadores únicos por
+colección, como máximo un \emph{enemy} de tipo jefe. Si hay \texttt{bossArena},
+debe existir jefe en el nivel. Los jefes no admiten \texttt{behaviourPreset} ni
+\texttt{behaviourHint}.
+
+Fragmento mínimo de autoría:
+
+\begin{lstlisting}[language={}]
+{
+  "minScore": 100,
+  "spawn": {"x": 0, "y": 80},
+  "platforms": [
+    {"pos": {"x": -50, "y": 0}, "width": 200, "height": 8}
+  ],
+  "movingPlatforms": [],
+  "enemies": [
+    {"id": 1, "kind": "snail", "pos": {"x": 40, "y": 8}}
+  ],
+  "pickups": [],
+  "exit": {"pos": {"x": 120, "y": 0}, "width": 32, "height": 64}
+}
+\end{lstlisting}
+
+\subsection{Pruebas}
+\label{subsec:pruebas}
+
+La suite usa \texttt{tasty} y \texttt{tasty-hunit}. Los módulos \texttt{*Test}
+registran casos con descubrimiento automático en \texttt{test/Main.hs}. El
+dominio se prueba con \emph{world}s fijos en \texttt{Domain.Fixtures} y
+comparación \texttt{(@?=)}. La orquestación usa \texttt{runGameM} sin \texttt{IO}.
+\texttt{updateGame} es polimórfica en \texttt{MonadReader} y
+\texttt{MonadState}, lo que permite instancias mínimas en
+\texttt{UpdateGameTest}.
+
+No hay regresión visual ni cobertura exhaustiva: son \emph{smoke checks} de
+lógica delicada. Ejemplos representativos:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Pruebas ilustrativas del motor.}
+  \label{tab:pruebas}
+  \begin{tabular}{@{}p{3.4cm}p{9.6cm}@{}}
+    \textbf{Módulo} & \textbf{Qué verifica} \\
+    \hline
+    \texttt{StepTest} &
+    \texttt{dt = 0} es identidad, aterrizaje, techo, pared y sub-pasos. \\
+    \texttt{AabbTest} &
+    Solapamiento y utilidades de caja. \\
+    \texttt{BehaviourTest}, \texttt{EnemyFsmTest} &
+    Un paso del intérprete y ramas de la FSM reactiva. \\
+    \texttt{CombatTest}, \texttt{ProjectileTest} &
+    Contacto, melee y disparos. \\
+    \texttt{LevelLoadTest}, \texttt{LoadLevelTest} &
+    JSON válido o rechazado y \texttt{buildWorld}. \\
+    \texttt{UpdateGameTest} &
+    Simulación congelada en \texttt{GameOver}, pickups y \texttt{runFrames}. \\
+  \end{tabular}
+\end{table}
+
+El test \texttt{unit\_stepZeroIsIdentityAtSpawn} fija el contrato de frame
+congelado: con \emph{delta time} cero, \texttt{step} devuelve el \emph{world}
+entrante sin importar el resto de la cadena.
