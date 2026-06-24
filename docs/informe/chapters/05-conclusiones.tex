@@ -1,4 +1,79 @@
 \section{Conclusiones}
 \label{sec:conclusiones}
 
-Esta es la sección de conclusiones.
+\subsection{Logros}
+\label{subsec:conclusiones-logros}
+
+El problema central del capítulo~\ref{sec:contexto-problema} era reconciliar un
+\emph{world} que evoluciona como valor puro con un \emph{run} que depende del
+tiempo real, la entrada del jugador y datos cargados desde fuera. La solución que
+implementamos sostuvo esa frontera de punta a punta: \texttt{advanceFrame} y el
+resto de la cadena de simulación viven en \texttt{Domain/} sin \texttt{IO}. La
+orquestación del \emph{frame} y del \emph{run} queda en \texttt{UseCases/} con
+\texttt{StateT}, \texttt{ReaderT} y \texttt{ExceptT}. Gloss, el teclado y el
+disco se limitan a \texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no
+fue solo organización de carpetas: permitió razonar sobre el paso de simulación
+como función sustituible y delegar los efectos del entorno a un borde estable.
+
+Como segundo eje, el DSL de comportamiento sobre \emph{free monad} mostró en la
+práctica la distinción entre describir acciones de una \emph{entity} e
+interpretarlas en el dominio. Patrullas, persecución y disparo a distancia se
+expresan como programas en el AST. \texttt{runBehaviourStep} consume una
+instrucción por \emph{frame} antes de integrar física y colisiones. Variar la IA
+de un arquetipo equivale a cambiar el programa o el intérprete, no a entrelazar
+condicionales de decisión con la cinemática del \emph{player}.
+
+El resto de las piezas del motor (carga de \emph{level definition}s desde JSON,
+pila monádica para vidas y fases de partida, combate y reglas de victoria) se
+integraron en esa arquitectura sin romper la pureza del núcleo. El juego
+jugable, con mecánicas del dominio operativas y una versión publicada en
+itch.io, funciona como validación empírica: un error en física, colisiones o
+comportamiento de un \emph{enemy} se ve al instante en pantalla, lo que acortó
+el ciclo entre modelo y comportamiento observado.
+
+Las pruebas automatizadas se limitaron a \emph{smoke checks} sobre lógica pura y
+orquestación sin \texttt{IO}. No hay regresión visual ni cobertura exhaustiva. El
+alcance del trabajo, por su parte, se acotó a un motor de plataformas 2D con un
+\emph{run} local, sin multijugador, persistencia de partidas ni editor de niveles.
+
+\subsection{Dificultades}
+\label{subsec:conclusiones-dificultades}
+
+La parte que más iteración demandó fue la física y las colisiones AABB. Mantener
+un paso puro sobre el \emph{world} no eliminó los casos borde del dominio:
+túnel en plataformas finas, elección del eje de menor penetración, distinguir
+aterrizaje de golpe de techo con \texttt{vyBefore}, y el arrastre del
+\emph{player} sobre plataformas móviles sin heredar velocidad al saltar.
+Cada regla parecía local, pero interactuaba con las demás en el mismo
+\emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y pruebas con
+\emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
+modelo.
+
+En un orden distinto, ordenar el pipeline del \emph{frame} (behaviour step,
+física, combate, proyectiles, victoria y muerte) también requirió cuidado para
+no duplicar estado ni romper el determinismo ante un \emph{delta time} variable.
+Una vez fijado el esquema en \texttt{updateGame}, las piezas puras encajaron sin
+reabrir el diseño de capas.
+
+\subsection{Trabajo futuro}
+\label{subsec:conclusiones-futuro}
+
+Hoy el DSL y los presets cubren un conjunto acotado de arquetipos. Los jefes
+dependen de un catálogo interno de fases y no se autoran desde la
+\emph{level definition}. Una extensión natural del motor es ampliar ese lenguaje:
+más primitivas, programas o fases declarativas en JSON, y el mismo intérprete
+puro en \texttt{Domain/} como único lugar donde esas descripciones afectan al
+\emph{world}. Eso alinearía la autoría de contenido con la separación entre descripción e
+interpretación que ya guió el diseño de la IA enemiga.
+
+Este fue el primer videojuego que desarrollamos en toda la carrera, y el proceso
+resultó muy gratificante. Pasar de rectángulos de colores a sprites y ver cómo el
+\emph{world} tomaba forma en cada \emph{frame} mantuvo la motivación a lo largo
+del proyecto. Al principio costó escribir en Haskell: para quien no está
+habituado, la sintaxis y la pereza no son lo más transparentes. Con el tiempo
+aprendimos a ``hablar en francés'' y las ventajas del lenguaje se hicieron
+evidentes en el propio diseño del motor. Antes de esta materia conceptos como
+funciones puras, efectos secundarios, transparencia referencial o funciones de
+orden superior casi no figuraban en nuestro vocabulario de programación. Llevarnos
+esa forma de leer programas como descripciones de valores es, en la práctica, lo
+que más nos queda del curso.
