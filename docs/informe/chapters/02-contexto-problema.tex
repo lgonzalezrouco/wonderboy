@@ -4,7 +4,7 @@
 \subsection{Contexto del dominio}
 \label{subsec:contexto-dominio}
 
-El juego que modelamos es una simulación de plataformas en vista lateral sobre un
+El juego que modelamos es una simulación de plataformas en 2D sobre un
 \emph{game plane}: posiciones y tamaños se miden en \emph{logical pixel}, con el eje
 horizontal hacia la derecha y el vertical hacia arriba. El tiempo de simulación no es
 continuo en el modelo: avanza en \emph{frame}s discretos. Cada \emph{frame} recibe un
@@ -19,8 +19,8 @@ razona sobre pasos finitos. Un \emph{frame} agrupa todas las actualizaciones de 
 entrada del \emph{player}, movimiento de \emph{entity}, detección de colisiones y
 resolución de interacciones. El \emph{delta time} escala desplazamientos y velocidades
 dentro de ese paso. Así el dominio separa \emph{qué} cambia en cada tick lógico de
-\emph{cuándo} ocurre en wall-clock; la correspondencia entre ambos es responsabilidad de la
-capa que integra el bucle externo, no del modelo de simulación en sí.
+\emph{cuándo} ocurre en el reloj del sistema. La correspondencia entre ambos es
+responsabilidad de la capa que integra el bucle externo, no del modelo de simulación en sí.
 
 \subsubsection{Estado de simulación y contenido estático}
 \label{subsubsec:dominio-estado-estatico}
@@ -35,7 +35,7 @@ cada \emph{enemy} vivo, las plataformas con su posición actual (incluidas las m
 
 El \emph{run} abarca varios niveles en una misma partida: vidas, puntaje acumulado y otras
 decisiones que persisten al pasar de etapa. Al entrar en un nivel el \emph{world} se
-reinicia a partir de la \emph{level definition}; al perder una vida, el \emph{respawn}
+reinicia a partir de la \emph{level definition}. Al perder una vida, el \emph{respawn}
 reubica al \emph{player} en un \emph{spawn point} sin recargar todo el layout.
 
 \subsubsection{Entidades e interacciones}
@@ -43,11 +43,11 @@ reubica al \emph{player} en un \emph{spawn point} sin recargar todo el layout.
 
 Una \emph{entity} es todo aquello con identidad que se mueve e interactúa en el tiempo: el
 \emph{player} (único controlable por nivel) y los \emph{enemy} hostiles. Las plataformas y
-los \emph{hazard} son geometría del nivel; los ítems son objetos recolectables. Las
+los \emph{hazard} son geometría del nivel, los ítems son objetos recolectables. Las
 interacciones físicas se expresan mediante \emph{collision box}es alineadas a los ejes
 (AABB): apoyo sobre plataformas, daño por contacto, recolección de ítems y ataques. La
 victoria exige alcanzar la \emph{exit zone} con el puntaje mínimo definido en la
-\emph{level definition}; el combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
+\emph{level definition}. El combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
 \emph{player} como de ciertos \emph{enemy}.
 
 \subsection{Marco teórico de Programación Funcional}
@@ -55,8 +55,7 @@ victoria exige alcanzar la \emph{exit zone} con el puntaje mínimo definido en l
 
 La materia propone leer los programas como descripciones de valores y mantener un núcleo
 donde el significado no dependa de efectos ocultos. Las secciones siguientes fijan el
-vocabulario con el que abordamos el dominio del juego; la arquitectura concreta del motor se
-desarrolla en el capítulo siguiente.
+vocabulario con el que abordamos el dominio del juego.
 
 \subsubsection{Transparencia referencial y funciones puras}
 \label{subsubsec:teoria-pureza}
@@ -73,15 +72,6 @@ situ, cada \emph{frame} produce un valor nuevo. El costo en copias se mitiga en 
 por estructuras inmutables y por acotar la pureza al dominio de la simulación, delegando
 los efectos reales a la frontera del sistema.
 
-\subsubsection{Vista denotacional}
-\label{subsubsec:teoria-denotacional}
-
-Bajo una lectura denotacional, un programa nombra un valor matemático (o una transformación
-entre valores), no una secuencia de mutaciones en memoria. El símbolo de definición expresa
-equivalencia de significado, no asignación destructiva. Aplicado al juego, el \emph{world}
-en un instante es el valor denotado; el motor en tiempo real es un intérprete que
-materializa sucesivos valores a medida que avanza el reloj y llega la entrada del jugador.
-
 \subsubsection{Tipos algebraicos y composición}
 \label{subsubsec:teoria-adts}
 
@@ -96,16 +86,6 @@ reutilizables (recorridos, acumulaciones, estrategias de actualización) sin dup
 estructura. Hughes~\cite{hughes1990whyfp} las considera una de las herramientas centrales
 para modularizar programas funcionales.
 
-\subsubsection{Recursión}
-\label{subsubsec:teoria-recursion}
-
-Muchas definiciones naturales del dominio son recursivas: un comportamiento de \emph{enemy}
-puede repetir una secuencia hasta que cambie una condición; la evaluación de un árbol de
-decisiones recorre subárboles hasta llegar a una hoja. En Haskell la recursión reemplaza con
-frecuencia los bucles imperativos; la corrección de esas definiciones se razona por
-inducción sobre la estructura de los datos, no sobre un contador mutable
-\cite{hutton2016programming}.
-
 \subsubsection{Evaluación perezosa}
 \label{subsubsec:teoria-lazy}
 
@@ -113,7 +93,7 @@ Haskell evalúa expresiones de forma perezosa: un valor se calcula solo cuando s
 es necesario. Eso permite definir estructuras potencialmente infinitas o flujos derivados
 del estado, y combinar transformaciones sin forzar intermedio. Hughes~\cite{hughes1990whyfp}
 muestra cómo la pereza aporta modularidad al separar generación y consumo de datos. En un
-motor de juego el camino crítico sigue siendo finito cada \emph{frame}; la pereza aporta
+motor de juego el camino crítico sigue siendo finito cada \emph{frame}. La pereza aporta
 sobre todo flexibilidad al componer lógica auxiliar y al mantener separadas descripciones de
 datos de su evaluación efectiva.
 
@@ -137,14 +117,14 @@ qué efecto puede ocurrir. Transformadores como \texttt{StateT}, \texttt{ReaderT
 
 Un \emph{free monad} separa la \emph{descripción} de una secuencia de acciones de su
 \emph{interpretación}. El AST del DSL de comportamientos de \emph{entity} expresa
-primitivas (moverse, esperar, atacar); un intérprete puro en el dominio las ejecuta sobre
+primitivas (moverse, esperar, atacar). Un intérprete puro en el dominio las ejecuta sobre
 el \emph{world}. Variar la IA equivale a cambiar el programa fuente del DSL o el intérprete,
 no a entrelazar condicionales de comportamiento con la física del paso.
 
 \subsection{El problema}
 \label{subsec:el-problema}
 
-Un juego de plataformas en tiempo real tensiona el marco anterior en varios puntos
+Un juego de plataformas en tiempo real pone a prueba el marco anterior en varios aspectos
 concretos. No se trata de ``usar Haskell'', sino de preservar un modelo denotacional
 legible mientras se integra con un entorno imperativo (entrada, reloj, archivos, dibujado).
 
@@ -155,15 +135,16 @@ Cada \emph{frame} debe considerar al \emph{player}, a todos los \emph{enemy} act
 plataformas móviles y a los ítems restantes en un mismo \emph{world}. Ese agregado es
 estado global en el sentido del dominio: ninguna actualización parcial puede ignorar el
 resto sin romper colisiones o reglas de combate. La inmutabilidad sugiere reemplazar el
-\emph{world} entero; la orquestación del \emph{run} (vidas, puntaje entre niveles) exige
+\emph{world} entero. La orquestación del \emph{run} (vidas, puntaje entre niveles) exige
 además un efecto de estado fuera del paso local. El desafío es mantener la función de paso
-pura sobre el \emph{world} y confinar la mutación aparente del estado de partida a una capa
-con tipo que la haga explícita.
+pura sobre el \emph{world}, de modo que cualquier actualización del estado global no se haga 
+de forma oculta, sino que esté explícitamente gestionada y tipada en una capa aparte que se 
+encargue de coordinar esas transformaciones visibles.
 
 \subsubsection{Tiempo discreto y reloj continuo}
 \label{subsubsec:problema-tiempo}
 
-El hardware entrega \emph{delta time} variable; la simulación debe ser determinista dado
+El hardware entrega \emph{delta time} variable. La simulación debe ser determinista dado
 ese valor y la entrada del \emph{frame}. La abstracción natural es una función de paso que,
 a partir del \emph{world} actual, del tiempo asignado y de la entrada del jugador, devuelve
 el \emph{world} siguiente. El problema es fijar esa interfaz sin mezclar en ella lectura del
@@ -173,13 +154,13 @@ paso.
 \subsubsection{Entrada y medio externo}
 \label{subsubsec:problema-medio}
 
-La consigna de \emph{interacción con el medio} del curso se interpreta aquí como efectos
-ajenos al núcleo de simulación: pulsaciones del jugador, carga de JSON con la \emph{level
-definition}, reloj y renderizado. No son entidades del \emph{world}; son fuentes de datos y
-sumideros de salida en la frontera. Si esos efectos se intercalan dentro de la física o de las
-reglas de combate, desaparece la transparencia referencial del dominio y las pruebas sobre
-el paso de simulación requieren mockear hardware. El problema es delimitar una frontera
-estable entre transformación pura y \texttt{IO}.
+El motor depende de efectos ajenos al núcleo de simulación: pulsaciones del jugador,
+carga de JSON con la \emph{level definition}, reloj y renderizado. No son entidades del
+\emph{world}, son fuentes de datos y destinos de salida en la frontera. Si esos efectos
+se intercalan dentro de la física o de las reglas de combate, desaparece la transparencia
+referencial del dominio y las pruebas sobre el paso de simulación requieren mockear
+hardware. El problema es delimitar una frontera estable entre transformación pura y
+\texttt{IO}.
 
 \subsubsection{Comportamiento e interpretación}
 \label{subsubsec:problema-comportamiento}
