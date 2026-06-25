@@ -7,13 +7,20 @@
 El problema central del capítulo~\ref{sec:contexto-problema} era reconciliar un
 \emph{world} que evoluciona como valor puro con un \emph{run} que depende del
 tiempo real, la entrada del jugador y datos cargados desde fuera. La solución que
-implementamos sostuvo esa frontera de punta a punta: \texttt{advanceFrame} y el
-resto de la cadena de simulación viven en \texttt{Domain/} sin \texttt{IO}. La
-orquestación del \emph{frame} y del \emph{run} queda en \texttt{UseCases/} con
-\texttt{StateT}, \texttt{ReaderT} y \texttt{ExceptT}. Gloss, el teclado y el
-disco se limitan a \texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no
-fue solo organización de carpetas: permitió razonar sobre el paso de simulación
-como función sustituible y delegar los efectos del entorno a un borde estable.
+implementamos sostuvo esa frontera de punta a punta:
+\texttt{advanceSimulationFrame} concentra en \texttt{Domain/} la denotación de
+un \emph{frame} completo sin \texttt{IO}. \texttt{updateGame} solo aplica
+política de fases y eleva ese resultado al \texttt{GameState}. La orquestación
+del \emph{run} queda en \texttt{UseCases/} con \texttt{StateT}, \texttt{ReaderT}
+y \texttt{ExceptT}. Gloss, el teclado, el disco y la API Anthropic se limitan a
+\texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no fue solo
+organización de carpetas: permitió razonar sobre el paso de simulación como
+función sustituible y delegar los efectos del entorno a un borde estable.
+
+En paralelo, los conceptos del dominio del capítulo~\ref{subsubsec:dominio-modelado}
+quedaron materializados en \texttt{Domain/Model} y \texttt{Domain/ValueObjects}:
+el mismo vocabulario del glosario aparece en tipos y \emph{pattern matching}, y la lógica
+pura opera sobre esos nombres.
 
 Como segundo eje, el DSL de comportamiento sobre \emph{free monad} mostró en la
 práctica la distinción entre describir acciones de una \emph{entity} e
@@ -23,7 +30,16 @@ instrucción por \emph{frame} antes de integrar física y colisiones. Variar la 
 de un arquetipo equivale a cambiar el programa o el intérprete, no a entrelazar
 condicionales de decisión con la cinemática del \emph{player}.
 
-El resto de las piezas del motor (carga de \emph{level definition}s desde JSON,
+Como tercer eje, la autoría asistida de contenido respeta la misma frontera: los
+puertos \texttt{LevelGeneratorPort} y \texttt{BehaviourResolverPort} traducen
+peticiones a la API de Anthropic en \texttt{Adapters/}, mientras
+\texttt{BootstrapRun} orquesta el catálogo del \emph{run} sin \texttt{IO}. Un
+\texttt{behaviourHint} en lenguaje natural se materializa en arquetipo y \emph{tuning}
+antes de \texttt{buildWorld}. Una definición generada reemplaza al JSON fijo solo
+si la llamada tiene éxito. El núcleo de simulación no distingue si el \emph{preset}
+vino del autor o del adaptador.
+
+El resto de las piezas del motor (carga de \emph{level definition}s,
 pila monádica para vidas y fases de partida, combate y reglas de victoria) se
 integraron en esa arquitectura sin romper la pureza del núcleo. El juego
 jugable, con mecánicas del dominio operativas y una versión publicada en
@@ -39,7 +55,7 @@ alcance del trabajo, por su parte, se acotó a un motor de plataformas 2D con un
 \subsection{Dificultades}
 \label{subsec:conclusiones-dificultades}
 
-La parte que más iteración demandó fue la física y las colisiones AABB. Mantener
+La parte que más iteración demandó fue la física y las colisiones \emph{AABB}. Mantener
 un paso puro sobre el \emph{world} no eliminó los casos borde del dominio:
 túnel en plataformas finas, elección del eje de menor penetración, distinguir
 aterrizaje de golpe de techo con \texttt{vyBefore}, y el arrastre del
@@ -49,22 +65,28 @@ Cada regla parecía local, pero interactuaba con las demás en el mismo
 \emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
 modelo.
 
-En un orden distinto, ordenar el pipeline del \emph{frame} (behaviour step,
-física, combate, proyectiles, victoria y muerte) también requirió cuidado para
-no duplicar estado ni romper el determinismo ante un \emph{delta time} variable.
-Una vez fijado el esquema en \texttt{updateGame}, las piezas puras encajaron sin
+En un orden distinto, fijar el orden del \emph{pipeline} dentro de
+\texttt{advanceSimulationFrame} (\emph{behaviour step}, física, combate, proyectiles,
+victoria y muerte) requirió cuidado para no duplicar estado ni romper el
+determinismo ante un \emph{delta time} variable. Una vez cerrado ese contrato en
+el dominio, \texttt{updateGame} y las pruebas de orquestación encajaron sin
 reabrir el diseño de capas.
 
 \subsection{Trabajo futuro}
 \label{subsec:conclusiones-futuro}
 
-Hoy el DSL y los presets cubren un conjunto acotado de arquetipos. Los jefes
-dependen de un catálogo interno de fases y no se autoran desde la
-\emph{level definition}. Una extensión natural del motor es ampliar ese lenguaje:
-más primitivas, programas o fases declarativas en JSON, y el mismo intérprete
-puro en \texttt{Domain/} como único lugar donde esas descripciones afectan al
-\emph{world}. Eso alinearía la autoría de contenido con la separación entre descripción e
-interpretación que ya guió el diseño de la IA enemiga.
+El \emph{DSL} y los arquetipos cubren un conjunto acotado de patrones. Convendría
+ampliar primitivas y programas compuestos sin tocar la cadena de física. Los
+jefes siguen dependiendo de un catálogo interno de fases: autorarlos desde la
+\emph{level definition} o desde \emph{hints} dedicados sería el siguiente paso de
+contenido. La generación procedural ya produce \emph{layout}s completos, pero aún
+carece de validación estructural fuerte más allá de \texttt{buildWorld}. Un
+esquema más estricto o un paso de corrección automática reduciría \emph{layout}s
+injugables. Un editor de niveles y persistencia de partidas quedan fuera del
+alcance actual pero encajarían en la misma separación dominio--adaptadores.
+
+\subsection{Reflexión personal}
+\label{subsec:conclusiones-reflexion}
 
 Este fue el primer videojuego que desarrollamos en toda la carrera, y el proceso
 resultó muy gratificante. Pasar de rectángulos de colores a sprites y ver cómo el

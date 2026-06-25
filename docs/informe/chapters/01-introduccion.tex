@@ -9,11 +9,11 @@ discreta por \emph{frame}: en cada paso se recibe un \emph{delta time} y una ent
 y se produce un nuevo \emph{world}, instantánea del estado en el \emph{game plane} con el
 \emph{player}, los \emph{enemy}, las plataformas y los ítems aún presentes en el nivel.
 El contenido estático de cada etapa proviene de una \emph{level definition} cargada antes de
-jugar; durante la partida el motor actualiza ese \emph{world} frame a frame.
+jugar. Durante la partida el motor actualiza ese \emph{world} frame a frame.
 
 La interacción con el \emph{medio} ocurre en la frontera del
 sistema: entrada del usuario, lectura de datos externos y renderizado en tiempo real. Esas
-responsabilidades quedan fuera del núcleo de simulación; la lógica de juego se expresa como
+responsabilidades quedan fuera del núcleo de simulación. La lógica de juego se expresa como
 transformaciones puras sobre el \emph{world}, mientras que la orquestación de estado global,
 configuración y efectos se delega a capas superiores del motor.
 
@@ -26,9 +26,9 @@ manejo de efectos con mónadas. Un juego de plataformas resulta un caso de estud
 porque combina estado global, actualización continua y entrada en tiempo real.
 
 Elegimos un videojuego también por una razón práctica: la retroalimentación visual hace
-tangible el comportamiento del programa. Cada \emph{frame} se puede observar de inmediato;
-un error en física, colisiones o comportamiento de un \emph{enemy} se manifiesta en pantalla
-sin depender de trazas o dumps de estado. Eso acorta el ciclo de validación y mantiene el
+tangible el comportamiento del programa. Cada \emph{frame} se puede observar de inmediato,
+y un error en física, colisiones o comportamiento de un \emph{enemy} se manifiesta en pantalla
+sin depender de trazas ni dumps de estado. Eso acorta el ciclo de validación y mantiene el
 foco en la corrección del modelo, no solo en que el código compile.
 
 \subsection{Objetivos}
@@ -55,11 +55,17 @@ mónadas e integración con el entorno externo.
     entrada, el reloj y el dibujado se concentren en adaptadores concretos. La transición
     central del motor se expresa como una función pura de paso sobre el \emph{world}.
 
+  \item Modelar los conceptos del dominio del juego en tipos algebraicos y \emph{value objects}
+    dentro de \texttt{Domain/}: distinguir \emph{level definition} y \emph{world}, nombrar
+    fases de partida, magnitudes físicas y \emph{behaviour tuning} (\texttt{BehaviourTuning}) como
+    valores con invariantes, en lugar de repartir reglas en booleanos o strings sueltos.
+
   \item Modelar comportamientos de \emph{entity} (en particular \emph{enemy}) mediante un
-    DSL basado en \emph{free monad}: el AST describe acciones como desplazarse, esperar o
-    atacar, y un intérprete puro en el dominio las ejecuta sobre el \emph{world}. Esa
-    separación permite combinar patrones de IA (patrullaje, persecución, disparo a
-    distancia) sin mezclar lógica de comportamiento con física ni con efectos del entorno.
+    \emph{DSL} basado en \emph{free monad}: el \emph{AST} describe
+    acciones como desplazarse, esperar o atacar, y un intérprete puro en el dominio las ejecuta
+    sobre el \emph{world}. Esa separación permite combinar patrones de IA (patrullaje,
+    persecución, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
+    efectos del entorno.
 
   \item Orquestar el estado global del juego, la configuración de física y parámetros de
     partida, y los errores recuperables al cargar datos, con una pila monádica en
@@ -67,9 +73,9 @@ mónadas e integración con el entorno externo.
     tiempo real interpreta el paso de simulación, aplica la entrada del \emph{player} y
     mantiene el \emph{run} entre niveles.
 
-  \item Cargar \emph{level definition} y parámetros desde archivos JSON serializados: geometría
-    de plataformas, \emph{spawn point}, colocación de \emph{enemy} e ítems, \emph{exit zone},
-    \emph{hazard} y constantes de movimiento.
+  \item Cargar \emph{level definition}s desde JSON: geometría de plataformas,
+    \emph{spawn point}, \emph{enemy}, ítems, \emph{exit zone} y \emph{hazard}s.
+    \texttt{GameConfig} (gravedad, vidas, combate) vive en código, no en JSON.
 \end{enumerate}
 
 Como complemento propio del equipo, se publicó una versión ejecutable del juego en

@@ -5,11 +5,11 @@
 \label{subsec:contexto-dominio}
 
 El juego que modelamos es una simulación de plataformas en 2D sobre un
-\emph{game plane}: posiciones y tamaños se miden en \emph{logical pixel}, con el eje
-horizontal hacia la derecha y el vertical hacia arriba. El tiempo de simulación no es
-continuo en el modelo: avanza en \emph{frame}s discretos. Cada \emph{frame} recibe un
-\emph{delta time} (segundos asignados a ese paso) y produce una nueva instantánea del
-estado jugable.
+\emph{game plane}: posiciones y
+tamaños se miden en \emph{logical pixel}s, con el eje horizontal hacia la derecha y el
+vertical hacia arriba. El tiempo de simulación no es continuo en el modelo: avanza en
+\emph{frame}s discretos. Cada \emph{frame} recibe un \emph{delta time} (segundos asignados
+a ese paso) y produce una nueva instantánea del estado jugable.
 
 \subsubsection{Tiempo y espacio}
 \label{subsubsec:dominio-tiempo-espacio}
@@ -18,7 +18,7 @@ El reloj real entrega intervalos variables entre llamadas al motor, pero la lóg
 razona sobre pasos finitos. Un \emph{frame} agrupa todas las actualizaciones de un ciclo:
 entrada del \emph{player}, movimiento de \emph{entity}, detección de colisiones y
 resolución de interacciones. El \emph{delta time} escala desplazamientos y velocidades
-dentro de ese paso. Así el dominio separa \emph{qué} cambia en cada tick lógico de
+dentro de ese paso. Así el dominio separa \emph{qué} cambia en cada \emph{frame} lógico de
 \emph{cuándo} ocurre en el reloj del sistema. La correspondencia entre ambos es
 responsabilidad de la capa que integra el bucle externo, no del modelo de simulación en sí.
 
@@ -33,22 +33,43 @@ cada \emph{enemy} vivo, las plataformas con su posición actual (incluidas las m
 ítems aún no recolectados y las regiones activas del nivel. Cada \emph{frame} reemplaza el
 \emph{world} anterior por uno nuevo.
 
-El \emph{run} abarca varios niveles en una misma partida: vidas, puntaje acumulado y otras
-decisiones que persisten al pasar de etapa. Al entrar en un nivel el \emph{world} se
+El \emph{run} abarca varios niveles en una misma partida: vidas y otras decisiones que
+persisten al pasar de etapa. El puntaje es por nivel y se reinicia al cargar cada etapa.
+Al entrar en un nivel el \emph{world} se
 reinicia a partir de la \emph{level definition}. Al perder una vida, el \emph{respawn}
-reubica al \emph{player} en un \emph{spawn point} sin recargar todo el layout.
+reubica al \emph{player} en un \emph{spawn point} sin recargar todo el \emph{layout} del nivel.
 
 \subsubsection{Entidades e interacciones}
 \label{subsubsec:dominio-entidades}
 
 Una \emph{entity} es todo aquello con identidad que se mueve e interactúa en el tiempo: el
 \emph{player} (único controlable por nivel) y los \emph{enemy} hostiles. Las plataformas y
-los \emph{hazard} son geometría del nivel, los ítems son objetos recolectables. Las
+los \emph{hazard} son geometría del nivel, los \emph{pickup}s son ítems recolectables. Las
 interacciones físicas se expresan mediante \emph{collision box}es alineadas a los ejes
-(AABB): apoyo sobre plataformas, daño por contacto, recolección de ítems y ataques. La
+(\emph{AABB}, \emph{axis-aligned bounding box}): cajas rectangulares que no rotan. Con ellas
+modelamos apoyo sobre plataformas, daño por contacto, recolección de ítems y ataques. La
 victoria exige alcanzar la \emph{exit zone} con el puntaje mínimo definido en la
 \emph{level definition}. El combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
 \emph{player} como de ciertos \emph{enemy}.
+
+\subsubsection{Modelado explícito de conceptos}
+\label{subsubsec:dominio-modelado}
+
+Además de describir el juego en prosa, el motor \emph{nombra} cada idea relevante como
+tipo o constructor. La \emph{level definition} (\emph{layout} autorado) y el \emph{world}
+(instantánea en ejecución) no comparten representación. Las fases de partida
+(\texttt{Playing}, \texttt{GameOver}, victoria de nivel) son variantes de un ADT, no
+strings ni enteros mágicos. Magnitudes como \emph{delta time}, puntaje, salud o
+velocidad van en \emph{value objects} con reglas de construcción (\texttt{Multiplier}
+y \texttt{Amplifier} en \texttt{BehaviourTuning}, \emph{frame} congelado si el
+\emph{delta time} es cero). El combate y la colisión hablan de
+\emph{collision box}es \emph{AABB}, no de coordenadas sueltas en funciones largas.
+
+Esa reificación tiene dos efectos en el diseño. Primero, las funciones de
+\texttt{Domain/Logic} hacen \emph{pattern matching} sobre significado de juego y quedan
+totalmente sustituibles. Segundo, el glosario del dominio (\emph{enemy}, \emph{run},
+\emph{exit zone}, etc.) se alinea con los nombres del código: un lector del informe y del
+repositorio usa el mismo vocabulario.
 
 \subsection{Marco teórico de Programación Funcional}
 \label{subsec:marco-teorico}
@@ -159,8 +180,8 @@ carga de JSON con la \emph{level definition}, reloj y renderizado. No son entida
 \emph{world}, son fuentes de datos y destinos de salida en la frontera. Si esos efectos
 se intercalan dentro de la física o de las reglas de combate, desaparece la transparencia
 referencial del dominio y las pruebas sobre el paso de simulación requieren mockear
-hardware. El problema es delimitar una frontera estable entre transformación pura y
-\texttt{IO}.
+hardware. El problema es delimitar una frontera estable entre
+transformación pura y \texttt{IO}.
 
 \subsubsection{Comportamiento e interpretación}
 \label{subsubsec:problema-comportamiento}
