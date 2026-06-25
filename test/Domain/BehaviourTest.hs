@@ -5,7 +5,7 @@ composición con la física en el dominio. La orquestación en 'GameM' vive en
 module Domain.BehaviourTest where
 
 import Domain.Fixtures (dtFrame, testLifeParams, testParams)
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
+import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep, stepEnemyBehaviour)
 import Domain.Logic.Step (step)
 import Domain.Model.Enemy (Enemy, enemyPos, enemyProgram, enemyVel, mkEnemy)

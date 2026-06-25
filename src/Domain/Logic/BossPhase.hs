@@ -11,8 +11,8 @@ where
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 
-import Domain.Logic.BehaviourSensing (playerHorizontalDistance)
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
+import Domain.Logic.RunBehaviour (playerHorizontalDistance)
 import Domain.Model.BossPhase (
   BossDefinition (..),
   BossEventKind (..),

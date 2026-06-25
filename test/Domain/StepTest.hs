@@ -11,7 +11,7 @@ import Domain.Fixtures (
   worldWithCeiling,
   worldWithWall,
  )
-import Domain.Logic.EntityBehaviours (defaultProgramForKind)
+import Domain.Logic.BehaviourCatalog (defaultProgramForKind)
 import Domain.Logic.Step (step)
 import Domain.Model.Enemy (enemyPos, spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind (GolemKind))

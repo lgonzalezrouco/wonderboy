@@ -5,9 +5,9 @@ import Data.List (find)
 import Data.Maybe (fromMaybe)
 
 import Domain.Fixtures (floorWorld, testCombatParams)
+import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.BossPhase (resolveBossPhases)
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.BossPhase (
   bossMaxHealth,
   bossPhaseIndex,

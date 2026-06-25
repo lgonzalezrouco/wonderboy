@@ -7,21 +7,13 @@ sensado y ramas deterministas.
 module Domain.Logic.RunBehaviour (
   runBehaviourStep,
   stepEnemyBehaviour,
+  playerHorizontalDistance,
 )
 where
 
 import Control.Monad.Free (Free (..))
+import Data.List (mapAccumL)
 
-import Domain.Logic.BehaviourSensing (
-  horizontalSign,
-  nearSpawnHorizontally,
-  playerHorizontalDelta,
-  playerHorizontalDistance,
-  playerVerticalDelta,
-  spawnHorizontalDelta,
-  spawnVerticalDelta,
-  velocityToward2D,
- )
 import Domain.Model.Enemy (
   Enemy (..),
   enemyAabb,
@@ -46,22 +38,13 @@ import Domain.ValueObjects.Aabb (aabbMaxX, aabbMinX)
 import Domain.ValueObjects.Facing (Facing (..), facingTowardHorizontal)
 import Domain.ValueObjects.Frames (frameCount, hasFramesLeft, tickFrames)
 import Domain.ValueObjects.Position (Position, posX, posY, position)
-import Domain.ValueObjects.Velocity (velocity)
+import Domain.ValueObjects.Velocity (Velocity, velocity)
 
 -- | Avanza un behaviour step en todos los enemigos del mundo (puro).
 runBehaviourStep :: World -> World
 runBehaviourStep w =
-  foldl stepOne w (worldEnemies w)
- where
-  stepOne w' e =
-    let (w'', e') = stepEnemyBehaviour w' e
-        enemies' = map (replaceEnemy e e') (worldEnemies w'')
-     in w''{worldEnemies = enemies'}
-
-replaceEnemy :: Enemy -> Enemy -> Enemy -> Enemy
-replaceEnemy old new e
-  | enemyId e == enemyId old = new
-  | otherwise = e
+  let (w', enemies') = mapAccumL stepEnemyBehaviour w (worldEnemies w)
+   in w'{worldEnemies = enemies'}
 
 -- | Un behaviour step para un enemigo.
 stepEnemyBehaviour :: World -> Enemy -> (World, Enemy)
@@ -199,3 +182,42 @@ shootSpawnPos e width height =
    in case enemyFacing e of
         FacingRight -> position (aabbMaxX body + offset) centerY
         FacingLeft -> position (aabbMinX body - offset) centerY
+
+{- | Distancia horizontal entre pies del jugador y del enemigo.
+
+Re-exportado para geometría compartida (p. ej. fases de jefe).
+-}
+playerHorizontalDistance :: World -> Enemy -> Float
+playerHorizontalDistance w e = abs (playerHorizontalDelta w e)
+
+playerHorizontalDelta :: World -> Enemy -> Float
+playerHorizontalDelta w e =
+  posX (playerPos (worldPlayer w)) - posX (enemyPos e)
+
+playerVerticalDelta :: World -> Enemy -> Float
+playerVerticalDelta w e =
+  posY (playerPos (worldPlayer w)) - posY (enemyPos e)
+
+spawnHorizontalDelta :: Enemy -> Float
+spawnHorizontalDelta e = posX (enemySpawnPos e) - posX (enemyPos e)
+
+spawnVerticalDelta :: Enemy -> Float
+spawnVerticalDelta e = posY (enemySpawnPos e) - posY (enemyPos e)
+
+nearSpawnHorizontally :: Float -> Enemy -> Bool
+nearSpawnHorizontally radius e = abs (spawnHorizontalDelta e) <= radius
+
+horizontalSign :: Float -> Float
+horizontalSign x
+  | x > 0 = 1
+  | x < 0 = -1
+  | otherwise = 0
+
+velocityToward2D :: Float -> Float -> Float -> Velocity
+velocityToward2D dx dy speed =
+  let dist = sqrt (dx * dx + dy * dy)
+   in if dist <= 0
+        then velocity 0 0
+        else
+          let scale = speed / dist
+           in velocity (dx * scale) (dy * scale)

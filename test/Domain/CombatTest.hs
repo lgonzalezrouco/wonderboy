@@ -2,8 +2,8 @@
 module Domain.CombatTest where
 
 import Domain.Fixtures (testCombatParams)
+import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Logic.Combat (resolveCombat)
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Model.Enemy (enemyHealth, mkEnemy, spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.ExitZone (defaultExitZone)
