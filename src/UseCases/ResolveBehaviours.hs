@@ -1,25 +1,9 @@
-{- | Orquestación de la resolución de comportamiento sobre una 'LevelDefinition'.
+{- | Orquesta la resolución de @behaviourHint@ sobre una 'LevelDefinition' vía el
+puerto 'BehaviourResolverPort', rellenando preset y tuning antes del build puro.
 
-Recorre los enemigos del nivel, resuelve sus pistas textuales (@behaviourHint@)
-al 'ResolvedBehaviour' correspondiente vía el puerto 'BehaviourResolverPort', y
-rellena los campos @enemyDefBehaviourPreset@ y @enemyDefBehaviourTuning@ /antes/ de que el build puro
-(@Domain.Logic.BuildWorld.buildWorld@) lo consuma. No hay 'IO' acá: todo es
-genérico sobre la mónada @m@ del puerto; la impureza (si la hay) la aporta la
-instancia concreta en @Adapters/@.
-
-__Precedencia (alineada con la doc de M28 y @buildEnemy@):__
-
-  1. @behaviourPreset@ ya presente → se respeta, __no__ se llama al resolver.
-  2. Sin preset y con @behaviourHint@ → se consulta al resolver.
-  3. Sin preset ni hint → se deja intacto (el default del kind aplica en build).
-
-__Dedup:__ varios enemigos pueden compartir el par @(EnemyKind, hint)@ (mismo
-tipo y misma pista). Resolver cada uno por separado dispararía consultas
-redundantes (en el adapter real, llamadas HTTP de más). Por eso primero se
-juntan los pares distintos con 'nub' (requiere @'Eq' 'EnemyKind'@), se resuelve
-cada uno __una sola vez__ armando una tabla de asociación, y luego se aplica esa
-tabla puramente a todos los enemigos. El número de consultas es el de pares
-distintos, no el de enemigos.
+Precedencia: preset explícito > hint resuelto > default del kind. Los pares
+@(kind, hint)@ distintos se resuelven una sola vez ('nub') para evitar consultas
+redundantes.
 -}
 module UseCases.ResolveBehaviours (
   resolveLevelBehaviours,
@@ -39,14 +23,6 @@ import Domain.Model.LevelDefinition (
  )
 import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
 
-{- | Resuelve las pistas de comportamiento de un nivel, rellenando los presets
-faltantes según el puerto 'BehaviourResolverPort'.
-
-Devuelve la misma 'LevelDefinition' con @levelEnemies@ posiblemente actualizado:
-los enemigos sin preset pero con hint quedan con @enemyDefBehaviourPreset@
-seteado al arquetipo resuelto (o 'Nothing' si el resolver no decidió). El resto
-de los enemigos —y todos los demás campos del nivel— quedan intactos.
--}
 resolveLevelBehaviours ::
   (BehaviourResolverPort m) => LevelDefinition -> m LevelDefinition
 resolveLevelBehaviours def = do
@@ -54,7 +30,6 @@ resolveLevelBehaviours def = do
   resolved <- traverse resolvePair needs
   pure def{levelEnemies = map (applyResolved resolved) (levelEnemies def)}
  where
-  -- Solo enemigos sin preset, con hint no vacío (evita consultas inútiles a la API).
   resolutionKey e
     | Nothing <- enemyDefBehaviourPreset e
     , Just h <- enemyDefBehaviourHint e
@@ -67,7 +42,6 @@ resolveLevelBehaviours def = do
 
   resolvePair (k, h) = (,) (k, h) <$> resolveBehaviourHint k h
 
-  -- `join` colapsa "par ausente" y "resolver devolvió Nothing" en un único `Nothing`.
   applyResolved table e
     | Nothing <- enemyDefBehaviourPreset e
     , Just h <- enemyDefBehaviourHint e =
