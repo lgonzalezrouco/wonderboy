@@ -78,10 +78,10 @@ La materia propone leer los programas como descripciones de valores y mantener u
 donde el significado no dependa de efectos ocultos. Las secciones siguientes fijan el
 vocabulario con el que abordamos el dominio del juego.
 
-\subsubsection{Transparencia referencial y funciones puras}
+\subsubsection{Referential transparency y funciones puras}
 \label{subsubsec:teoria-pureza}
 
-Una expresión es transparente respecto a referencia cuando puede sustituirse por otra de
+Una expresión tiene \emph{referential transparency} cuando puede sustituirse por otra de
 igual valor sin alterar el comportamiento del programa. En un núcleo de simulación eso
 implica funciones puras: mismas entradas, mismas salidas, sin lectura ni escritura de estado
 global mutable ni dependencia de la hora del sistema. Hughes~\cite{hughes1990whyfp} subraya
@@ -102,19 +102,19 @@ comportamiento. Hutton~\cite{hutton2016programming} presenta esa técnica como f
 de hacer visibles las reglas del dominio en el tipo, de modo que casos no contemplados
 queden fuera del programa bien tipado.
 
-La composición de funciones y las funciones de orden superior permiten expresar patrones
+La composición de funciones y las \emph{higher-order functions} permiten expresar patrones
 reutilizables (recorridos, acumulaciones, estrategias de actualización) sin duplicar
 estructura. Hughes~\cite{hughes1990whyfp} las considera una de las herramientas centrales
 para modularizar programas funcionales.
 
-\subsubsection{Evaluación perezosa}
+\subsubsection{Lazy evaluation}
 \label{subsubsec:teoria-lazy}
 
-Haskell evalúa expresiones de forma perezosa: un valor se calcula solo cuando su resultado
+Haskell evalúa expresiones con \emph{lazy evaluation}: un valor se calcula solo cuando su resultado
 es necesario. Eso permite definir estructuras potencialmente infinitas o flujos derivados
 del estado, y combinar transformaciones sin forzar intermedio. Hughes~\cite{hughes1990whyfp}
-muestra cómo la pereza aporta modularidad al separar generación y consumo de datos. En un
-motor de juego el camino crítico sigue siendo finito cada \emph{frame}. La pereza aporta
+muestra cómo la \emph{laziness} aporta modularidad al separar generación y consumo de datos. En un
+motor de juego el camino crítico sigue siendo finito cada \emph{frame}. La \emph{laziness} aporta
 sobre todo flexibilidad al componer lógica auxiliar y al mantener separadas descripciones de
 datos de su evaluación efectiva.
 
@@ -138,8 +138,8 @@ qué efecto puede ocurrir. Transformadores como \texttt{StateT}, \texttt{ReaderT
 
 Un \emph{free monad} separa la \emph{descripción} de una secuencia de acciones de su
 \emph{interpretación}. El AST del DSL de comportamientos de \emph{entity} expresa
-primitivas (moverse, esperar, atacar). Un intérprete puro en el dominio las ejecuta sobre
-el \emph{world}. Variar la IA equivale a cambiar el programa fuente del DSL o el intérprete,
+primitivas (moverse, esperar, atacar). Un interpreter puro en el dominio las ejecuta sobre
+el \emph{world}. Variar la IA equivale a cambiar el programa fuente del DSL o el interpreter,
 no a entrelazar condicionales de comportamiento con la física del paso.
 
 \subsection{El problema}
@@ -156,7 +156,7 @@ Cada \emph{frame} debe considerar al \emph{player}, a todos los \emph{enemy} act
 plataformas móviles y a los ítems restantes en un mismo \emph{world}. Ese agregado es
 estado global en el sentido del dominio: ninguna actualización parcial puede ignorar el
 resto sin romper colisiones o reglas de combate. La inmutabilidad sugiere reemplazar el
-\emph{world} entero. La orquestación del \emph{run} (vidas, puntaje entre niveles) exige
+\emph{world} entero. La orchestration del \emph{run} (vidas, puntaje entre niveles) exige
 además un efecto de estado fuera del paso local. El desafío es mantener la función de paso
 pura sobre el \emph{world}, de modo que cualquier actualización del estado global no se haga 
 de forma oculta, sino que esté explícitamente gestionada y tipada en una capa aparte que se 
@@ -176,17 +176,17 @@ paso.
 \label{subsubsec:problema-medio}
 
 El motor depende de efectos ajenos al núcleo de simulación: pulsaciones del jugador,
-carga de JSON con la \emph{level definition}, reloj y renderizado. No son entidades del
+carga de JSON con la \emph{level definition}, reloj y rendering. No son entidades del
 \emph{world}, son fuentes de datos y destinos de salida en la frontera. Si esos efectos
-se intercalan dentro de la física o de las reglas de combate, desaparece la transparencia
-referencial del dominio y las pruebas sobre el paso de simulación requieren mockear
+se intercalan dentro de la física o de las reglas de combate, desaparece la \emph{referential
+transparency} del dominio y los tests sobre el paso de simulación requieren mockear
 hardware. El problema es delimitar una frontera estable entre
 transformación pura y \texttt{IO}.
 
 \subsubsection{Comportamiento e interpretación}
 \label{subsubsec:problema-comportamiento}
 
-Los \emph{enemy} siguen patrones distintos (patrullaje, persecución, disparo a distancia).
+Los \emph{enemy} siguen patrones distintos (patrol, chase, disparo a distancia).
 Implementarlos con condicionales entrelazados en el paso de física mezcla dos ritmos: el de
 la cinemática y el de la decisión. El free monad plantea otra vía: describir el
 comportamiento como programa en un DSL e interpretarlo junto con el avance del

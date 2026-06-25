@@ -6,7 +6,7 @@
 
 Los problemas del capítulo anterior se abordan con una separación estricta de
 responsabilidades. La simulación de un \emph{frame} vive en un núcleo puro que
-transforma un \emph{world} en otro \emph{world}. La orquestación del
+transforma un \emph{world} en otro \emph{world}. La orchestration del
 \emph{run} (vidas, fase de partida, puntaje entre etapas) se expresa con una
 pila monádica sin \texttt{IO}. Los efectos del entorno (entrada, reloj,
 archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
@@ -42,12 +42,12 @@ no importa capas superiores.
     \texttt{Domain/} & 100\% pura &
     Modelos, \emph{value objects} y lógica de simulación: física, colisiones,
     combate, construcción del \emph{world} desde la \emph{level definition},
-    DSL de comportamiento, intérprete del behaviour step y transición de
+    DSL de comportamiento, interpreter del behaviour step y transición de
     \emph{frame} completa. &
     \texttt{World}, \texttt{advanceSimulationFrame}, \texttt{runBehaviourStep} \\
     \texttt{UseCases/} & Mónadas abstractas &
-    Orquestación del \emph{frame} y del \emph{run}: pila \texttt{GameM},
-    \texttt{updateGame}, \emph{bootstrap} del catálogo, puertos y carga desde JSON. &
+    Orchestration del \emph{frame} y del \emph{run}: pila \texttt{GameM},
+    \texttt{updateGame}, \emph{bootstrap} del catálogo, ports y carga desde JSON. &
     \texttt{GameMonad}, \texttt{BootstrapRun}, \texttt{LoadLevel} \\
     \texttt{Adapters/} & \texttt{IO} concreto &
     Traducción entre medios externos y tipos del dominio: teclado Gloss
@@ -55,7 +55,7 @@ no importa capas superiores.
     API Anthropic $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
     \texttt{Gloss.Input}, \texttt{LevelGenerator}, \texttt{BehaviourResolver} \\
     \texttt{Frameworks/} & \texttt{IO} &
-    Cableado del bucle de juego: \texttt{playIO}, estado de aplicación
+    Wiring del bucle de juego: \texttt{playIO}, estado de aplicación
     ajeno al dominio, llamadas a \texttt{runGameM} y \texttt{updateGame}. &
     \texttt{Gloss.GameLoop} \\
   \end{tabular}
@@ -65,9 +65,9 @@ no importa capas superiores.
 \texttt{ValueObjects/} (magnitudes con invariantes) y \texttt{Logic/}
 (transformaciones puras). Los modelos materializan el vocabulario del dominio
 (sección~\ref{subsubsec:dominio-modelado}): \texttt{World}, \texttt{LevelDefinition},
-\texttt{GamePhase}, arquetipos de comportamiento. Los \emph{value objects} encapsulan
+\texttt{GamePhase}, archetypes de comportamiento. Los \emph{value objects} encapsulan
 unidades (\texttt{DeltaTime}, \texttt{Score}, \texttt{BehaviourTuning}) para que la
-lógica no mezcle \texttt{Float}s sin significado. \texttt{UseCases/} concentra el estado global del motor, define puertos
+lógica no mezcle \texttt{Float}s sin significado. \texttt{UseCases/} concentra el estado global del motor, define ports
 (\texttt{Ports/}) para servicios externos y eleva las funciones puras del dominio
 al contexto monádico.
 \texttt{Adapters/} encapsula Gloss y el sistema de archivos sin introducir
@@ -116,7 +116,7 @@ congelado (cuando el \emph{delta time} es cero o la fase es terminal, no avanza)
 terminales, invoca \texttt{advanceSimulationFrame} cuando corresponde y escribe el resultado
 en el estado del \emph{run}.
 
-\subsection{Orquestación con mónadas}
+\subsection{Orchestration con mónadas}
 \label{subsec:solucion-monadas}
 
 El \emph{world} cubre la instantánea de un nivel, pero una partida (\emph{run})
@@ -164,7 +164,7 @@ configuración y estado, si la fase y el \emph{delta time} lo permiten invocar
 \texttt{advanceSimulationFrame}, escribir el \texttt{GameState} resultante.
 \texttt{updateGame} está
 polimórfica en \texttt{MonadReader} y \texttt{MonadState}: no depende del
-concreto \texttt{GameM}, lo que facilita pruebas con instancias mínimas.
+concreto \texttt{GameM}, lo que facilita tests con instancias mínimas.
 
 Fuera del paso \emph{frame} a \emph{frame}, \texttt{GameState} y
 \texttt{GameConfig} separan lo que el capítulo anterior llamó estado local del
@@ -182,13 +182,13 @@ describen acciones cinematográficas y de sensado (\texttt{SetVelocity},
 \emph{player} o al punto de aparición, disparo, etc.) sin ejecutar física ni
 tocar \texttt{IO}.
 
-El intérprete \texttt{runBehaviourStep}, en \texttt{Domain/}, consume un
+El interpreter \texttt{runBehaviourStep}, en \texttt{Domain/}, consume un
 \emph{frame} del programa por cada \emph{enemy}: fija velocidades u orientación
 o avanza contadores de espera. \texttt{advanceFrame} invoca ese paso antes de
 \texttt{step}. Así el ritmo de decisión (IA) y el de cinemática (integración y
 colisiones) permanecen desacoplados pero alineados en el mismo \emph{delta
-time}. Cambiar la IA de un arquetipo equivale a sustituir el programa fuente o
-ajustar el intérprete, no a editar la cadena de gravedad y AABB.
+time}. Cambiar la IA de un archetype equivale a sustituir el programa fuente o
+ajustar el interpreter, no a editar la cadena de gravedad y AABB.
 
 Un patrón de patrulla horizontal ilustra la idea sin entrar en todos los
 constructores del AST:
@@ -203,8 +203,8 @@ patrolHorizontal speed leg =
 \end{lstlisting}
 
 En el código la recursión se expresa con \texttt{fix}. Cada \emph{frame} el
-intérprete avanza una instrucción. La sintaxis completa del DSL, los programas
-por arquetipo de \emph{enemy} y las máquinas de estado reactivas se desarrollan
+interpreter avanza una instrucción. La sintaxis completa del DSL, los programas
+por archetype de \emph{enemy} y las máquinas de estado reactivas se desarrollan
 en el capítulo~\ref{sec:detalles-diseno}.
 
 \subsection{Frontera con el medio}
@@ -218,7 +218,7 @@ Los adaptadores \emph{traducen}. \texttt{Gloss.Input} mantiene un
 \texttt{KeyState} con teclas sostenidas y genera un \texttt{Input} de dominio
 por \emph{frame}, incluyendo bordes de pulsación para salto, ataque y
 lanzamiento. \texttt{LevelFile} lee bytes del disco y devuelve
-\texttt{Text}. La decodificación JSON y \texttt{buildWorld} ocurren en
+\texttt{Text}. El decoding de JSON y \texttt{buildWorld} ocurren en
 \texttt{UseCases/} y \texttt{Domain/}, sin \texttt{IO}. \texttt{Gloss.Rendering}
 recibe un \texttt{GameView} y produce la imagen del \emph{frame} (sprites, cámara con
 scroll y \emph{tiling} del fondo).
@@ -229,7 +229,7 @@ dibujar. El \emph{HUD} (\emph{heads-up display}) es la capa de información en p
 (vidas, puntaje) que no forma parte del \emph{world} simulado. El framework lo construye
 con \texttt{gameViewFromState} a partir de
 \texttt{GameConfig} y \texttt{GameState} antes de llamar al adaptador de
-renderizado. Así los adaptadores no importan \texttt{UseCases.GameMonad}.
+rendering. Así los adaptadores no importan \texttt{UseCases.GameMonad}.
 
 \texttt{Frameworks.Gloss.GameLoop} \emph{integra} el ciclo. Mantiene un
 \texttt{AppState} ajeno al motor: catálogo de \emph{level definition}s ya
@@ -267,7 +267,7 @@ hasta confirmar con Enter o Space. El framework carga el siguiente nivel o reini
 referencia del disco, opcionalmente pide definiciones nuevas a la API de
 mensajes de Anthropic (modelo Claude Haiku por defecto) y resuelve los
 \texttt{behaviourHint} (pistas de comportamiento en lenguaje natural) de cada nivel.
-La orquestación pura vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP y las
+La orchestration pura vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP y las
 variables de entorno quedan en \texttt{Adapters/}. El framework guarda el catálogo
 resultante en \texttt{AppState} y materializa el \emph{world} inicial con
 \texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin volver a
@@ -275,7 +275,7 @@ consultar la red.
 
 \begin{table}[htbp]
   \centering
-  \caption{Puertos de contenido y sus adaptadores.}
+  \caption{Ports de contenido y sus adaptadores.}
   \label{tab:puertos-contenido}
   \begin{tabular}{@{}p{3.6cm}p{4.8cm}p{4.6cm}@{}}
     \textbf{Puerto (\texttt{UseCases/})} & \textbf{Responsabilidad} &
@@ -286,13 +286,13 @@ consultar la red.
     (intro, desafío, jefe). &
     \texttt{Nothing} $\rightarrow$ JSON fijo del disco (\emph{fallback}). \\
     \texttt{BehaviourResolverPort} &
-    Traducir \texttt{behaviourHint} a arquetipo y \texttt{BehaviourTuning}. &
+    Traducir \texttt{behaviourHint} a archetype y \texttt{BehaviourTuning}. &
     \texttt{Nothing} $\rightarrow$ \emph{default} del \texttt{kind}. \\
   \end{tabular}
 \end{table}
 
 Los \emph{stubs} \texttt{NoGenerator} y \texttt{NoResolver} (implementaciones vacías del
-puerto) permiten pruebas e integración continua sin clave de API. La decodificación JSON y
+puerto) permiten tests e integración continua sin clave de API. El decoding de JSON y
 \texttt{buildWorld} siguen siendo puras sobre \texttt{Text}. Solo la lectura de archivos y
 las llamadas HTTP son \texttt{IO} en el borde.
 
@@ -308,7 +308,7 @@ las llamadas HTTP son \texttt{IO} en el borde.
     \hline
     Haskell (GHC) &
     Lenguaje del motor. Inmutabilidad y tipos algebraicos en el dominio,
-    evaluación perezosa donde simplifica la composición. \\
+    lazy evaluation donde simplifica la composición. \\
     Gloss~\cite{gloss} &
     Ventana, bucle \texttt{playIO}, eventos de teclado y primitivas de dibujo.
     Integrado en \texttt{Frameworks/} y \texttt{Adapters/Gloss/}
@@ -326,7 +326,7 @@ las llamadas HTTP son \texttt{IO} en el borde.
     Cliente HTTP para los adaptadores Anthropic de generación de niveles y
     resolución de \texttt{behaviourHint} (sección~\ref{subsec:solucion-frontera}). \\
     tasty, tasty-hunit &
-    Tests unitarios de lógica pura y de orquestación. El detalle de casos
+    Tests unitarios de lógica pura y de orchestration. El detalle de casos
     relevantes se presenta en el capítulo~\ref{sec:detalles-diseno}. \\
   \end{tabular}
 \end{table}

@@ -10,7 +10,7 @@ tiempo real, la entrada del jugador y datos cargados desde fuera. La solución q
 implementamos sostuvo esa frontera de punta a punta:
 \texttt{advanceSimulationFrame} concentra en \texttt{Domain/} la denotación de
 un \emph{frame} completo sin \texttt{IO}. \texttt{updateGame} solo aplica
-política de fases y eleva ese resultado al \texttt{GameState}. La orquestación
+política de fases y eleva ese resultado al \texttt{GameState}. La orchestration
 del \emph{run} queda en \texttt{UseCases/} con \texttt{StateT}, \texttt{ReaderT}
 y \texttt{ExceptT}. Gloss, el teclado, el disco y la API Anthropic se limitan a
 \texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no fue solo
@@ -24,17 +24,17 @@ pura opera sobre esos nombres.
 
 Como segundo eje, el DSL de comportamiento sobre \emph{free monad} mostró en la
 práctica la distinción entre describir acciones de una \emph{entity} e
-interpretarlas en el dominio. Patrullas, persecución y disparo a distancia se
+interpretarlas en el dominio. Patrol, chase y disparo a distancia se
 expresan como programas en el AST. \texttt{runBehaviourStep} consume una
 instrucción por \emph{frame} antes de integrar física y colisiones. Variar la IA
-de un arquetipo equivale a cambiar el programa o el intérprete, no a entrelazar
+de un archetype equivale a cambiar el programa o el interpreter, no a entrelazar
 condicionales de decisión con la cinemática del \emph{player}.
 
 Como tercer eje, la autoría asistida de contenido respeta la misma frontera: los
-puertos \texttt{LevelGeneratorPort} y \texttt{BehaviourResolverPort} traducen
+ports \texttt{LevelGeneratorPort} y \texttt{BehaviourResolverPort} traducen
 peticiones a la API de Anthropic en \texttt{Adapters/}, mientras
 \texttt{BootstrapRun} orquesta el catálogo del \emph{run} sin \texttt{IO}. Un
-\texttt{behaviourHint} en lenguaje natural se materializa en arquetipo y \emph{tuning}
+\texttt{behaviourHint} en lenguaje natural se materializa en archetype y \emph{tuning}
 antes de \texttt{buildWorld}. Una definición generada reemplaza al JSON fijo solo
 si la llamada tiene éxito. El núcleo de simulación no distingue si el \emph{preset}
 vino del autor o del adaptador.
@@ -47,8 +47,8 @@ itch.io, funciona como validación empírica: un error en física, colisiones o
 comportamiento de un \emph{enemy} se ve al instante en pantalla, lo que acortó
 el ciclo entre modelo y comportamiento observado.
 
-Las pruebas automatizadas se limitaron a \emph{smoke checks} sobre lógica pura y
-orquestación sin \texttt{IO}. No hay regresión visual ni cobertura exhaustiva. El
+Los tests automatizados se limitaron a \emph{smoke checks} sobre lógica pura y
+orchestration sin \texttt{IO}. No hay regresión visual ni cobertura exhaustiva. El
 alcance del trabajo, por su parte, se acotó a un motor de plataformas 2D con un
 \emph{run} local, sin multijugador, persistencia de partidas ni editor de niveles.
 
@@ -61,7 +61,7 @@ túnel en plataformas finas, elección del eje de menor penetración, distinguir
 aterrizaje de golpe de techo con \texttt{vyBefore}, y el arrastre del
 \emph{player} sobre plataformas móviles sin heredar velocidad al saltar.
 Cada regla parecía local, pero interactuaba con las demás en el mismo
-\emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y pruebas con
+\emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y tests con
 \emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
 modelo.
 
@@ -69,13 +69,13 @@ En un orden distinto, fijar el orden del \emph{pipeline} dentro de
 \texttt{advanceSimulationFrame} (\emph{behaviour step}, física, combate, proyectiles,
 victoria y muerte) requirió cuidado para no duplicar estado ni romper el
 determinismo ante un \emph{delta time} variable. Una vez cerrado ese contrato en
-el dominio, \texttt{updateGame} y las pruebas de orquestación encajaron sin
+el dominio, \texttt{updateGame} y los tests de orchestration encajaron sin
 reabrir el diseño de capas.
 
 \subsection{Trabajo futuro}
 \label{subsec:conclusiones-futuro}
 
-El \emph{DSL} y los arquetipos cubren un conjunto acotado de patrones. Convendría
+El \emph{DSL} y los archetypes cubren un conjunto acotado de patrones. Convendría
 ampliar primitivas y programas compuestos sin tocar la cadena de física. Los
 jefes siguen dependiendo de un catálogo interno de fases: autorarlos desde la
 \emph{level definition} o desde \emph{hints} dedicados sería el siguiente paso de
@@ -92,10 +92,10 @@ Este fue el primer videojuego que desarrollamos en toda la carrera, y el proceso
 resultó muy gratificante. Pasar de rectángulos de colores a sprites y ver cómo el
 \emph{world} tomaba forma en cada \emph{frame} mantuvo la motivación a lo largo
 del proyecto. Al principio costó escribir en Haskell: para quien no está
-habituado, la sintaxis y la pereza no son lo más transparentes. Con el tiempo
+habituado, la sintaxis y la \emph{laziness} no son lo más transparentes. Con el tiempo
 aprendimos a ``hablar en francés'' y las ventajas del lenguaje se hicieron
 evidentes en el propio diseño del motor. Antes de esta materia conceptos como
-funciones puras, efectos secundarios, transparencia referencial o funciones de
-orden superior casi no figuraban en nuestro vocabulario de programación. Llevarnos
+funciones puras, \emph{side effects}, \emph{referential transparency} o \emph{higher-order functions}
+casi no figuraban en nuestro vocabulario de programación. Llevarnos
 esa forma de leer programas como descripciones de valores es, en la práctica, lo
 que más nos queda del curso.

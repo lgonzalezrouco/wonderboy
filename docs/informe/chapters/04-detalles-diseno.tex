@@ -4,7 +4,7 @@
 Este capítulo desarrolla los algoritmos que el capítulo~\ref{sec:solucion-propuesta}
 presentó a alto nivel: el orden exacto de un \emph{frame}, la física y las
 colisiones, el DSL de comportamiento, las reglas de combate, la carga de niveles y
-la estrategia de pruebas.
+la estrategia de testing.
 
 \subsection{Pipeline de un frame}
 \label{subsec:pipeline-frame}
@@ -104,7 +104,7 @@ El detalle de combate del jefe se resume en la sección~\ref{subsec:combate}.
 
 Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un \emph{free monad}
 sobre el \emph{functor} \texttt{EntityAction} (cada nodo del \emph{AST} es una acción
-posible). El intérprete \texttt{runBehaviourStep} consume \emph{una} instrucción por
+posible). El interpreter \texttt{runBehaviourStep} consume \emph{una} instrucción por
 \emph{frame} y puede leer el \emph{world} para \emph{sensing} (medir distancias al
 \emph{player} o al spawn). Luego \texttt{step} integra física. Los bucles infinitos
 (patrullas, \emph{FSM}s reactivas) se escriben con \texttt{fix} y recursión en el
@@ -140,10 +140,10 @@ Los programas compuestos viven en \texttt{Domain.Logic.BehaviourCatalog}:
   \item \textbf{FSM reactiva terrestre} (\texttt{reactiveFsm}): si el
     \emph{player} entra en rango, persigue. Si está cerca del spawn, mira al
     \emph{player}. Si no, vuelve al spawn. Los \emph{presets} \texttt{chase} y
-    \texttt{guard} (plantillas de arquetipo) comparten el mismo programa. La diferencia está en los
+    \texttt{guard} (plantillas de archetype) comparten el mismo programa. La diferencia está en los
     parámetros de movimiento y en el \texttt{BehaviourTuning} opcional.
   \item \textbf{FSM aérea} (\texttt{flyingReactiveFsm}): igual en espíritu, con
-    persecución omnidireccional y patrulla horizontal en el spawn para murciélagos.
+    chase omnidireccional y patrulla horizontal en el spawn para murciélagos.
   \item \textbf{Arquero} (\texttt{archerProgram}): en rango, mira y dispara. Fuera
     de rango, mira y espera.
 \end{itemize}
@@ -225,7 +225,7 @@ Los niveles generados por API omiten \texttt{behaviourHint}. Cada enemigo queda 
 
 \textbf{\emph{Hints} en lenguaje natural.} El autor puede describir la IA de un
 \emph{enemy} con \texttt{behaviourHint}. El adaptador traduce el texto a un
-arquetipo (\texttt{patrol}, \texttt{chase} o \texttt{guard}) y a un
+archetype (\texttt{patrol}, \texttt{chase} o \texttt{guard}) y a un
 \texttt{BehaviourTuning}. \texttt{archer} es una \texttt{kind} con programa propio.
 La construcción pura del \emph{world} solo ve \emph{preset} y \emph{tuning} ya
 materializados en memoria.
@@ -263,24 +263,24 @@ Fragmento con \emph{hint} ilustrativo:
 }
 \end{lstlisting}
 
-\subsection{Pruebas}
+\subsection{Tests}
 \label{subsec:pruebas}
 
 La suite usa \texttt{tasty} y \texttt{tasty-hunit}. Los módulos \texttt{*Test}
 registran casos con descubrimiento automático en \texttt{test/Main.hs}. El
 dominio se prueba con \emph{world}s fijos en \texttt{Domain.Fixtures} y
-comparación \texttt{(@?=)}. La orquestación usa \texttt{runGameM} sin \texttt{IO}.
+comparación \texttt{(@?=)}. La orchestration usa \texttt{runGameM} sin \texttt{IO}.
 \texttt{updateGame} es polimórfica en \texttt{MonadReader} y
 \texttt{MonadState}, lo que permite instancias mínimas en
 \texttt{UpdateGameTest}.
 
-No hay regresión visual ni cobertura exhaustiva: son \emph{smoke checks} (pruebas
+No hay regresión visual ni cobertura exhaustiva: son \emph{smoke checks} (tests
 mínimas de sanidad) sobre lógica delicada. Otros módulos cubren arena de jefe,
 plataformas especiales y flujo de nivel con el mismo criterio. Ejemplos representativos:
 
 \begin{table}[htbp]
   \centering
-  \caption{Pruebas ilustrativas del motor.}
+  \caption{Tests ilustrativos del motor.}
   \label{tab:pruebas}
   \begin{tabular}{@{}p{3.4cm}p{9.6cm}@{}}
     \textbf{Módulo} & \textbf{Qué verifica} \\
@@ -290,7 +290,7 @@ plataformas especiales y flujo de nivel con el mismo criterio. Ejemplos represen
     \texttt{AabbTest} &
     Solapamiento y utilidades de caja. \\
     \texttt{BehaviourTest}, \texttt{EnemyFsmTest} &
-    Un paso del intérprete y ramas de la FSM reactiva. \\
+    Un paso del interpreter y ramas de la FSM reactiva. \\
     \texttt{CombatTest}, \texttt{ProjectileTest} &
     Contacto, melee y disparos. \\
     \texttt{LevelLoadTest}, \texttt{LoadLevelTest} &
@@ -302,7 +302,7 @@ plataformas especiales y flujo de nivel con el mismo criterio. Ejemplos represen
     \texttt{ResolveBehavioursTest} &
     Resolución de \texttt{behaviourHint} vía \emph{stub} del puerto. \\
     \texttt{BehaviourCatalogTest} &
-    \texttt{programForEnemyDef} y \emph{tuning} sobre arquetipos. \\
+    \texttt{programForEnemyDef} y \emph{tuning} sobre archetypes. \\
     \texttt{UpdateGameTest} &
     Simulación congelada en \texttt{GameOver}, \emph{pickup}s y \texttt{runFrames}. \\
   \end{tabular}

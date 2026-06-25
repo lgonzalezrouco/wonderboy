@@ -12,9 +12,9 @@ El contenido estático de cada etapa proviene de una \emph{level definition} car
 jugar. Durante la partida el motor actualiza ese \emph{world} frame a frame.
 
 La interacción con el \emph{medio} ocurre en la frontera del
-sistema: entrada del usuario, lectura de datos externos y renderizado en tiempo real. Esas
+sistema: entrada del usuario, lectura de datos externos y rendering en tiempo real. Esas
 responsabilidades quedan fuera del núcleo de simulación. La lógica de juego se expresa como
-transformaciones puras sobre el \emph{world}, mientras que la orquestación de estado global,
+transformaciones puras sobre el \emph{world}, mientras que la orchestration de estado global,
 configuración y efectos se delega a capas superiores del motor.
 
 \subsection{Motivación}
@@ -25,7 +25,7 @@ vistos en la materia: funciones puras, composición con tipos algebraicos, abstr
 manejo de efectos con mónadas. Un juego de plataformas resulta un caso de estudio exigente
 porque combina estado global, actualización continua y entrada en tiempo real.
 
-Elegimos un videojuego también por una razón práctica: la retroalimentación visual hace
+Elegimos un videojuego también por una razón práctica: el feedback visual hace
 tangible el comportamiento del programa. Cada \emph{frame} se puede observar de inmediato,
 y un error en física, colisiones o comportamiento de un \emph{enemy} se manifiesta en pantalla
 sin depender de trazas ni dumps de estado. Eso acorta el ciclo de validación y mantiene el
@@ -36,7 +36,7 @@ foco en la corrección del modelo, no solo en que el código compile.
 
 \textbf{Objetivo general.}
 Demostrar conceptos de Programación Funcional mediante la construcción de un videojuego de
-plataformas~2D jugable, con un motor modular que separa simulación pura, orquestación con
+plataformas~2D jugable, con un motor modular que separa simulación pura, orchestration con
 mónadas e integración con el entorno externo.
 
 \textbf{Objetivos específicos.}
@@ -51,7 +51,7 @@ mónadas e integración con el entorno externo.
 
   \item Diseñar un motor modular por capas (\texttt{Domain}, \texttt{UseCases},
     \texttt{Adapters}, \texttt{Frameworks}), de modo que la simulación viva en un núcleo
-    puro sin \texttt{IO}, la orquestación del \emph{frame} quede en casos de uso, y la
+    puro sin \texttt{IO}, la orchestration del \emph{frame} quede en casos de uso, y la
     entrada, el reloj y el dibujado se concentren en adaptadores concretos. La transición
     central del motor se expresa como una función pura de paso sobre el \emph{world}.
 
@@ -62,9 +62,9 @@ mónadas e integración con el entorno externo.
 
   \item Modelar comportamientos de \emph{entity} (en particular \emph{enemy}) mediante un
     \emph{DSL} basado en \emph{free monad}: el \emph{AST} describe
-    acciones como desplazarse, esperar o atacar, y un intérprete puro en el dominio las ejecuta
-    sobre el \emph{world}. Esa separación permite combinar patrones de IA (patrullaje,
-    persecución, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
+    acciones como desplazarse, esperar o atacar, y un interpreter puro en el dominio las ejecuta
+    sobre el \emph{world}. Esa separación permite combinar patrones de IA (patrol,
+    chase, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
     efectos del entorno.
 
   \item Orquestar el estado global del juego, la configuración de física y parámetros de
