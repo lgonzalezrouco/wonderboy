@@ -448,24 +448,35 @@ promptText profile mExample =
       [ "Schema del nivel (todas las posiciones son objetos {\"x\": Float, \"y\": Float} con ancla bottom-left):"
       , "- minScore (Int >= 0): puntaje mínimo para completar el nivel."
       , "- spawn ({x,y}): posición inicial del jugador; debe quedar sobre una plataforma."
-      , "- platforms (array de {pos, width, height}): plataformas fijas. Incluí siempre una pared izquierda y una derecha (height alto) y un piso continuo."
+      , "- platforms (array de {pos, width, height}): plataformas fijas. Incluí un piso continuo y dos paredes de límite (height alto) SOLO en los extremos del nivel: una a la izquierda del spawn (en la x mínima) y otra a la derecha del exit (en la x máxima). NO agregues paredes en el interior del nivel."
       , "- movingPlatforms (array de {id, pos, width, height, endA, endB, speed, startTowardB}): plataformas que oscilan entre endA y endB."
       , "- enemies (array de {id, kind, pos}): enemigos. kind es uno de: snail, bat, golem, archer, bossGolem, bossBat. NO incluyas NUNCA los campos behaviourPreset ni behaviourHint en los enemigos, AUNQUE el ejemplo de abajo los traiga: ignoralos por completo (cada enemigo usa su comportamiento por defecto)."
       , "- pickups (array de {id, pos, value}): gemas; value es un Int de puntaje."
       , "- fallingHazards (array de {id, pos, width, height, fallSpeed, loopDelay opcional}): peligros que caen; fallSpeed > 0."
       , "- crumblingPlatforms (array de {id, pos, width, height}): plataformas que se desmoronan al pisarlas."
       , "- bossArena (opcional, {left, right}): límites en X de la arena del jefe; left < right."
-      , "- exit ({pos, width, height}): zona de salida del nivel."
+      , "- exit ({pos, width, height}): zona de salida; debe quedar APOYADA sobre una plataforma fija (con piso justo debajo), nunca flotando en el aire."
       , "Tipos numéricos: minScore, todos los id, value y loopDelay son ENTEROS (sin decimales). Los demás números (x, y, width, height, speed, fallSpeed) pueden ser decimales."
       ]
 
-  -- Reglas de jugabilidad transversales a todos los roles.
+  -- Reglas de jugabilidad transversales a todos los roles. Las reglas de "exit
+  -- apoyado", "piso continuo" y "paredes solo en los extremos" son defensivas
+  -- contra dos artefactos observados en niveles generados: (1) el exit dibujado
+  -- flotando cuando el modelo lo ubicaba sin piso debajo, y (2) "paredes
+  -- invisibles" que encierran al jugador, porque el render oculta toda columna
+  -- alta y angosta apoyada en el piso salvo la del borde derecho del mapa (ver
+  -- 'platformKind'/'renderPlatform' en 'Adapters.Gloss.Rendering'). Pedir piso
+  -- continuo, exit apoyado y paredes solo en los extremos reduce ambos casos.
   playabilitySection =
     T.intercalate
       "\n"
       [ "Reglas de jugabilidad (obligatorias):"
-      , "- El spawn del jugador debe quedar parado sobre una plataforma fija."
-      , "- La salida (exit) debe ser alcanzable saltando entre plataformas desde el spawn."
+      , "- El spawn del jugador debe quedar parado sobre una plataforma fija (debe haber piso justo debajo del spawn)."
+      , "- El piso debe ser CONTINUO desde el spawn hasta el exit: nada de huecos por los que el jugador caiga al vacío en el recorrido principal."
+      , "- El exit debe estar APOYADO sobre una plataforma fija: tiene que existir una plataforma cuya cara superior quede a la altura de la base del exit (exit.pos.y igual a platform.pos.y + platform.height) y que cubra el rango horizontal del exit. NUNCA dejes el exit flotando."
+      , "- La salida (exit) debe ser alcanzable caminando y saltando entre plataformas desde el spawn."
+      , "- Las ÚNICAS plataformas verticales (más altas que anchas) deben ser las dos paredes de límite en los extremos del nivel: la izquierda antes del spawn y la derecha después del exit. NO pongas columnas altas y angostas en el interior ni cerca del spawn: el juego las convierte en barreras invisibles que encierran al jugador."
+      , "- Las plataformas del interior (pisos y repisas) deben ser anchas y bajas: su width siempre claramente mayor que su height, nunca columnas."
       , "- Los ids deben ser únicos DENTRO de cada tipo (enemies, pickups, movingPlatforms, etc.), empezando en 1."
       , "- Usá coordenadas razonables, en los mismos rangos que el ejemplo (x de unos -280 a algunos miles, y de 0 a ~200 para el contenido jugable)."
       , "- minScore no debe superar la suma de los value de todos los pickups."
