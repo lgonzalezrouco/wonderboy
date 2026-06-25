@@ -153,6 +153,7 @@ library
       , Domain.Logic.Projectiles
       , Domain.Logic.CrumblingPlatforms
       , Domain.Logic.FallingHazards
+      , Domain.Logic.Frame
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
       , Domain.Logic.MovingPlatforms
@@ -184,9 +185,11 @@ library
       , Domain.Logic.BossPhase
       , Domain.Logic.BuildWorld
       , Adapters.Gloss.Camera
+      , Adapters.Gloss.Tiling
       , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.GenerateLevels
+      , UseCases.BootstrapRun
       , UseCases.UpdateGame
       , UseCases.Ports.BehaviourResolverPort
       , UseCases.Ports.LevelGeneratorPort
@@ -201,6 +204,7 @@ library
       , Adapters.Gloss.Time
       , Adapters.LevelFile
       , Adapters.LevelGenerator
+      , Adapters.BootstrapRun
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -252,6 +256,7 @@ test-suite wonderboy-hs-test
       , Domain.BossPhaseTest
       , Domain.BehaviourTest
       , Domain.Fixtures
+      , Domain.FrameTest
       , Domain.PlayerLifeTest
       , Domain.CombatTest
       , Domain.EnemyFsmTest
@@ -264,6 +269,7 @@ test-suite wonderboy-hs-test
       , Domain.CrumblingPlatformTest
       , Domain.StepTest
       , Adapters.Gloss.CameraTest
+      , Adapters.Gloss.TilingTest
       , Domain.LevelLoadTest
       , Domain.LevelFlowTest
       , UseCases.UpdateGameTest
@@ -271,6 +277,7 @@ test-suite wonderboy-hs-test
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
       , UseCases.GenerateLevelsTest
+      , UseCases.BootstrapRunTest
       , Domain.BehaviourTuningTest
       , Domain.AmplifierTest
       , Domain.ScaleHealthTest

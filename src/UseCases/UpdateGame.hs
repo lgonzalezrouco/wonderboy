@@ -1,8 +1,7 @@
 {- | Orquestación del ciclo de actualización del juego.
 
-'updateGame' es el punto de entrada para un frame de simulación: lee la
-configuración con 'MonadReader', y eleva la transición pura de frame
-('Domain.Logic.Step.advanceFrame' + 'Domain.Logic.PlayerLife.resolveHazardsAndDeath')
+'updateGame' lee 'GameConfig' con 'MonadReader', aplica la política de frame
+congelado y fases terminales, y eleva 'Domain.Logic.Frame.advanceSimulationFrame'
 al estado del juego con 'MonadState'.
 'runFrames' corre @n@ frames seguidos reutilizando 'runGameM'.
 -}
@@ -19,15 +18,13 @@ import Control.Monad (unless)
 import Control.Monad.Reader (MonadReader, ask)
 import Control.Monad.State (MonadState, get, modify)
 
-import Domain.Logic.BossPhase (resolveBossPhases)
-import Domain.Logic.Combat (resolveCombat)
-import Domain.Logic.FallingHazards (resolveFallingHazards)
-import Domain.Logic.LevelFlow (resolveFramePhase, resolvePlayingWin)
-import Domain.Logic.Pickups (resolvePickups)
-import Domain.Logic.PlayerLife (resolveHazardsAndDeath)
-import Domain.Logic.Projectiles (resolveProjectiles)
-import Domain.Logic.Step (advanceFrame)
-import Domain.Model.GamePhase (GamePhase (Playing), isSimulationFrozen)
+import Domain.Logic.Frame (
+  FrameParams (..),
+  FrameResult (..),
+  PlayingFrame (..),
+  advanceSimulationFrame,
+ )
+import Domain.Model.GamePhase (isSimulationFrozen)
 import Domain.ValueObjects.DeltaTime (DeltaTime, isFrozen)
 import Domain.ValueObjects.Input (Input)
 import UseCases.GameMonad (
@@ -45,8 +42,7 @@ import UseCases.GameMonad (
 
 Con 'GameOver', 'LevelComplete' o 'Victory' no avanza simulación. Con el frame
 congelado ('Domain.ValueObjects.DeltaTime.isFrozen') tampoco avanza nada. En
-'Playing' con tiempo: behaviour + física, combate, pickups, victoria híbrida,
-luego out-of-bounds y muerte (la muerte anula la victoria en el mismo frame).
+'Playing' con tiempo delega en 'advanceSimulationFrame'.
 
 La firma es polimórfica en las typeclasses 'mtl' que realmente usa
 ('MonadReader' 'GameConfig', 'MonadState' 'GameState'); no necesita 'MonadError'
@@ -61,32 +57,28 @@ updateGame dt input = do
   st <- get
   unless (isSimulationFrozen (gsPhase st) || isFrozen dt) $ do
     cfg <- ask
-    let params = physicsParamsFromConfig cfg
-        life = lifeParamsFromConfig cfg
-        combat = combatParamsFromConfig cfg
-        throwP = throwParamsFromConfig cfg
-        livesBefore = gsLives st
-        scoreAfterPickups = gsScore st
-        wBefore = gsWorld st
-        wAfterFrame = advanceFrame params life dt input wBefore
-        wAfterCombat = resolveCombat combat input wAfterFrame
-        wAfterProjectiles = resolveProjectiles throwP combat params dt input wAfterCombat
-        wAfterHazards = resolveFallingHazards life combat dt wAfterProjectiles
-        wAfterBoss = resolveBossPhases combat wBefore wAfterHazards
-        (wAfterPickups, scoreDelta) = resolvePickups wAfterBoss
-        scoreFinal = scoreAfterPickups <> scoreDelta
-        phaseFromWin =
-          resolvePlayingWin (gsLevelIndex st) (gcLevelCount cfg) scoreFinal wAfterPickups
-        (wFinal, lives', phaseFromDeath) =
-          resolveHazardsAndDeath life livesBefore Playing wAfterPickups
-        phase' = resolveFramePhase livesBefore lives' phaseFromDeath phaseFromWin
+    let fp =
+          FrameParams
+            { fpPhysics = physicsParamsFromConfig cfg
+            , fpLife = lifeParamsFromConfig cfg
+            , fpCombat = combatParamsFromConfig cfg
+            , fpThrow = throwParamsFromConfig cfg
+            }
+        playing =
+          PlayingFrame
+            { pfWorld = gsWorld st
+            , pfLives = gsLives st
+            , pfScore = gsScore st
+            , pfLevelIndex = gsLevelIndex st
+            }
+        result = advanceSimulationFrame fp (gcLevelCount cfg) dt input playing
     modify
       ( \s ->
           s
-            { gsWorld = wFinal
-            , gsLives = lives'
-            , gsPhase = phase'
-            , gsScore = scoreFinal
+            { gsWorld = frWorld result
+            , gsLives = frLives result
+            , gsPhase = frPhase result
+            , gsScore = frScore result
             }
       )
 
