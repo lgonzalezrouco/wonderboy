@@ -59,7 +59,7 @@ data BehaviourArchetype
   | GuardArchetype
   deriving (Eq, Show, Generic)
 
-{- | Arquetipo + tuning producidos por el behaviour resolver. -}
+-- | Arquetipo + tuning producidos por el behaviour resolver.
 data ResolvedBehaviour = ResolvedBehaviour
   { rbArchetype :: BehaviourArchetype
   , rbTuning :: BehaviourTuning
