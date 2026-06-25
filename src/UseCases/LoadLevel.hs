@@ -2,6 +2,7 @@
 module UseCases.LoadLevel (
   decodeLevelDefinition,
   worldFromDefinition,
+  worldFromCatalog,
   loadLevelFromText,
 )
 where
@@ -39,6 +40,20 @@ flujos que necesiten resolver comportamiento componen los pasos por separado.
 -}
 loadLevelFromText :: Text -> Either GameError World
 loadLevelFromText txt = decodeLevelDefinition txt >>= worldFromDefinition
+
+{- | Construye el 'World' del nivel @idx@ dentro de un catálogo pre-cargado.
+
+Índice fuera de rango → 'GameError'; el llamador con 'IO' decide cómo abortar.
+-}
+worldFromCatalog :: [LevelDefinition] -> Int -> Either GameError World
+worldFromCatalog defs idx
+  | idx < 0 = Left invalidIndex
+  | otherwise =
+      case drop idx defs of
+        (def : _) -> worldFromDefinition def
+        _ -> Left invalidIndex
+ where
+  invalidIndex = GameError ("invalid level index: " ++ show idx)
 
 levelBuildToGameError :: LevelBuildError -> GameError
 levelBuildToGameError (LevelBuildError msg) =

@@ -188,6 +188,7 @@ library
       , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.GenerateLevels
+      , UseCases.BootstrapRun
       , UseCases.UpdateGame
       , UseCases.Ports.BehaviourResolverPort
       , UseCases.Ports.LevelGeneratorPort
@@ -202,6 +203,7 @@ library
       , Adapters.Gloss.Time
       , Adapters.LevelFile
       , Adapters.LevelGenerator
+      , Adapters.BootstrapRun
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -273,6 +275,7 @@ test-suite wonderboy-hs-test
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
       , UseCases.GenerateLevelsTest
+      , UseCases.BootstrapRunTest
       , Domain.BehaviourTuningTest
       , Domain.AmplifierTest
       , Domain.ScaleHealthTest

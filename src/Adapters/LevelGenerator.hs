@@ -7,7 +7,7 @@ Anthropic. Todo el 'IO' del feature vive acá.
 
 'AnthropicGenerator' (@ReaderT GeneratorEnv IO@) evita una instancia huérfana sobre
 'IO' y mantiene @UseCases/@ libre de este módulo. Cualquier falla degrada a
-'Nothing'; @Frameworks/@ hace fallback al @level{N}.json@ fijo.
+'Nothing'; @UseCases.BootstrapRun@ hace fallback al @level{N}.json@ fijo.
 -}
 module Adapters.LevelGenerator (generateCatalogIO)
 where
