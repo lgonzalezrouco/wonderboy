@@ -88,7 +88,7 @@ El catálogo del \emph{run} admite dos formas de obtener las tres
 \emph{level definition}s (sección~\ref{subsec:solucion-catalogo}). Por
 \textbf{defecto} el juego carga los JSON de referencia escritos a mano en
 \texttt{levels/} (\texttt{level1.json}, etc.): el \emph{layout} es fijo y reproducible.
-Con \textbf{generación activada} (\texttt{WONDERBOY\_GENERATE\_LEVELS}), cada etapa
+Con \envvar{WONDERBOY_GENERATE_LEVELS} activada, cada etapa
 puede reemplazarse por un JSON nuevo producido por la API de un LLM antes del primer
 \emph{frame}. Si la API falla, ese \emph{slot} conserva el JSON fijo del mismo índice.
 

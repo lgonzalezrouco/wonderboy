@@ -231,12 +231,12 @@ volver a consultar la red.
     \textbf{Modo} & \textbf{Activación} & \textbf{Origen del contenido} \\
     \hline
     JSON fijos &
-    Por defecto (sin \texttt{WONDERBOY\_GENERATE\_LEVELS}). &
+    Por defecto (sin \envvar{WONDERBOY_GENERATE_LEVELS}). &
     Tres archivos en \texttt{levels/}, escritos a mano en el repositorio.
     \emph{Layout} reproducible. \texttt{behaviourHint} opcional en cada enemigo:
     la IA lo traduce a archetype y \emph{tuning} al arrancar. \\
     JSON generados por IA &
-    \texttt{WONDERBOY\_GENERATE\_LEVELS} activa. &
+    \envvar{WONDERBOY_GENERATE_LEVELS} activa. &
     La API produce un JSON por etapa (intro, desafío, jefe). \emph{Layout} distinto
     en cada arranque. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
     \emph{default} de su \texttt{kind}. Si falla la generación de un \emph{slot},

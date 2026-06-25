@@ -271,11 +271,11 @@ generación opcional por API y resolución de hints (sección~\ref{subsec:soluci
 Si un \emph{slot} generado falla, conserva el JSON fijo de ese índice. Si un hint no se
 resuelve, el enemigo cae al \emph{default} de su \texttt{kind}. La partida no se aborta.
 
-\textbf{Niveles generados por IA.} Con \texttt{WONDERBOY\_GENERATE\_LEVELS} activo, el
+\textbf{Niveles generados por IA.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
 adaptador consulta la API una vez por perfil (intro, desafío, jefe) y devuelve un JSON
 completo que reemplaza al archivo fijo del mismo índice. El prompt fija el schema, reglas
 de jugabilidad y un ejemplo few-shot del JSON fijo del mismo índice. Un tema
-opcional (\texttt{WONDERBOY\_WORLD\_PROMPT}) orienta el diseño. La respuesta se decodifica
+opcional (\envvar{WONDERBOY_WORLD_PROMPT}) orienta el diseño. La respuesta se decodifica
 y se valida con \texttt{buildWorld}. Hay un reintento por etapa ante fallo de red o JSON
 inválido. El JSON generado no incluye \texttt{behaviourHint}: cada \emph{enemy} queda con
 el \emph{default} de su \texttt{kind}.
