@@ -57,6 +57,8 @@ import Network.HTTP.Client (
   redactHeaders,
   requestBody,
   requestHeaders,
+  responseTimeout,
+  responseTimeoutMicro,
  )
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
@@ -145,12 +147,17 @@ override opcional y un 'Manager' TLS) y se corre la orquestación en
 -}
 resolveLevelIO :: LevelDefinition -> IO LevelDefinition
 resolveLevelIO def = do
-  mKey <- lookupEnv "ANTHROPIC_API_KEY"
+  -- `lookupEnv` devuelve `Just ""` si la variable está definida pero vacía (p. ej.
+  -- `ANTHROPIC_API_KEY=` en el shell o un `.env` sin valor). 'nonEmptyApiKey' trata
+  -- vacío —o solo espacios— igual que ausente: con una key vacía cada pista
+  -- dispararía un request que la API rechaza (401), uno por hint. Degradamos una
+  -- sola vez a 'runNoResolver' (el mismo camino que cuando la variable falta).
+  mKey <- nonEmptyApiKey <$> lookupEnv "ANTHROPIC_API_KEY"
   case mKey of
     Nothing -> do
       hPutStrLn
         stderr
-        "[behaviour-resolver] ANTHROPIC_API_KEY ausente; uso arquetipos por defecto."
+        "[behaviour-resolver] ANTHROPIC_API_KEY ausente o vacía; uso arquetipos por defecto."
       pure (runNoResolver (resolveLevelBehaviours def))
     Just key -> do
       mModel <- lookupEnv "WONDERBOY_RESOLVER_MODEL"
@@ -161,7 +168,7 @@ resolveLevelIO def = do
       manager <- newTlsManager
       let env =
             ResolverEnv
-              { reApiKey = T.pack key
+              { reApiKey = key
               , reModel = maybe defaultModel T.pack mModel
               , reManager = manager
               , reBaseUrl = "https://api.anthropic.com/v1/messages"
@@ -172,6 +179,30 @@ resolveLevelIO def = do
         env
         ("activo; modelo=" <> T.unpack (reModel env) <> " endpoint=" <> reBaseUrl env)
       runReaderT (runAnthropicResolver (resolveLevelBehaviours def)) env
+
+{- | Normaliza la API key leída del entorno: 'Nothing' si está ausente, vacía o
+compuesta solo por espacios; 'Just' con la key recortada en otro caso.
+
+Distingue "definida con valor real" de "definida pero vacía" ('Just ""', que
+'lookupEnv' devuelve para @ANTHROPIC_API_KEY=@). Recortar también evita que
+espacios accidentales rompan el header @x-api-key@.
+-}
+nonEmptyApiKey :: Maybe String -> Maybe Text
+nonEmptyApiKey raw = do
+  s <- raw
+  let trimmed = T.strip (T.pack s)
+  if T.null trimmed then Nothing else Just trimmed
+
+{- | Timeout de respuesta por consulta a la API, en microsegundos (10 s).
+
+La resolución corre __sincrónicamente__ al cargar un nivel, incluido el cambio o
+reinicio de nivel dentro del event handler de Gloss. Sin un límite explícito, una
+API lenta o inalcanzable bloquearía la ventana hasta el default del manager (30 s)
+__por cada pista distinta__. Al vencer, 'httpLbs' lanza una 'HttpException' que el
+'try' de 'resolveOne' captura y degrada a 'Nothing' (arquetipo por defecto).
+-}
+resolverTimeoutMicros :: Int
+resolverTimeoutMicros = 10 * 1000 * 1000
 
 {- | Traza de depuración a 'stderr', condicionada al flag 'reDebug'.
 
@@ -232,6 +263,10 @@ resolveOne env kind hint = do
                 , ("content-type", "application/json")
                 ]
             , requestBody = RequestBodyLBS (encode body)
+            , -- Timeout de respuesta explícito (ver 'resolverTimeoutMicros'): acota
+              -- cuánto puede bloquear la ventana de Gloss una API lenta o caída, ya
+              -- que la resolución corre sincrónicamente al cargar/cambiar de nivel.
+              responseTimeout = responseTimeoutMicro resolverTimeoutMicros
             , -- La API key viaja en el header `x-api-key`. `redactHeaders` hace que
               -- el `Show` del `Request` (que puede aparecer dentro de una
               -- `HttpException` y terminar en stderr vía `show err`) lo enmascare,
