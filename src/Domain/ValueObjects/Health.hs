@@ -39,9 +39,16 @@ isDepleted (Health n) = n <= 0
 reduceHealth :: Damage -> Health -> Health
 reduceHealth d (Health n) = health (n - damagePoints d)
 
-{- | Escala la salud por un factor (típicamente ya clampeado por 'Multiplier'),
-redondeando al entero más cercano, con piso de 1 HP: ningún enemigo nace derrotado.
+{- | Escala la salud por un factor (típicamente ya clampeado por 'Amplifier'),
+redondeando hacia arriba ('ceiling') con piso de 1 HP.
+
+Se usa 'ceiling' y no 'round' a propósito: sobre una base chica (los enemigos comunes
+arrancan en 1 HP) cualquier factor > 1.0 debe costar al menos +1 golpe. Con 'round' un
+@toughness×@ tibio como 1.2 sobre 1 HP volvía a 1 (@round 1.2 = 1@) y la amplificación se
+perdía; peor aún, el redondeo banquero de Haskell dejaba @round 2.5 = 2@, así que ni el
+valor más alto que sugiere el modelo llegaba a 3 HP. El piso de 1 HP ('max' con 1) sigue
+garantizando que ningún enemigo nace derrotado aunque el factor fuera < 1.
 -}
 scaleHealth :: Float -> Health -> Health
 scaleHealth factor h =
-  health (max 1 (round (fromIntegral (healthPoints h) * factor)))
+  health (max 1 (ceiling (fromIntegral (healthPoints h) * factor)))
