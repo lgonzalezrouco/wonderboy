@@ -38,10 +38,8 @@ import Domain.Model.ExitZone (ExitZone (..))
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (Player (..), spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
-import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Health (health)
-import Domain.ValueObjects.Input (noInput)
+import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.Position (Position, position)
 import Domain.ValueObjects.Score (score)
 import Test.Tasty.HUnit (Assertion, (@?=))
@@ -162,11 +160,8 @@ unit_frameBossPhaseUsesPreFrameHealth =
           { enemyHealth = health 14
           , enemyMaxHealth = health 20
           }
-      p =
-        (spawnPlayer defaultMaxHealth (position 170 8))
-          { playerAttackFrames = cpAttackDuration testCombatParams
-          , playerFacing = FacingRight
-          }
+      -- Arranca el swing por input: el melee daña en el frame de inicio ('attackStarted').
+      p = spawnPlayer defaultMaxHealth (position 170 8) -- mira a la derecha por defecto
       w =
         floorWorld
           { worldPlayer = p
@@ -177,6 +172,6 @@ unit_frameBossPhaseUsesPreFrameHealth =
           testFrameParams
           (gcLevelCount defaultConfig)
           dtFrame
-          noInput
+          (noInput{inputAttack = True})
           (playingFrame w)
    in bossPhaseIndexIn (frWorld result) @?= 1
