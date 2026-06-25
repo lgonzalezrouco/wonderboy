@@ -7,14 +7,12 @@ module Frameworks.Gloss.GameLoop (
 )
 where
 
-import Adapters.BehaviourResolver (resolveLevelIO)
+import Adapters.BootstrapRun (bootstrapCatalogIO)
 import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
 import Adapters.Gloss.Sprites (SpriteCatalog, loadSpriteCatalog)
 import Adapters.Gloss.Time (capDeltaTime)
-import Adapters.LevelFile (readLevelFile)
-import Adapters.LevelGenerator (generateCatalogIO)
 import Domain.Model.GamePhase (GamePhase (..), isSimulationFrozen)
 import Domain.Model.LevelDefinition (LevelDefinition)
 import Domain.Model.World (World)
@@ -27,8 +25,6 @@ import Graphics.Gloss.Interface.IO.Game (
   playIO,
  )
 import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
-import Paths_wonderboy_hs (getDataFileName)
-import System.Environment (lookupEnv)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStrLn, stderr)
 import UseCases.GameMonad (
@@ -44,10 +40,8 @@ import UseCases.GameMonad (
   restartRun,
   runGameM,
  )
-import UseCases.LoadLevel (decodeLevelDefinition, worldFromDefinition)
+import UseCases.LoadLevel (worldFromCatalog)
 import UseCases.UpdateGame (updateGame)
-
-import Data.Text qualified as T
 
 -- | Catálogo del demo (tres niveles). Añadir rutas aquí o pasar otra lista a 'runGameWith'.
 demoLevelPaths :: [FilePath]
@@ -80,7 +74,7 @@ runGame = runGameWith demoLevelPaths
 runGameWith :: [FilePath] -> IO ()
 runGameWith paths = do
   let cfg = configForLevelCatalog paths
-  defs <- buildLevelCatalog paths
+  defs <- bootstrapCatalogIO paths
   world <- loadWorldFromCatalog defs 0
   sprites <- loadSpriteCatalog
   playIO
@@ -92,58 +86,14 @@ runGameWith paths = do
     handleEvent
     advanceFrame
 
-buildLevelCatalog :: [FilePath] -> IO [LevelDefinition]
-buildLevelCatalog paths = do
-  genOn <- lookupEnv "WONDERBOY_GENERATE_LEVELS"
-  theme <- lookupEnv "WONDERBOY_WORLD_PROMPT"
-  defs <-
-    if isEnabled genOn
-      then do
-        generated <- generateCatalogIO (T.pack <$> theme)
-        traverse (uncurry resolveSlot) (zip paths (padTo (length paths) generated))
-      else traverse loadDefFromFile paths
-  traverse resolveLevelIO defs
- where
-  isEnabled = maybe False (not . null)
-
-  resolveSlot :: FilePath -> Maybe LevelDefinition -> IO LevelDefinition
-  resolveSlot _ (Just def) = pure def
-  resolveSlot path Nothing = loadDefFromFile path
-
-padTo :: Int -> [Maybe a] -> [Maybe a]
-padTo n xs = take n (xs ++ repeat Nothing)
-
-loadDefFromFile :: FilePath -> IO LevelDefinition
-loadDefFromFile relPath = do
-  path <- getDataFileName relPath
-  readResult <- readLevelFile path
-  case readResult of
-    Left err -> exitWithError err
-    Right txt ->
-      case decodeLevelDefinition txt of
-        Left (GameError err) -> exitWithError err
-        Right def -> pure def
-
 loadWorldFromCatalog :: [LevelDefinition] -> Int -> IO World
 loadWorldFromCatalog defs idx =
-  case defs !!? idx of
-    Nothing -> exitWithError ("invalid level index: " ++ show idx)
-    Just def ->
-      case worldFromDefinition def of
-        Left (GameError err) -> exitWithError err
-        Right world -> pure world
+  case worldFromCatalog defs idx of
+    Left (GameError err) -> exitWithError err
+    Right world -> pure world
 
 exitWithError :: String -> IO a
 exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
-
-(!!?) :: [a] -> Int -> Maybe a
-(!!?) xs n
-  | n < 0 = Nothing
-  | otherwise = go n xs
- where
-  go _ [] = Nothing
-  go 0 (x : _) = Just x
-  go k (_ : xs') = go (k - 1) xs'
 
 -- | Estado inicial a partir de un mundo cargado.
 initialAppState :: GameConfig -> [LevelDefinition] -> SpriteCatalog -> World -> AppState
