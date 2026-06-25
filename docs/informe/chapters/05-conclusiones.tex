@@ -42,14 +42,10 @@ simulación no distingue si el \emph{preset} vino del autor, del resolver o del
 El resto de las piezas del motor (carga de \emph{level definition}s,
 pila monádica para vidas y fases de partida, combate y reglas de victoria) se
 integraron en esa arquitectura sin romper la pureza del núcleo. El juego
-jugable, con mecánicas del dominio operativas y una versión publicada en
-itch.io, funciona como validación empírica: un error en física, colisiones o
-comportamiento de un \emph{enemy} se ve al instante en pantalla, lo que acortó
-el ciclo entre modelo y comportamiento observado.
+jugable, con una versión publicada en itch.io, validó el modelo en pantalla.
 
 Los tests automatizados se limitaron a \emph{smoke checks} sobre lógica pura y
-orchestration sin \texttt{IO}. El alcance del trabajo se acotó a un motor de
-plataformas 2D con un \emph{run} local.
+orchestration sin \texttt{IO}.
 
 \subsection{Dificultades}
 \label{subsec:conclusiones-dificultades}

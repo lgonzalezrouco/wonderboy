@@ -10,8 +10,6 @@ transforma un \emph{world} en otro \emph{world}. La orchestration del
 \emph{run} (vidas, fase de partida, puntaje entre etapas) se expresa con una
 pila monádica sin \texttt{IO}. Los efectos del entorno (entrada, reloj,
 archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
-Cada capa importa solo hacia abajo: el dominio no conoce Gloss ni el sistema de
-archivos.
 
 \subsection{Arquitectura por capas}
 \label{subsec:solucion-capas}
@@ -107,9 +105,8 @@ física y colisiones en \texttt{step}. Un \emph{frame} abarca todo el pipeline
 (sección~\ref{subsec:pipeline-frame}). El \emph{behaviour step} es solo la parte de
 decisión de la IA dentro de ese ciclo. A continuación se encadenan combate, proyectiles,
 peligros, fases de jefe, \emph{pickup}s, victoria híbrida y muerte, en orden fijo.
-La victoria híbrida combina tres condiciones: solapamiento con la \emph{exit zone},
-puntaje mínimo de la \emph{level definition} y ausencia de jefe vivo (ver
-sección~\ref{subsubsec:dominio-entidades}). \texttt{step} concentra gravedad, salto,
+La victoria híbrida sigue las tres condiciones de
+sección~\ref{subsubsec:dominio-entidades}. \texttt{step} concentra gravedad, salto,
 integración de velocidades y resolución \emph{AABB} del \emph{player} y los \emph{enemy}
 terrestres. Las plataformas móviles y los \emph{hazard} temporales se actualizan
 en la misma cadena.
@@ -369,5 +366,4 @@ la API de mensajes (modelo Claude Haiku por defecto).
 
 El ejecutable \texttt{wonderboy-hs} enlaza el framework Gloss con la biblioteca
 del motor. La configuración de compilación y las dependencias exactas figuran en
-el manifiesto Cabal del repositorio. Este informe se centra en cómo esas piezas
-se distribuyen en la arquitectura descrita.
+el manifiesto Cabal del repositorio.

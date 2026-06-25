@@ -1,11 +1,6 @@
 \section{Detalles de Diseño}
 \label{sec:detalles-diseno}
 
-Este capítulo desarrolla los algoritmos que el capítulo~\ref{sec:solucion-propuesta}
-presentó a alto nivel: el orden exacto de un \emph{frame}, la física y las
-colisiones, el DSL de comportamiento, las reglas de combate, la carga de niveles y
-la estrategia de testing.
-
 \subsection{Pipeline de un frame}
 \label{subsec:pipeline-frame}
 
@@ -33,8 +28,7 @@ En fases \texttt{GameOver}, \texttt{LevelComplete} o \texttt{Victory}, o con
 el mismo \emph{frame} ante \texttt{GameOver} o \emph{respawn}.
 \texttt{updateGame} lee \texttt{GameConfig}, delega el \emph{frame} al dominio y escribe
 el \texttt{GameState} con \texttt{modify}. No reexpone la pila \texttt{GameM}
-(sección~\ref{subsec:solucion-monadas}). Las subsecciones siguientes detallan cada
-bloque.
+(sección~\ref{subsec:solucion-monadas}).
 
 \subsection{Física cinemática}
 \label{subsec:fisica}
@@ -251,9 +245,8 @@ daño vienen de \texttt{CombatParams}.
 Los \emph{falling hazard}s caen a velocidad autorizada, dañan por solapamiento y,
 con \texttt{loopDelay} opcional en el JSON, reactivan en el spawn tras una espera.
 
-La victoria híbrida (sección~\ref{subsubsec:dominio-entidades}) exige las tres
-condiciones a la vez: solapamiento con la \emph{exit zone}, puntaje mínimo de la
-\emph{level definition} y ausencia de jefe vivo. Ninguna sola basta.
+La victoria híbrida exige las tres condiciones ya descritas
+(sección~\ref{subsubsec:dominio-entidades}).
 \texttt{resolveHazardsAndDeath} comprueba caída bajo la línea de muerte (derivada de la
 plataforma más baja) y reduce vidas o marca \texttt{GameOver}. El \emph{respawn} ubica al
 jugador en el \emph{spawn point}, elimina sus proyectiles y desactiva el modo de \emph{boss arena}.

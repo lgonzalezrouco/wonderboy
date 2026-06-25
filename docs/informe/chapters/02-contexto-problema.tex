@@ -103,8 +103,7 @@ ve \emph{preset} y \emph{tuning} ya materializados.
 \label{subsec:marco-teorico}
 
 La materia propone leer los programas como descripciones de valores y mantener un núcleo
-donde el significado no dependa de efectos ocultos. Las secciones siguientes fijan el
-vocabulario con el que abordamos el dominio del juego.
+donde el significado no dependa de efectos ocultos.
 
 \subsubsection{Referential transparency y funciones puras}
 \label{subsubsec:teoria-pureza}
@@ -223,7 +222,3 @@ El free monad plantea otra vía: describir el
 comportamiento como programa en un DSL e interpretarlo junto con el avance del
 \emph{frame}. El desafío es mantener esa separación sin duplicar estado ni romper la
 coherencia temporal del \emph{world}.
-
-En síntesis, el trabajo debe reconciliar un \emph{world} que evoluciona como valor puro con
-un \emph{run} que vive en el tiempo real, entrada impredecible y lectura de \emph{level
-definition}s desde archivos al arrancar o al cambiar de nivel.
