@@ -16,8 +16,8 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 
+import Domain.Logic.BehaviourCatalog (programForEnemyDef)
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
-import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetypeTuned)
 import Domain.Model.BossArena (BossArena, mkBossArena)
 import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHealth, bossPhases, phaseProgram)
 import Domain.Model.CrumblingPlatform (CrumblingPlatform, mkCrumblingPlatform)
@@ -143,11 +143,7 @@ buildEnemy def
       (enemyDefId def)
       (enemyDefKind def)
       (enemyDefPos def)
-      (behaviourProgramFor def)
-  behaviourProgramFor d =
-    case enemyDefBehaviourPreset d of
-      Just archetype -> programForArchetypeTuned (enemyDefKind d) archetype tuning
-      Nothing -> defaultProgramForKind (enemyDefKind d)
+      (programForEnemyDef def)
   tuneHealth e =
     let hp = scaleHealth (unAmplifier (tuningToughness tuning)) (enemyMaxHealth e)
      in e{enemyHealth = hp, enemyMaxHealth = hp}

@@ -1,6 +1,6 @@
 {- | Catálogo de clases de enemigo (stats y tamaño de la caja de colisión).
 
-El arquetipo de comportamiento por defecto vive en @Domain.Logic.EntityBehaviours@.
+El arquetipo de comportamiento por defecto vive en @Domain.Logic.BehaviourCatalog@.
 -}
 module Domain.Model.EnemyKind (
   EnemyKind (..),

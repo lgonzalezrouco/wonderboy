@@ -154,7 +154,7 @@ library
       , Domain.Logic.CrumblingPlatforms
       , Domain.Logic.FallingHazards
       , Domain.Logic.Frame
-      , Domain.Logic.EntityBehaviours
+      , Domain.Logic.BehaviourCatalog
       , Domain.Logic.Physics
       , Domain.Logic.MovingPlatforms
       , Domain.Logic.LevelFlow
@@ -165,7 +165,6 @@ library
       , Domain.Model.EntityBehaviour
       , Domain.Model.EnemyKind
       , Domain.Model.Enemy
-      , Domain.Logic.BehaviourSensing
       , Domain.Model.GamePhase
       , Domain.Model.GameView
       , Domain.Model.MovingPlatform
@@ -252,6 +251,7 @@ test-suite wonderboy-hs-test
     other-modules:
         Domain.AabbTest
       , Domain.ArchetypeMotionTest
+      , Domain.BehaviourCatalogTest
       , Domain.HealthRatioTest
       , Domain.BossPhaseTest
       , Domain.BehaviourTest

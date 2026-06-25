@@ -9,8 +9,8 @@ import Domain.Fixtures (
   testPlayerProjectile,
   testThrowParams,
  )
+import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Logic.Combat (resolveCombat)
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
 import Domain.Logic.Projectiles (resolveProjectiles)
 import Domain.Model.Enemy (mkEnemy)
 import Domain.Model.Player (playerAttackFrames, playerThrowCooldownFrames)
