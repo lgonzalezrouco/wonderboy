@@ -200,7 +200,6 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
-      , Adapters.BehaviourResolver
       , Adapters.LevelGenerator
       , Paths_wonderboy_hs
     autogen-modules:
