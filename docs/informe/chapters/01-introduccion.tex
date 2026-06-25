@@ -91,3 +91,27 @@ del \emph{player}, luego plataformas y colisiones, después ítems y combate, en
 comportamiento programable, y por último carga de niveles desde datos externos. Cada
 iteración cerraba un ciclo completo (modelo de dominio, integración en el \emph{frame} y
 prueba manual en el juego) antes de avanzar al siguiente bloque.
+
+Los cambios entraron al repositorio mediante \emph{pull requests} revisadas entre
+integrantes. En esas revisiones comprobamos que el bloque compilara, que la lógica nueva
+respetara la frontera de pureza de \texttt{Domain/}, que los casos del dominio quedaran
+cubiertos en el \emph{pattern matching}, y que los \emph{smoke checks} agregados
+reprodujeran el comportamiento esperado. Esa code review complementó la validación
+visual en pantalla.
+
+Un pipeline de continuous integration en GitHub ejecuta en cada cambio la compilación con
+tests habilitados, la suite \texttt{tasty}, la validación del paquete Cabal, la
+documentación Haddock, HLint y Fourmolu. Esos chequeos automáticos detectan regresiones de
+compilación, roturas en tests y desvíos de estilo antes del merge.
+
+Durante el desarrollo también recurrimos a Cursor y Claude. La arquitectura del motor, el
+modelado del dominio y las decisiones que este informe desarrolla en los capítulos
+siguientes las tomamos entre ambos integrantes. Esas herramientas nos ayudaron a barajar
+alternativas, a contrastar técnicas de Programación Funcional y a señalar debilidades en
+borradores intermedios. En ningún caso delegamos la decisión final: cada elección de diseño
+quedó argumentada y acordada por el equipo.
+
+En la escritura del código la asistencia se limitó sobre todo a sintaxis de Haskell y a
+piezas repetitivas de estructura. Todo lo que incorporamos pasó por las revisiones entre
+integrantes y por el pipeline de CI: lo releímos, lo corregimos y lo validamos contra el
+comportamiento esperado en pantalla o en tests.
