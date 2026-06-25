@@ -3,9 +3,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 {- | Adaptador concreto del puerto 'BehaviourResolverPort': resuelve el
-@behaviourHint@ (texto libre del autor del nivel) a un 'BehaviourArchetype'
-consultando a la API de Anthropic (Claude). Acá vive TODO el 'IO' del feature:
-lectura de variables de entorno, creación del 'Manager' TLS y la llamada HTTP.
+@behaviourHint@ (texto libre del autor del nivel) a un 'ResolvedBehaviour'
+(arquetipo + multiplicadores de gameplay) consultando a la API de Anthropic
+(Claude). Acá vive TODO el 'IO' del feature: lectura de variables de entorno,
+creación del 'Manager' TLS y la llamada HTTP.
 
 __Por qué un newtype y no una instancia sobre 'IO':__ el puerto se define en
 @UseCases/@ y la orquestación ('UseCases.ResolveBehaviours') es genérica sobre la
@@ -17,17 +18,22 @@ newtype sí está definido. @UseCases/@ nunca importa este módulo.
 
 __Degradación con gracia (alineada con la semántica de fallback del puerto):__
 ninguna falla acá tumba la carga del nivel. Sin API key, falla de red, status
-fuera de 2xx, JSON inesperado o respuesta no reconocida → 'Nothing' (más un
-warning a 'stderr'); el build puro cae al default del kind y el juego sigue
-jugable. Esto también mantiene el CI verde sin acceso a la red.
+fuera de 2xx, JSON inesperado, arquetipo no reconocido o número inválido →
+'Nothing' (más un warning a 'stderr'); cada multiplicador ausente o fuera de rango
+cae a 1.0 vía 'mkMultiplier'; el build puro cae al default del kind y el juego
+sigue jugable. Esto también mantiene el CI verde sin acceso a la red.
 -}
-module Adapters.BehaviourResolver (resolveLevelIO)
+module Adapters.BehaviourResolver (
+  resolveLevelIO,
+  ResolverReply (..),
+  resolvedFromReply,
+  extractJsonObject,
+)
 where
 
 -- Grupo 1 — stdlib / base
 import Control.Exception (SomeException, try)
 import Data.List (find)
-import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8Lenient, encodeUtf8)
 import System.Environment (lookupEnv)
@@ -58,10 +64,13 @@ import Network.HTTP.Types.Status (statusCode)
 -- Grupo 3 — proyecto
 import Domain.Model.EnemyKind (EnemyKind)
 import Domain.Model.LevelDefinition (
-  BehaviourArchetype,
   LevelDefinition,
+  ResolvedBehaviour (..),
   parseBehaviourArchetype,
  )
+import Domain.ValueObjects.Amplifier (Amplifier, identityAmplifier, mkAmplifier, unAmplifier)
+import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
+import Domain.ValueObjects.Multiplier (Multiplier, identityMultiplier, mkMultiplier, unMultiplier)
 import UseCases.Ports.BehaviourResolverPort (
   BehaviourResolverPort (..),
   runNoResolver,
@@ -177,6 +186,23 @@ debugLog env msg
   | otherwise = pure ()
 
 -- ---------------------------------------------------------------------------
+-- Extracción de JSON del texto del modelo
+-- ---------------------------------------------------------------------------
+
+{- | Extrae el primer objeto JSON de un texto que puede venir envuelto en cercas
+markdown (@```json ... ```@) o con prosa alrededor: toma el substring desde el
+primer @{@ hasta el último @}@. Devuelve 'Nothing' si no hay un par de llaves.
+Endurece el happy path ante modelos que no respetan "respondé SOLO JSON".
+-}
+extractJsonObject :: Text -> Maybe Text
+extractJsonObject t =
+  let afterOpen = T.dropWhile (/= '{') t
+      (beforeClose, _) = T.breakOnEnd "}" afterOpen
+   in if T.null afterOpen || T.null beforeClose
+        then Nothing
+        else Just beforeClose
+
+-- ---------------------------------------------------------------------------
 -- Consulta individual a la API
 -- ---------------------------------------------------------------------------
 
@@ -187,7 +213,7 @@ respuesta. /Cualquier/ desvío (excepción de red, status no-2xx, JSON inesperad
 texto no reconocido) se convierte en 'Nothing' más un warning a 'stderr': nunca
 propaga una excepción que pudiera abortar la carga del nivel.
 -}
-resolveOne :: ResolverEnv -> EnemyKind -> Text -> IO (Maybe BehaviourArchetype)
+resolveOne :: ResolverEnv -> EnemyKind -> Text -> IO (Maybe ResolvedBehaviour)
 resolveOne env kind hint = do
   -- Trazas de entrada (solo con debug on): qué par se resuelve y con qué prompt.
   -- Ver el prompt exacto ayuda a entender por qué el modelo respondió lo que respondió.
@@ -229,13 +255,13 @@ resolveOne env kind hint = do
       | otherwise ->
           warn ("status inesperado: " <> show (statusCode (responseStatus resp)))
  where
-  -- Cuerpo JSON del request: pedimos UNA palabra, sin pensar de más.
-  -- `max_tokens` chico y `temperature` 0 acotan el costo y hacen la salida
-  -- determinista (mismo hint → misma palabra).
+  -- Cuerpo JSON del request: pedimos un objeto JSON con arquetipo y tres números.
+  -- `max_tokens` en 64 es suficiente para el objeto y `temperature` 0 hace la
+  -- salida determinista (mismo hint → mismo JSON).
   body =
     object
       [ "model" .= reModel env
-      , "max_tokens" .= (16 :: Int)
+      , "max_tokens" .= (64 :: Int)
       , "temperature" .= (0.0 :: Double)
       , "messages"
           .= [ object
@@ -252,51 +278,119 @@ resolveOne env kind hint = do
 
   -- `try @SomeException (httpLbs ...)` ya garantiza no propagar; si algo falla,
   -- devolvemos `Nothing` con un aviso a stderr para que el operador lo vea.
-  warn :: String -> IO (Maybe BehaviourArchetype)
+  warn :: String -> IO (Maybe ResolvedBehaviour)
   warn msg = do
     hPutStrLn stderr ("[behaviour-resolver] " <> msg <> "; uso arquetipo por defecto.")
     pure Nothing
 
-  -- Parsea el cuerpo, extrae el primer bloque de texto y lo normaliza. Cada paso
-  -- deja una traza de debug para poder seguir en vivo la decisión del clasificador.
+  -- Parsea el cuerpo, extrae el texto del modelo y lo decodifica como
+  -- 'ResolverReply'. Primero extrae el objeto JSON del texto (puede venir
+  -- envuelto en cercas markdown o con prosa), luego decodifica. Cada paso
+  -- deja una traza de debug para seguir en vivo la decisión del clasificador.
   interpretBody bs =
     case decode @AnthropicResponse bs of
       Nothing -> warn "JSON de respuesta inesperado"
       Just resp ->
-        case firstWord resp of
+        case replyText resp of
           Nothing -> warn "respuesta sin texto"
-          Just w -> do
-            debugLog env ("palabra cruda: " <> show w)
-            case parseBehaviourArchetype w of
-              Left _ -> warn ("arquetipo no reconocido: " <> T.unpack w)
-              Right arch -> do
-                debugLog env ("arquetipo resuelto: " <> show arch)
-                pure (Just arch)
+          Just t ->
+            case extractJsonObject t of
+              Nothing -> warn "respuesta sin objeto JSON"
+              Just jsonText ->
+                case decode @ResolverReply (BL.fromStrict (encodeUtf8 jsonText)) of
+                  Nothing -> warn ("JSON del modelo no parseable: " <> T.unpack jsonText)
+                  Just reply ->
+                    case resolvedFromReply reply of
+                      Nothing -> warn ("arquetipo no reconocido: " <> T.unpack (rrArchetype reply))
+                      Just rb -> do
+                        debugLog env ("resuelto: " <> show (rbArchetype rb) <> " tuning=" <> showTuning (rbTuning rb))
+                        pure (Just rb)
 
-{- | Prompt para el clasificador: instruye al modelo a responder EXACTAMENTE una
-palabra (@patrol@, @chase@ o @guard@), sin puntuación ni explicación, e incluye
-el contexto (tipo de enemigo) para acotar el espacio de respuestas válidas.
+  -- Helper de debug: muestra los tres multiplicadores sin exponer la API key.
+  showTuning :: BehaviourTuning -> String
+  showTuning tuning =
+    "speed="
+      <> show (unMultiplier (tuningSpeed tuning))
+      <> " reach="
+      <> show (unAmplifier (tuningReach tuning))
+      <> " toughness="
+      <> show (unAmplifier (tuningToughness tuning))
+
+{- | Prompt para el clasificador: pide UN objeto JSON con el arquetipo y los tres
+multiplicadores de gameplay. @speed@ admite @<1@ (más lento) y @>1@ (más rápido); @reach@ y
+@toughness@ son @>= 1.0@ (1.0 = base del arquetipo; solo suben). Incluye el tipo de enemigo
+como contexto para que el modelo ajuste sus sugerencias.
 -}
 promptText :: EnemyKind -> Text -> Text
 promptText kind hint =
-  "Clasificá el comportamiento de un enemigo ("
+  "Sos un diseñador de niveles de un plataformero 2D. Para un enemigo ("
     <> T.pack (show kind)
-    <> ") de un plataformero 2D. Respondé SOLO una palabra: patrol, chase o guard. Pista: "
+    <> ") con esta descripción, devolvé SOLO un objeto JSON (sin texto extra) con:\n"
+    <> "  \"archetype\": \"patrol\" | \"chase\" | \"guard\" (la forma de moverse),\n"
+    <> "  \"speed\": número (1.0 normal, <1 más lento, >1 más rápido),\n"
+    <> "  \"reach\": número >= 1.0 (1.0 = alcance base del arquetipo, >1 detecta y persigue más lejos),\n"
+    <> "  \"toughness\": número >= 1.0 (1.0 = vida base, >1 más resistente),\n"
+    <> "Descripción: "
     <> hint
 
-{- | Extrae la primera palabra del primer bloque de /texto/ de la respuesta,
-normalizada a minúsculas y sin espacios alrededor.
+{- | Texto del primer bloque de tipo @"text"@ de la respuesta del modelo.
 
 Trabaja en la mónada 'Maybe': 'find' toma el primer bloque con @type == "text"@
-(ignorando @thinking@, @tool_use@ u otros que no traen texto), desempaqueta su
-@text@ opcional y toma su primera palabra con 'listToMaybe' (o 'Nothing' si
-quedó vacío). Tolera respuestas que agreguen texto de más pese al prompt.
+(ignorando @thinking@, @tool_use@ u otros que no traen texto) y desempaqueta su
+@text@ opcional. El texto completo se pasa luego a 'decode' para parsear el JSON
+que devolvió el modelo.
 -}
-firstWord :: AnthropicResponse -> Maybe Text
-firstWord resp = do
+replyText :: AnthropicResponse -> Maybe Text
+replyText resp = do
   block <- find ((== "text") . acType) (arContent resp)
-  t <- acText block
-  listToMaybe (T.words (T.toLower (T.strip t)))
+  acText block
+
+-- ---------------------------------------------------------------------------
+-- DTO de la respuesta del modelo y mapeo puro a ResolvedBehaviour
+-- ---------------------------------------------------------------------------
+
+-- | Vista de la respuesta del modelo: arquetipo (texto) + 3 factores opcionales.
+data ResolverReply = ResolverReply
+  { rrArchetype :: Text
+  -- ^ Nombre del arquetipo tal como lo devolvió el modelo (@"patrol"@, @"chase"@, @"guard"@).
+  , rrSpeed :: Maybe Double
+  -- ^ Multiplicador de velocidad sugerido por el modelo; 'Nothing' si ausente en el JSON.
+  , rrReach :: Maybe Double
+  -- ^ Multiplicador de alcance sugerido por el modelo; 'Nothing' si ausente en el JSON.
+  , rrToughness :: Maybe Double
+  -- ^ Multiplicador de resistencia sugerido por el modelo; 'Nothing' si ausente en el JSON.
+  }
+  deriving (Eq, Show)
+
+instance FromJSON ResolverReply where
+  parseJSON =
+    withObject "ResolverReply" $ \o ->
+      ResolverReply
+        <$> o .: "archetype"
+        <*> o .:? "speed"
+        <*> o .:? "reach"
+        <*> o .:? "toughness"
+
+{- | Mapeo puro respuesta → 'ResolvedBehaviour'. El arquetipo debe ser reconocible (si no,
+'Nothing' y el build cae al default del kind); @speed@ ausente/raro cae a 1.0 vía
+'mkMultiplier', y @reach@/@toughness@ ausentes, raros o por debajo de 1.0 caen a 1.0 vía
+'mkAmplifier' (solo amplifican).
+
+El módulo exporta esta función para que el test-suite la verifique directamente, sin
+necesidad de invocar la API.
+-}
+resolvedFromReply :: ResolverReply -> Maybe ResolvedBehaviour
+resolvedFromReply r =
+  case parseBehaviourArchetype (T.toLower (T.strip (rrArchetype r))) of
+    Left _ -> Nothing
+    Right arch -> Just (ResolvedBehaviour arch tuning)
+ where
+  tuning =
+    BehaviourTuning (mulSpeed (rrSpeed r)) (amp (rrReach r)) (amp (rrToughness r))
+  mulSpeed :: Maybe Double -> Multiplier
+  mulSpeed = maybe identityMultiplier (mkMultiplier . realToFrac)
+  amp :: Maybe Double -> Amplifier
+  amp = maybe identityAmplifier (mkAmplifier . realToFrac)
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la respuesta de la API (FromJSON parcial, solo lo que usamos)

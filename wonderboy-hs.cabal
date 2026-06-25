@@ -139,6 +139,9 @@ library
       , Domain.ValueObjects.Damage
       , Domain.ValueObjects.Health
       , Domain.ValueObjects.HealthRatio
+      , Domain.ValueObjects.Multiplier
+      , Domain.ValueObjects.Amplifier
+      , Domain.ValueObjects.BehaviourTuning
       , Domain.ValueObjects.BossHealth
       , Domain.ValueObjects.Lives
       , Domain.ValueObjects.Score
@@ -187,6 +190,7 @@ library
       , UseCases.Ports.BehaviourResolverPort
       , UseCases.ResolveBehaviours
       , Frameworks.Gloss.GameLoop
+      , Adapters.BehaviourResolver
     other-modules:
         Adapters.Gloss.Config
       , Adapters.Gloss.Input
@@ -194,7 +198,6 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
-      , Adapters.BehaviourResolver
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -264,6 +267,12 @@ test-suite wonderboy-hs-test
       , UseCases.LoadLevelTest
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
+      , Domain.BehaviourTuningTest
+      , Domain.AmplifierTest
+      , Domain.ScaleHealthTest
+      , Domain.EnemyDefJsonTest
+      , Domain.BuildEnemyTuningTest
+      , Adapters.ResolverReplyTest
       , Paths_wonderboy_hs
 
     autogen-modules:
@@ -278,6 +287,7 @@ test-suite wonderboy-hs-test
     build-depends:
         wonderboy-hs
       , aeson >=2.1 && <2.3
+      , bytestring >=0.11 && <0.13
       , tasty >=1.5 && <1.6
       , tasty-hunit >=0.10 && <0.11
       , text >=2.0 && <2.2

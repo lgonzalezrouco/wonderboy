@@ -7,15 +7,17 @@ pickups y enemigos.
 -}
 module Domain.Logic.BuildWorld (
   buildWorld,
+  buildEnemy,
 )
 where
 
 import Data.List (nub)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
-import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetype)
+import Domain.Logic.EntityBehaviours (defaultProgramForKind, programForArchetypeTuned)
 import Domain.Model.BossArena (BossArena, mkBossArena)
 import Domain.Model.BossPhase (BossDefinition (..), BossPhaseDef (..), bossMaxHealth, bossPhases, phaseProgram)
 import Domain.Model.CrumblingPlatform (CrumblingPlatform, mkCrumblingPlatform)
@@ -41,7 +43,10 @@ import Domain.Model.Pickup (Pickup, mkPickup)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..), defaultMaxHealth)
+import Domain.ValueObjects.Amplifier (unAmplifier)
+import Domain.ValueObjects.BehaviourTuning (identityTuning, tuningToughness)
 import Domain.ValueObjects.Frames (frames)
+import Domain.ValueObjects.Health (scaleHealth)
 import Domain.ValueObjects.Score (score)
 
 -- | Construye el mundo inicial del nivel a partir de la definición autoral.
@@ -130,17 +135,23 @@ buildEnemy :: EnemyDef -> Either LevelBuildError Enemy
 buildEnemy def
   | isBossKind (enemyDefKind def) = buildBossEnemy def
   | otherwise =
-      pure $
-        spawnEnemy
-          (enemyDefId def)
-          (enemyDefKind def)
-          (enemyDefPos def)
-          (behaviourProgramFor def)
+      pure (tuneHealth spawned)
  where
+  tuning = fromMaybe identityTuning (enemyDefBehaviourTuning def)
+  spawned =
+    spawnEnemy
+      (enemyDefId def)
+      (enemyDefKind def)
+      (enemyDefPos def)
+      (behaviourProgramFor def)
   behaviourProgramFor d =
     case enemyDefBehaviourPreset d of
-      Just archetype -> programForArchetype (enemyDefKind d) archetype
+      Just archetype -> programForArchetypeTuned (enemyDefKind d) archetype tuning
       Nothing -> defaultProgramForKind (enemyDefKind d)
+  -- toughness× amplifica la salud al spawnear (piso 1 HP en 'scaleHealth', redundante con el piso del Amplifier).
+  tuneHealth e =
+    let hp = scaleHealth (unAmplifier (tuningToughness tuning)) (enemyMaxHealth e)
+     in e{enemyHealth = hp, enemyMaxHealth = hp}
 
 buildBossEnemy :: EnemyDef -> Either LevelBuildError Enemy
 buildBossEnemy def

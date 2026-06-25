@@ -1,8 +1,8 @@
 {- | Orquestación de la resolución de comportamiento sobre una 'LevelDefinition'.
 
 Recorre los enemigos del nivel, resuelve sus pistas textuales (@behaviourHint@)
-al 'BehaviourArchetype' correspondiente vía el puerto 'BehaviourResolverPort', y
-rellena el campo @enemyDefBehaviourPreset@ /antes/ de que el build puro
+al 'ResolvedBehaviour' correspondiente vía el puerto 'BehaviourResolverPort', y
+rellena los campos @enemyDefBehaviourPreset@ y @enemyDefBehaviourTuning@ /antes/ de que el build puro
 (@Domain.Logic.BuildWorld.buildWorld@) lo consuma. No hay 'IO' acá: todo es
 genérico sobre la mónada @m@ del puerto; la impureza (si la hay) la aporta la
 instancia concreta en @Adapters/@.
@@ -35,6 +35,7 @@ import Data.Text qualified as T
 import Domain.Model.LevelDefinition (
   EnemyDef (..),
   LevelDefinition (..),
+  ResolvedBehaviour (..),
  )
 import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
 
@@ -61,15 +62,21 @@ resolveLevelBehaviours def = do
           , Just h <- [enemyDefBehaviourHint e]
           , not (T.null (T.strip h))
           ]
-  -- Una consulta por par distinto; se construye la tabla [((kind, hint), Maybe arch)].
+  -- Una consulta por par distinto; se construye la tabla [((kind, hint), Maybe ResolvedBehaviour)].
   resolved <-
     traverse (\kh@(k, h) -> (,) kh <$> resolveBehaviourHint k h) needs
   -- Aplicación pura de la tabla: solo se toca el caso (sin preset, con hint).
-  -- `lookup` da `Maybe (Maybe arch)`; `join` colapsa "par ausente en tabla" y
-  -- "resolver devolvió Nothing" en un único `Nothing`.
+  -- `lookup` da `Maybe (Maybe ResolvedBehaviour)`; `join` colapsa "par ausente
+  -- en tabla" y "resolver devolvió Nothing" en un único `Nothing`. El
+  -- 'ResolvedBehaviour' se desempaqueta en preset (arquetipo) y tuning por
+  -- separado, para que el build puro tenga ambos campos disponibles.
   let apply e =
         case (enemyDefBehaviourPreset e, enemyDefBehaviourHint e) of
           (Nothing, Just h) ->
-            e{enemyDefBehaviourPreset = join (lookup (enemyDefKind e, h) resolved)}
+            let mrb = join (lookup (enemyDefKind e, h) resolved)
+             in e
+                  { enemyDefBehaviourPreset = rbArchetype <$> mrb
+                  , enemyDefBehaviourTuning = rbTuning <$> mrb
+                  }
           _ -> e
   pure def{levelEnemies = map apply (levelEnemies def)}
