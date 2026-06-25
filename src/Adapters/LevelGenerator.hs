@@ -143,23 +143,20 @@ El argumento es el tema opcional del usuario (@WONDERBOY_WORLD_PROMPT@), que
 -}
 generateCatalogIO :: Maybe Text -> IO [Maybe LevelDefinition]
 generateCatalogIO theme = do
-  mKey <- lookupEnv "ANTHROPIC_API_KEY"
+  mKey <- nonEmptyApiKey <$> lookupEnv "ANTHROPIC_API_KEY"
   case mKey of
     Nothing -> do
       hPutStrLn
         stderr
-        "[level-generator] ANTHROPIC_API_KEY ausente; uso niveles fijos."
+        "[level-generator] ANTHROPIC_API_KEY ausente o vacía; uso niveles fijos."
       pure (runNoGenerator (generateCatalog (defaultProfiles theme)))
     Just key -> do
       mModel <- lookupEnv "WONDERBOY_GENERATOR_MODEL"
-      -- Modo debug opcional: con `WONDERBOY_GENERATOR_DEBUG` seteada a cualquier
-      -- valor no vacío se vuelcan trazas detalladas a stderr. Apagado por
-      -- defecto, así la salida normal (y el CI) quedan limpios.
       mDebug <- lookupEnv "WONDERBOY_GENERATOR_DEBUG"
       manager <- newTlsManager
       let env =
             GeneratorEnv
-              { geApiKey = T.pack key
+              { geApiKey = key
               , geModel = maybe defaultModel T.pack mModel
               , geManager = manager
               , geBaseUrl = "https://api.anthropic.com/v1/messages"
@@ -170,6 +167,12 @@ generateCatalogIO theme = do
         env
         ("activo; modelo=" <> T.unpack (geModel env) <> " endpoint=" <> geBaseUrl env)
       runReaderT (runAnthropicGenerator (generateCatalog (defaultProfiles theme))) env
+
+nonEmptyApiKey :: Maybe String -> Maybe Text
+nonEmptyApiKey raw = do
+  s <- raw
+  let trimmed = T.strip (T.pack s)
+  if T.null trimmed then Nothing else Just trimmed
 
 {- | Traza de depuración a 'stderr', condicionada al flag 'geDebug'.
 
@@ -219,12 +222,12 @@ generateOne env profile = do
   -- malformado puntual).
   first <- attempt env prompt
   case first of
-    Just def -> pure (Just def)
+    Just{} -> pure first
     Nothing -> do
       debugLog env "primer intento fallido; reintentando una vez"
       second <- attempt env prompt
       case second of
-        Just def -> pure (Just def)
+        Just{} -> pure second
         Nothing -> do
           warn
             ( "no se pudo generar el nivel "
@@ -337,7 +340,7 @@ interpretBody env bs =
           pure Nothing
         Just raw -> do
           let levelJson = stripCodeFences raw
-          debugLog env ("JSON del nivel extraído: " <> previewText levelJson)
+          debugLog env ("JSON del nivel extraído: " <> preview levelJson)
           -- Reutilizamos el MISMO pipeline puro que la carga de niveles fijos:
           -- decode estructural seguido del build con todas sus validaciones
           -- (ids únicos, conteo de jefes, arena coherente, etc.). Así un nivel
@@ -364,16 +367,14 @@ warn :: String -> IO ()
 warn msg =
   hPutStrLn stderr ("[level-generator] " <> msg <> "; uso nivel fijo.")
 
+preview :: Text -> String
+preview = T.unpack . T.take 600
+
 {- | Preview legible (UTF-8 tolerante, truncada) del cuerpo crudo de la
-respuesta, para las trazas de debug. Truncar evita volcar respuestas largas a la
-consola.
+respuesta, para las trazas de debug.
 -}
 previewBody :: BL.ByteString -> String
-previewBody = T.unpack . T.take 600 . decodeUtf8Lenient . BL.toStrict
-
--- | Igual que 'previewBody' pero sobre un 'Text' ya decodificado.
-previewText :: Text -> String
-previewText = T.unpack . T.take 600
+previewBody = preview . decodeUtf8Lenient . BL.toStrict
 
 {- | Quita los code fences de Markdown (@```json ... ```@ o @``` ... ```@) si el
 modelo los agregó pese a que el prompt pide JSON crudo.

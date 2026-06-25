@@ -128,9 +128,7 @@ buildLevelCatalog paths = do
         -- Generación activa: una consulta a la IA por nivel; el tema (si lo hay)
         -- se propaga a los tres perfiles dentro de `generateCatalogIO`.
         generated <- generateCatalogIO (T.pack <$> theme)
-        -- Empareja generados con archivos por índice: cada `Nothing` cae al
-        -- `level{N}.json` fijo, así un nivel que la IA no produjo no rompe el run.
-        traverse resolveSlot (zip [0 ..] (padTo (length paths) generated))
+        traverse (uncurry resolveSlot) (zip paths (padTo (length paths) generated))
       else
         -- Generación apagada: comportamiento previo, todo desde archivos fijos.
         traverse loadDefFromFile paths
@@ -141,14 +139,9 @@ buildLevelCatalog paths = do
   -- ¿La env var de activación está presente y no vacía?
   isEnabled = maybe False (not . null)
 
-  -- Para el índice `i`: usa la definición generada si existe; si no, cae al
-  -- archivo fijo `paths !! i` (fallback granular).
-  resolveSlot :: (Int, Maybe LevelDefinition) -> IO LevelDefinition
-  resolveSlot (_, Just def) = pure def
-  resolveSlot (i, Nothing) =
-    case paths !!? i of
-      Just relPath -> loadDefFromFile relPath
-      Nothing -> exitWithError ("invalid level index for fallback: " ++ show i)
+  resolveSlot :: FilePath -> Maybe LevelDefinition -> IO LevelDefinition
+  resolveSlot _ (Just def) = pure def
+  resolveSlot path Nothing = loadDefFromFile path
 
 {- | Rellena la lista de niveles generados hasta el largo del catálogo de
 archivos, completando con 'Nothing' (que dispara el fallback granular).
