@@ -1,8 +1,8 @@
 {-# LANGUAGE DerivingVia #-}
 
 {- | Puerto de resolución de comportamiento: traduce metadata textual de un enemigo
-(@behaviourHint@, texto libre escrito por el autor del nivel) al arquetipo de
-comportamiento canónico que entiende el dominio ('BehaviourArchetype').
+(@behaviourHint@, texto libre escrito por el autor del nivel) al
+'ResolvedBehaviour' canónico que entiende el dominio (arquetipo + tuning).
 
 __Por qué un puerto (typeclass) y no una función concreta:__ la resolución real
 puede involucrar 'IO' (una llamada HTTP a un clasificador/SLM de Anthropic). La
@@ -29,10 +29,10 @@ import Data.Text (Text)
 
 -- Grupo 2 — proyecto
 import Domain.Model.EnemyKind (EnemyKind)
-import Domain.Model.LevelDefinition (BehaviourArchetype)
+import Domain.Model.LevelDefinition (ResolvedBehaviour)
 
-{- | Puerto que resuelve un @behaviourHint@ (texto libre) al arquetipo de
-comportamiento de un enemigo.
+{- | Puerto que resuelve un @behaviourHint@ (texto libre) al
+'ResolvedBehaviour' de un enemigo (arquetipo + tuning).
 
 El 'EnemyKind' se pasa como contexto: la misma pista ("agresivo", "vigila la
 puerta") puede mapear a arquetipos distintos según la clase de enemigo, y darle
@@ -44,8 +44,8 @@ concreta ('IO', API Anthropic) vive en @Adapters/@; los tests usan un stub puro.
 -}
 class (Monad m) => BehaviourResolverPort m where
   -- | Resuelve la pista textual de un enemigo de clase 'EnemyKind' a un
-  --   arquetipo, o 'Nothing' si no se puede decidir.
-  resolveBehaviourHint :: EnemyKind -> Text -> m (Maybe BehaviourArchetype)
+  --   'ResolvedBehaviour', o 'Nothing' si no se puede decidir.
+  resolveBehaviourHint :: EnemyKind -> Text -> m (Maybe ResolvedBehaviour)
 
 {- | Resolver nulo: nunca resuelve (siempre 'Nothing').
 

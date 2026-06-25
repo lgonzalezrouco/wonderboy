@@ -18,6 +18,7 @@ module Domain.Model.LevelDefinition (
   PickupDef (..),
   PlatformDef (..),
   RectDef (..),
+  ResolvedBehaviour (..),
   levelBuildError,
   parseBehaviourArchetype,
   parseEnemyKind,
@@ -40,6 +41,7 @@ import GHC.Generics (Generic)
 
 import Domain.Model.BossArena (BossArenaDef (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
+import Domain.ValueObjects.BehaviourTuning (BehaviourTuning)
 import Domain.ValueObjects.Position (Position)
 
 -- | Error de validación o construcción al pasar de definición a mundo.
@@ -55,6 +57,15 @@ data BehaviourArchetype
   = PatrolArchetype
   | ChaseArchetype
   | GuardArchetype
+  deriving (Eq, Show, Generic)
+
+{- | Resultado de resolver un @behaviourHint@: el arquetipo (la /forma/ del FSM) más el
+tuning (la /personalidad/: los 3 multiplicadores). Lo produce el behaviour resolver.
+-}
+data ResolvedBehaviour = ResolvedBehaviour
+  { rbArchetype :: BehaviourArchetype
+  , rbTuning :: BehaviourTuning
+  }
   deriving (Eq, Show, Generic)
 
 -- | Rectángulo con ancla bottom-left (plataformas y salida).
@@ -99,6 +110,8 @@ data EnemyDef = EnemyDef
   , enemyDefPos :: Position
   , enemyDefBehaviourPreset :: Maybe BehaviourArchetype
   , enemyDefBehaviourHint :: Maybe Text
+  , enemyDefBehaviourTuning :: Maybe BehaviourTuning
+  -- ^ Multiplicadores resueltos por el behaviour resolver; 'Nothing' = sin ajuste.
   }
   deriving (Eq, Show, Generic)
 
@@ -194,7 +207,13 @@ instance FromJSON EnemyDef where
   parseJSON = withObject "Enemy" $ \o -> do
     kind <- o .: "kind" >>= parseOrFail parseEnemyKind
     preset <- o .:? "behaviourPreset" >>= traverse (parseOrFail parseBehaviourArchetype)
-    EnemyDef <$> o .: "id" <*> pure kind <*> o .: "pos" <*> pure preset <*> o .:? "behaviourHint"
+    EnemyDef
+      <$> o .: "id"
+      <*> pure kind
+      <*> o .: "pos"
+      <*> pure preset
+      <*> o .:? "behaviourHint"
+      <*> pure Nothing
 
 instance ToJSON EnemyDef where
   toJSON e =
