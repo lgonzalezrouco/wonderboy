@@ -261,6 +261,9 @@ attackImpactPhase = 0.55
 attackSparkRadius :: Float
 attackSparkRadius = 3
 
+attackSparkPhaseWidth :: Float
+attackSparkPhaseWidth = 0.16
+
 -- | Color del cuerpo durante el destello de daño (solo fallback si falta el sprite).
 damageBodyColor :: Color
 damageBodyColor = makeColor 1.0 0.2 0.2 1.0
@@ -781,14 +784,14 @@ posePlayerForAttack combatParams p box body =
   case attackPhase combatParams p of
     Nothing -> body
     Just phase ->
-      Translate (faceScale * attackBodyLungeOffset phase) 0 $
-        rotateAround
-          (aabbCenterX box)
-          (aabbMinY box)
-          (-(faceScale * attackBodyLean phase))
-          body
- where
-  faceScale = facingScale (playerFacing p)
+      let envelope = sin (pi * phase)
+          faceScale = facingScale (playerFacing p)
+       in Translate (faceScale * attackBodyLunge * envelope) 0 $
+            rotateAround
+              (aabbCenterX box)
+              (aabbMinY box)
+              (-(faceScale * attackBodyLeanDegrees * envelope))
+              body
 
 renderPlayerAttackCue :: SpriteCatalog -> CombatParams -> Player -> Aabb -> Picture
 renderPlayerAttackCue catalog combatParams p box =
@@ -826,28 +829,27 @@ renderAttackSpark :: Float -> Float -> Picture
 renderAttackSpark phase angle
   | impact <= 0 = Blank
   | otherwise =
-      Rotate angle $
-        Translate 0 (-attackCueHeight - 2) $
-          Color (attackSparkColor (0.42 * impact)) $
-            pictures
-              [ circleSolid (attackSparkRadius * impact)
-              , rectangleSolid (attackSparkRadius * 3 * impact) 1.5
-              , Rotate 90 (rectangleSolid (attackSparkRadius * 3 * impact) 1.5)
-              ]
+      let arm = attackSparkRadius * 3 * impact
+       in Rotate angle $
+            Translate 0 (-attackCueHeight - 2) $
+              Color (makeColor 1.0 0.96 0.62 (0.42 * impact)) $
+                pictures
+                  [ circleSolid (attackSparkRadius * impact)
+                  , rectangleSolid arm 1.5
+                  , Rotate 90 (rectangleSolid arm 1.5)
+                  ]
  where
-  impact = clamp01 (1 - abs (phase - attackImpactPhase) / 0.16)
+  impact = clamp01 (1 - abs (phase - attackImpactPhase) / attackSparkPhaseWidth)
 
 attackPhase :: CombatParams -> Player -> Maybe Float
 attackPhase combatParams p
-  | not (hasFramesLeft remainingFrames) = Nothing
-  | otherwise =
-      Just (clamp01 (fromIntegral elapsed / fromIntegral durationSpan))
+  | not (hasFramesLeft frames) = Nothing
+  | otherwise = Just (clamp01 (fromIntegral elapsed / fromIntegral phaseSpan))
  where
-  remainingFrames = playerAttackFrames p
-  totalFrames = max 1 (frameCount (cpAttackDuration combatParams))
-  remaining = frameCount remainingFrames
-  elapsed = totalFrames - remaining
-  durationSpan = max 1 (totalFrames - 1)
+  frames = playerAttackFrames p
+  total = max 1 (frameCount (cpAttackDuration combatParams))
+  elapsed = total - frameCount frames
+  phaseSpan = max 1 (total - 1)
 
 attackSwingAngle :: Float -> Float
 attackSwingAngle phase
@@ -858,15 +860,6 @@ attackSwingAngle phase
  where
   windupT = clamp01 (phase / attackImpactPhase)
   recoveryT = clamp01 ((phase - attackImpactPhase) / (1 - attackImpactPhase))
-
-attackBodyLean :: Float -> Float
-attackBodyLean phase = attackBodyLeanDegrees * sin (pi * phase)
-
-attackBodyLungeOffset :: Float -> Float
-attackBodyLungeOffset phase = attackBodyLunge * sin (pi * phase)
-
-attackSparkColor :: Float -> Color
-attackSparkColor = makeColor 1.0 0.96 0.62
 
 facingScale :: Facing -> Float
 facingScale facing =
