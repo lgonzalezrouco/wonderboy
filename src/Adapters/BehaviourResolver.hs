@@ -318,28 +318,15 @@ resolveOne env kind hint = do
     hPutStrLn stderr ("[behaviour-resolver] " <> msg <> "; uso arquetipo por defecto.")
     pure Nothing
 
-  -- Parsea el cuerpo, extrae el texto del modelo y lo decodifica como
-  -- 'ResolverReply'. Primero extrae el objeto JSON del texto (puede venir
-  -- envuelto en cercas markdown o con prosa), luego decodifica. Cada paso
-  -- deja una traza de debug para seguir en vivo la decisión del clasificador.
   interpretBody bs =
-    case decode @AnthropicResponse bs of
-      Nothing -> warn "JSON de respuesta inesperado"
-      Just resp ->
-        case replyText resp of
-          Nothing -> warn "respuesta sin texto"
-          Just t ->
-            case extractJsonObject t of
-              Nothing -> warn "respuesta sin objeto JSON"
-              Just jsonText ->
-                case decode @ResolverReply (BL.fromStrict (encodeUtf8 jsonText)) of
-                  Nothing -> warn ("JSON del modelo no parseable: " <> T.unpack jsonText)
-                  Just reply ->
-                    case resolvedFromReply reply of
-                      Nothing -> warn ("arquetipo no reconocido: " <> T.unpack (rrArchetype reply))
-                      Just rb -> do
-                        debugLog env ("resuelto: " <> show (rbArchetype rb) <> " tuning=" <> showTuning (rbTuning rb))
-                        pure (Just rb)
+    case parseModelReply bs of
+      Left err -> warn err
+      Right reply ->
+        case resolvedFromReply reply of
+          Nothing -> warn ("arquetipo no reconocido: " <> T.unpack (rrArchetype reply))
+          Just rb -> do
+            debugLog env ("resuelto: " <> show (rbArchetype rb) <> " tuning=" <> showTuning (rbTuning rb))
+            pure (Just rb)
 
   -- Helper de debug: muestra los tres multiplicadores sin exponer la API key.
   showTuning :: BehaviourTuning -> String
@@ -380,6 +367,24 @@ replyText resp = do
   block <- find ((== "text") . acType) (arContent resp)
   acText block
 
+{- | Decodifica la respuesta HTTP hasta un 'ResolverReply', con mensajes de error
+específicos por etapa (útil en warnings de fallback).
+-}
+parseModelReply :: BL.ByteString -> Either String ResolverReply
+parseModelReply bs =
+  case decode @AnthropicResponse bs of
+    Nothing -> Left "JSON de respuesta inesperado"
+    Just resp ->
+      case replyText resp of
+        Nothing -> Left "respuesta sin texto"
+        Just t ->
+          case extractJsonObject t of
+            Nothing -> Left "respuesta sin objeto JSON"
+            Just jsonText ->
+              case decode @ResolverReply (BL.fromStrict (encodeUtf8 jsonText)) of
+                Nothing -> Left ("JSON del modelo no parseable: " <> T.unpack jsonText)
+                Just reply -> Right reply
+
 -- ---------------------------------------------------------------------------
 -- DTO de la respuesta del modelo y mapeo puro a ResolvedBehaviour
 -- ---------------------------------------------------------------------------
@@ -418,14 +423,16 @@ resolvedFromReply :: ResolverReply -> Maybe ResolvedBehaviour
 resolvedFromReply r =
   case parseBehaviourArchetype (T.toLower (T.strip (rrArchetype r))) of
     Left _ -> Nothing
-    Right arch -> Just (ResolvedBehaviour arch tuning)
- where
-  tuning =
-    BehaviourTuning (mulSpeed (rrSpeed r)) (amp (rrReach r)) (amp (rrToughness r))
-  mulSpeed :: Maybe Double -> Multiplier
-  mulSpeed = maybe identityMultiplier (mkMultiplier . realToFrac)
-  amp :: Maybe Double -> Amplifier
-  amp = maybe identityAmplifier (mkAmplifier . realToFrac)
+    Right arch ->
+      Just
+        ( ResolvedBehaviour
+            arch
+            ( BehaviourTuning
+                (maybe identityMultiplier (mkMultiplier . realToFrac) (rrSpeed r))
+                (maybe identityAmplifier (mkAmplifier . realToFrac) (rrReach r))
+                (maybe identityAmplifier (mkAmplifier . realToFrac) (rrToughness r))
+            )
+        )
 
 -- ---------------------------------------------------------------------------
 -- Tipos de la respuesta de la API (FromJSON parcial, solo lo que usamos)

@@ -50,33 +50,31 @@ de los enemigos —y todos los demás campos del nivel— quedan intactos.
 resolveLevelBehaviours ::
   (BehaviourResolverPort m) => LevelDefinition -> m LevelDefinition
 resolveLevelBehaviours def = do
-  -- Pares distintos (kind, hint) que necesitan resolución: solo enemigos sin
-  -- preset explícito (`Nothing <- [...]`), con hint presente (`Just h <- [...]`)
-  -- y no en blanco (`not (T.null (T.strip h))`, para no gastar una consulta a la
-  -- API en una pista vacía o de solo espacios). `nub` deduplica el mismo par.
-  let needs =
-        nub
-          [ (enemyDefKind e, h)
-          | e <- levelEnemies def
-          , Nothing <- [enemyDefBehaviourPreset e]
-          , Just h <- [enemyDefBehaviourHint e]
-          , not (T.null (T.strip h))
-          ]
-  -- Una consulta por par distinto; se construye la tabla [((kind, hint), Maybe ResolvedBehaviour)].
-  resolved <-
-    traverse (\kh@(k, h) -> (,) kh <$> resolveBehaviourHint k h) needs
-  -- Aplicación pura de la tabla: solo se toca el caso (sin preset, con hint).
-  -- `lookup` da `Maybe (Maybe ResolvedBehaviour)`; `join` colapsa "par ausente
-  -- en tabla" y "resolver devolvió Nothing" en un único `Nothing`. El
-  -- 'ResolvedBehaviour' se desempaqueta en preset (arquetipo) y tuning por
-  -- separado, para que el build puro tenga ambos campos disponibles.
-  let apply e =
-        case (enemyDefBehaviourPreset e, enemyDefBehaviourHint e) of
-          (Nothing, Just h) ->
-            let mrb = join (lookup (enemyDefKind e, h) resolved)
-             in e
-                  { enemyDefBehaviourPreset = rbArchetype <$> mrb
-                  , enemyDefBehaviourTuning = rbTuning <$> mrb
-                  }
-          _ -> e
-  pure def{levelEnemies = map apply (levelEnemies def)}
+  let needs = nub [kh | e <- levelEnemies def, Just kh <- [resolutionKey e]]
+  resolved <- traverse resolvePair needs
+  pure def{levelEnemies = map (applyResolved resolved) (levelEnemies def)}
+ where
+  -- Solo enemigos sin preset, con hint no vacío (evita consultas inútiles a la API).
+  resolutionKey e
+    | Nothing <- enemyDefBehaviourPreset e
+    , Just h <- enemyDefBehaviourHint e
+    , nonBlankHint h =
+        Just (enemyDefKind e, h)
+    | otherwise =
+        Nothing
+
+  nonBlankHint h = not (T.null (T.strip h))
+
+  resolvePair (k, h) = (,) (k, h) <$> resolveBehaviourHint k h
+
+  -- `join` colapsa "par ausente" y "resolver devolvió Nothing" en un único `Nothing`.
+  applyResolved table e
+    | Nothing <- enemyDefBehaviourPreset e
+    , Just h <- enemyDefBehaviourHint e =
+        let mrb = join (lookup (enemyDefKind e, h) table)
+         in e
+              { enemyDefBehaviourPreset = rbArchetype <$> mrb
+              , enemyDefBehaviourTuning = rbTuning <$> mrb
+              }
+    | otherwise =
+        e

@@ -193,30 +193,28 @@ El arquero es la excepción: su esencia es el ataque a distancia, así que conse
 -}
 motionForArchetype :: EnemyKind -> BehaviourArchetype -> EnemyMotionStats
 motionForArchetype kind archetype =
-  case naturalMotion of
-    ArcherMotion{} -> naturalMotion
-    _ -> case archetype of
-      PatrolArchetype -> patrolMotion
-      ChaseArchetype -> reactiveMotion chaseDetectRange chaseRoamRadius
-      GuardArchetype -> reactiveMotion guardDetectRange guardHoldRadius
+  case eksMotion (enemyKindStats kind) of
+    motion@ArcherMotion{} -> motion
+    naturalMotion ->
+      case archetype of
+        PatrolArchetype -> patrolFrom naturalMotion
+        ChaseArchetype -> reactiveFrom naturalMotion chaseDetectRange chaseRoamRadius
+        GuardArchetype -> reactiveFrom naturalMotion guardDetectRange guardHoldRadius
  where
-  naturalMotion = eksMotion (enemyKindStats kind)
-  speed = baseSpeed naturalMotion
-
   -- Patrulla: preserva el tramo natural de las clases que ya patrullan; para las
   -- reactivas sintetiza un tramo estándar a su velocidad base.
-  patrolMotion = case naturalMotion of
-    PatrolMotion s legs -> PatrolMotion s legs
-    _ -> PatrolMotion speed defaultPatrolLeg
+  patrolFrom (PatrolMotion s legs) = PatrolMotion s legs
+  patrolFrom motion = PatrolMotion (baseSpeed motion) defaultPatrolLeg
 
   -- Reactivo (chase/guard): aéreo si la clase vuela, terrestre si no. El @range@
   -- (detección) y el @hold@ (radio de spawn) los fija el arquetipo que llama; la
   -- velocidad de retorno es algo menor que la de persecución.
-  reactiveMotion range hold
-    | isFlyingKind kind =
-        FlyingReactiveMotion speed (speed * returnSpeedFactor) range hold speed homePatrolLeg
-    | otherwise =
-        ReactiveMotion speed (speed * returnSpeedFactor) range hold
+  reactiveFrom motion range hold =
+    let speed = baseSpeed motion
+        returnSpeed = speed * returnSpeedFactor
+     in if isFlyingKind kind
+          then FlyingReactiveMotion speed returnSpeed range hold speed homePatrolLeg
+          else ReactiveMotion speed returnSpeed range hold
 
 {- | Modula un 'EnemyMotionStats' con los multiplicadores de la IA.
 
