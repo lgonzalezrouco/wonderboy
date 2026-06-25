@@ -15,7 +15,8 @@ archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
 \label{subsec:solucion-capas}
 
 El repositorio sigue una arquitectura en cuatro niveles, inspirada en
-arquitectura limpia y hexagonal. La regla de dependencias es unidireccional:
+arquitectura limpia y hexagonal~\cite{martin2017cleanarchitecture,cockburn2005hexagonal}.
+La regla de dependencias es unidireccional:
 \texttt{Frameworks} y \texttt{Adapters} pueden usar \texttt{UseCases} y
 \texttt{Domain}. \texttt{UseCases} importa solo \texttt{Domain}. \texttt{Domain}
 no importa capas superiores.
@@ -129,7 +130,7 @@ daño de contacto, duración de invencibilidad, cantidad de niveles del
 \emph{run}) se agrupan en \texttt{GameConfig} y se sirven de solo lectura.
 
 La pila \texttt{GameM} modela tres efectos sobre una base pura
-(\texttt{Identity}), en el orden habitual de \texttt{mtl}:
+(\texttt{Identity}), en el orden elegido para \texttt{GameM}:
 
 \begin{lstlisting}
 newtype GameM a = GameM {
@@ -338,26 +339,26 @@ la API de mensajes (modelo Claude Haiku por defecto).
   \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}X@{}}
     \textbf{Biblioteca} & \textbf{Rol} \\
     \hline
-    Haskell (GHC) &
+    Haskell (GHC)~\cite{ghc967} &
     Lenguaje del motor. Inmutabilidad y tipos algebraicos en el dominio,
     lazy evaluation donde simplifica la composición. \\
     Gloss~\cite{gloss} &
     Ventana, bucle \texttt{playIO}, eventos de teclado y primitivas de dibujo.
     Integrado en \texttt{Frameworks/} y \texttt{Adapters/Gloss/}
     (sección~\ref{subsec:solucion-frontera}). \\
-    \texttt{mtl} &
+    \texttt{mtl}~\cite{mtl} &
     Transformadores \texttt{ReaderT}, \texttt{StateT} y \texttt{ExceptT} y sus
     typeclasses. Base de \texttt{GameM} (sección~\ref{subsec:solucion-monadas}). \\
-    \texttt{free} &
+    \texttt{free}~\cite{free} &
     \emph{Free monad} sobre \texttt{EntityAction} para el DSL de
     comportamiento (sección~\ref{subsec:solucion-behaviour}). \\
-    Aeson~\cite{aeson} &
+    Aeson~\cite{hackageSupportLibs} &
     Deserialización de \emph{level definition}s desde JSON. La lectura del archivo
     es \texttt{IO}. El \emph{decode} es puro sobre \texttt{Text}. \\
-    \texttt{http-client} &
+    \texttt{http-client}~\cite{hackageSupportLibs} &
     Cliente HTTP para los adaptadores Anthropic de generación de niveles y
     resolución de \texttt{behaviourHint} (sección~\ref{subsec:solucion-frontera}). \\
-    tasty, tasty-hunit &
+    tasty, tasty-hunit~\cite{hackageSupportLibs} &
     Tests unitarios de lógica pura y de orchestration. El detalle de casos
     relevantes se presenta en el capítulo~\ref{sec:detalles-diseno}. \\
   \end{tabularx}

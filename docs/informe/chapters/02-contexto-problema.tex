@@ -111,7 +111,7 @@ donde el significado no dependa de efectos ocultos.
 Una expresión tiene \emph{referential transparency} cuando puede sustituirse por otra de
 igual valor sin alterar el comportamiento del programa. En un núcleo de simulación eso
 implica funciones puras: mismas entradas, mismas salidas, sin lectura ni escritura de estado
-global mutable ni dependencia de la hora del sistema. Hughes~\cite{hughes1990whyfp} subraya
+global mutable ni dependencia de la hora del sistema. Hughes~\cite{hughes1989whyfp} subraya
 que esa disciplina favorece piezas pequeñas y reutilizables, porque el significado de cada
 fragmento es local.
 
@@ -131,7 +131,7 @@ queden fuera del programa bien tipado.
 
 La composición de funciones y las \emph{higher-order functions} permiten expresar patrones
 reutilizables (recorridos, acumulaciones, estrategias de actualización) sin duplicar
-estructura. Hughes~\cite{hughes1990whyfp} las considera una de las herramientas centrales
+estructura. Hughes~\cite{hughes1989whyfp} las considera una de las herramientas centrales
 para modularizar programas funcionales.
 
 \subsubsection{Lazy evaluation}
@@ -139,7 +139,7 @@ para modularizar programas funcionales.
 
 Haskell evalúa expresiones con \emph{lazy evaluation}: un valor se calcula solo cuando su resultado
 es necesario. Eso permite definir estructuras potencialmente infinitas o flujos derivados
-del estado, y combinar transformaciones sin forzar intermedio. Hughes~\cite{hughes1990whyfp}
+del estado, y combinar transformaciones sin forzar intermedio. Hughes~\cite{hughes1989whyfp}
 muestra cómo la \emph{laziness} aporta modularidad al separar generación y consumo de datos. En un
 motor de juego el camino crítico sigue siendo finito cada \emph{frame}. La \emph{laziness} aporta
 sobre todo flexibilidad al componer lógica auxiliar y al mantener separadas descripciones de
@@ -167,7 +167,7 @@ Un \emph{free monad} separa la \emph{descripción} de una secuencia de acciones 
 \emph{interpretación}. El AST del DSL de comportamientos de \emph{entity} expresa
 primitivas (moverse, esperar, atacar). Un interpreter puro en el dominio las ejecuta sobre
 el \emph{world}. Variar la IA equivale a cambiar el programa fuente del DSL o el interpreter,
-no a entrelazar condicionales de comportamiento con la física del paso.
+no a entrelazar condicionales de comportamiento con la física del paso~\cite{free}.
 
 \subsection{El problema}
 \label{subsec:el-problema}
