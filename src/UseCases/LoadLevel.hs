@@ -1,6 +1,7 @@
 -- | Orquestación de carga de niveles: decode JSON y 'buildWorld' (sin IO).
 module UseCases.LoadLevel (
   decodeLevelDefinition,
+  worldFromDefinition,
   loadLevelFromText,
 )
 where
@@ -20,10 +21,24 @@ decodeLevelDefinition txt =
     Left err -> Left (GameError ("invalid level JSON: " ++ err))
     Right lvl -> Right lvl
 
--- | Carga un nivel desde texto JSON.
+{- | Construye el 'World' a partir de una 'LevelDefinition' ya decodificada.
+
+Se extrae como paso propio para que el flujo de carga pueda insertar la
+resolución de comportamiento (@UseCases.ResolveBehaviours@) /entre/ el decode y
+el build: la resolución vive en una mónada con posible 'IO' (en @Adapters/@) y
+no puede componerse dentro del 'Either' puro de 'decodeLevelDefinition'. Mapea el
+'LevelBuildError' del dominio al 'GameError' del motor.
+-}
+worldFromDefinition :: LevelDefinition -> Either GameError World
+worldFromDefinition = either (Left . levelBuildToGameError) Right . buildWorld
+
+{- | Carga un nivel desde texto JSON: decode seguido del build puro.
+
+Conserva el comportamiento previo a la extracción de 'worldFromDefinition'; los
+flujos que necesiten resolver comportamiento componen los pasos por separado.
+-}
 loadLevelFromText :: Text -> Either GameError World
-loadLevelFromText txt =
-  decodeLevelDefinition txt >>= either (Left . levelBuildToGameError) Right . buildWorld
+loadLevelFromText txt = decodeLevelDefinition txt >>= worldFromDefinition
 
 levelBuildToGameError :: LevelBuildError -> GameError
 levelBuildToGameError (LevelBuildError msg) =

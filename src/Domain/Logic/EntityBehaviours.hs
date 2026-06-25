@@ -10,6 +10,9 @@ module Domain.Logic.EntityBehaviours (
   archerProgram,
   defaultProgramForKind,
   programForArchetype,
+  motionForArchetype,
+  applyTuning,
+  programForArchetypeTuned,
 )
 where
 
@@ -20,6 +23,7 @@ import Domain.Model.EnemyKind (
   EnemyKindStats (eksMotion),
   EnemyMotionStats (..),
   enemyKindStats,
+  isFlyingKind,
  )
 import Domain.Model.EntityBehaviour (
   BehaviourProgram,
@@ -37,7 +41,10 @@ import Domain.Model.EntityBehaviour (
   (>>>),
  )
 import Domain.Model.LevelDefinition (BehaviourArchetype (..))
+import Domain.ValueObjects.Amplifier (unAmplifier)
+import Domain.ValueObjects.BehaviourTuning (BehaviourTuning (..))
 import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft)
+import Domain.ValueObjects.Multiplier (unMultiplier)
 import Domain.ValueObjects.Velocity (velocity)
 
 {- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
@@ -133,12 +140,6 @@ archerProgram shootRange cooldown
           (facePlayer >>> waitFrames (frames 1) >>> loop)
   | otherwise = idleProgram
 
-{- | Programa de comportamiento para una variante de movimiento.
-
-El arquetipo chase y el arquetipo guard comparten la misma máquina reactiva
-('reactiveFsm'), que en su rama de spawn ya mira al jugador; hoy no se distinguen
-en comportamiento (la diferencia real vive en los stats por clase).
--}
 programForMotion :: EnemyMotionStats -> BehaviourProgram
 programForMotion (PatrolMotion speed legFrames) = patrolHorizontal speed legFrames
 programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) =
@@ -152,18 +153,80 @@ programForMotion (ArcherMotion shootRange cooldown _ _ _ _) =
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
 defaultProgramForKind = programForMotion . eksMotion . enemyKindStats
 
-{- | Programa según arquetipo explícito y clase.
-
-Si el arquetipo autorado no corresponde a la variante de movimiento de la clase
-(p. ej. patrulla sobre una clase reactiva), degrada a 'idleProgram' — el mismo
-resultado que antes producían los stats inaplicables en cero a través de las guardas.
+{- | Cualquier clase puede expresar cualquier arquetipo: sintetiza stats y reutiliza
+'programForMotion'.
 -}
 programForArchetype :: EnemyKind -> BehaviourArchetype -> BehaviourProgram
-programForArchetype kind archetype =
-  case (archetype, eksMotion (enemyKindStats kind)) of
-    (PatrolArchetype, motion@PatrolMotion{}) -> programForMotion motion
-    (ChaseArchetype, motion@ReactiveMotion{}) -> programForMotion motion
-    (ChaseArchetype, motion@FlyingReactiveMotion{}) -> programForMotion motion
-    (GuardArchetype, motion@ReactiveMotion{}) -> programForMotion motion
-    (_, motion@ArcherMotion{}) -> programForMotion motion
-    _ -> idleProgram
+programForArchetype kind = programForMotion . motionForArchetype kind
+
+{- | Materializa un arquetipo sobre una clase: velocidad de su motion natural, rangos
+por arquetipo (chase amplio, guard corto). El arquero conserva 'ArcherMotion'.
+-}
+motionForArchetype :: EnemyKind -> BehaviourArchetype -> EnemyMotionStats
+motionForArchetype kind archetype =
+  case eksMotion (enemyKindStats kind) of
+    motion@ArcherMotion{} -> motion
+    naturalMotion ->
+      case archetype of
+        PatrolArchetype -> patrolFrom naturalMotion
+        ChaseArchetype -> reactiveFrom naturalMotion chaseDetectRange chaseRoamRadius
+        GuardArchetype -> reactiveFrom naturalMotion guardDetectRange guardHoldRadius
+ where
+  patrolFrom (PatrolMotion s legs) = PatrolMotion s legs
+  patrolFrom motion = PatrolMotion (baseSpeed motion) defaultPatrolLeg
+
+  reactiveFrom motion range hold =
+    let speed = baseSpeed motion
+        returnSpeed = speed * returnSpeedFactor
+     in if isFlyingKind kind
+          then FlyingReactiveMotion speed returnSpeed range hold speed homePatrolLeg
+          else ReactiveMotion speed returnSpeed range hold
+
+{- | speed× y reach× sobre velocidades y rangos; frames y proyectil intactos.
+toughness× se aplica en 'BuildWorld'.
+-}
+applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
+applyTuning tuning motion = case motion of
+  PatrolMotion s leg -> PatrolMotion (s * spd) leg
+  ReactiveMotion cs rs cr sr ->
+    ReactiveMotion (cs * spd) (rs * spd) (cr * rch) (sr * rch)
+  FlyingReactiveMotion cs rs cr sr ps leg ->
+    FlyingReactiveMotion (cs * spd) (rs * spd) (cr * rch) (sr * rch) (ps * spd) leg
+  ArcherMotion shootRange cd projSpeed projLife w h ->
+    ArcherMotion (shootRange * rch) cd projSpeed projLife w h
+ where
+  spd = unMultiplier (tuningSpeed tuning)
+  rch = unAmplifier (tuningReach tuning)
+
+programForArchetypeTuned ::
+  EnemyKind -> BehaviourArchetype -> BehaviourTuning -> BehaviourProgram
+programForArchetypeTuned kind archetype tuning =
+  programForMotion (applyTuning tuning (motionForArchetype kind archetype))
+
+-- | 'ArcherMotion' → 0 solo para totalidad bajo @-Wall@ (inalcanzable vía 'motionForArchetype').
+baseSpeed :: EnemyMotionStats -> Float
+baseSpeed (PatrolMotion s _) = s
+baseSpeed (ReactiveMotion s _ _ _) = s
+baseSpeed (FlyingReactiveMotion s _ _ _ _ _) = s
+baseSpeed ArcherMotion{} = 0
+
+returnSpeedFactor :: Float
+returnSpeedFactor = 0.8
+
+chaseDetectRange :: Float
+chaseDetectRange = 140
+
+chaseRoamRadius :: Float
+chaseRoamRadius = 28
+
+guardDetectRange :: Float
+guardDetectRange = 60
+
+guardHoldRadius :: Float
+guardHoldRadius = 10
+
+defaultPatrolLeg :: Frames
+defaultPatrolLeg = frames 90
+
+homePatrolLeg :: Frames
+homePatrolLeg = frames 60

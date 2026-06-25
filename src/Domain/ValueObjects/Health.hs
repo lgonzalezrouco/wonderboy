@@ -11,6 +11,7 @@ module Domain.ValueObjects.Health (
   healthPoints,
   isDepleted,
   reduceHealth,
+  scaleHealth,
 )
 where
 
@@ -37,3 +38,10 @@ isDepleted (Health n) = n <= 0
 -- | Aplica un 'Damage' a la salud, saturando en 0.
 reduceHealth :: Damage -> Health -> Health
 reduceHealth d (Health n) = health (n - damagePoints d)
+
+{- | Escala la salud por un factor (típicamente ya clampeado por 'Multiplier'),
+redondeando al entero más cercano, con piso de 1 HP: ningún enemigo nace derrotado.
+-}
+scaleHealth :: Float -> Health -> Health
+scaleHealth factor h =
+  health (max 1 (round (fromIntegral (healthPoints h) * factor)))
