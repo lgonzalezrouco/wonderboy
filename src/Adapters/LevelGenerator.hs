@@ -38,6 +38,8 @@ import Network.HTTP.Client (
   redactHeaders,
   requestBody,
   requestHeaders,
+  responseTimeout,
+  responseTimeoutMicro,
  )
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
@@ -109,6 +111,13 @@ nonEmptyApiKey raw = do
   let trimmed = T.strip (T.pack s)
   if T.null trimmed then Nothing else Just trimmed
 
+{- | 30 s por intento: acota el arranque (hasta seis llamadas) ante una API
+  lenta o colgada, cayendo a niveles fijos. Más holgado que el resolver
+  (10 s) porque un nivel completo (@max_tokens@ 4096) tarda más.
+-}
+generatorTimeoutMicros :: Int
+generatorTimeoutMicros = 30 * 1000 * 1000
+
 debugLog :: GeneratorEnv -> String -> IO ()
 debugLog env msg
   | geDebug env = hPutStrLn stderr ("[level-generator:debug] " <> msg)
@@ -168,6 +177,8 @@ attempt env prompt = do
                 , ("content-type", "application/json")
                 ]
             , requestBody = RequestBodyLBS (encode body)
+            , -- Tope por intento: sin esto una API colgada bloquearía el arranque.
+              responseTimeout = responseTimeoutMicro generatorTimeoutMicros
             , -- Evita filtrar la key si `show` del Request aparece en stderr.
               redactHeaders = Set.fromList ["x-api-key"]
             }
