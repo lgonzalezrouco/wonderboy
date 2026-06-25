@@ -32,10 +32,10 @@ no importa capas superiores.
   \label{fig:capas-dependencias}
 \end{figure}
 
-\begin{table}[htbp]
-  \centering
-  \caption{Rol de cada capa en el motor.}
+\begin{center}
+  \captionof{table}{Rol de cada capa en el motor.}
   \label{tab:capas-rol}
+  \smallskip
   \begin{tabular}{@{}p{2.4cm}p{2.2cm}p{5.2cm}p{4.2cm}@{}}
     \textbf{Capa} & \textbf{Pureza} & \textbf{Responsabilidad} & \textbf{Ejemplos} \\
     \hline
@@ -59,7 +59,7 @@ no importa capas superiores.
     ajeno al dominio, llamadas a \texttt{runGameM} y \texttt{updateGame}. &
     \texttt{Gloss.GameLoop} \\
   \end{tabular}
-\end{table}
+\end{center}
 
 \texttt{Domain/} agrupa \texttt{Model/} (entidades y agregados),
 \texttt{ValueObjects/} (magnitudes con invariantes) y \texttt{Logic/}
@@ -85,7 +85,8 @@ dominio (sección~\ref{subsubsec:problema-estado}): el paso de simulación es
 una función total y sustituible.
 
 La transición principal de un \emph{frame} en juego es
-\texttt{advanceSimulationFrame}, en \texttt{Domain.Logic.Frame}. Recibe
+\texttt{advanceSimulationFrame}, en \texttt{Domain.\allowbreak Logic.\allowbreak Frame}.
+Recibe
 parámetros de física y reglas (\texttt{FrameParams}, proyectados desde la
 configuración), el \emph{delta time}, la entrada del jugador y un
 \texttt{PlayingFrame} (\emph{world}, vidas, puntaje e índice de nivel), y
@@ -100,20 +101,23 @@ advanceSimulationFrame
   -> PlayingFrame -> FrameResult
 \end{lstlisting}
 
-El primer paso interno es \texttt{advanceFrame}: un \emph{behaviour step} (un paso del
-programa DSL del enemigo) sobre cada \emph{enemy} activo y después integración de física y
-colisiones en \texttt{step}. A continuación se encadenan combate, proyectiles, peligros,
-fases de jefe, \emph{pickup}s, victoria híbrida y muerte, en orden fijo
-(capítulo~\ref{subsec:pipeline-frame}). La victoria híbrida exige llegar a la \emph{exit zone}
-con puntaje mínimo y sin jefe vivo. \texttt{step} concentra gravedad, salto,
+El primer paso interno es \texttt{advanceFrame}: por cada \emph{enemy} activo, un
+\emph{behaviour step} (una instrucción del programa \emph{DSL}) y después integración de
+física y colisiones en \texttt{step}. Un \emph{frame} abarca todo el pipeline
+(sección~\ref{subsec:pipeline-frame}). El \emph{behaviour step} es solo la parte de
+decisión de la IA dentro de ese ciclo. A continuación se encadenan combate, proyectiles,
+peligros, fases de jefe, \emph{pickup}s, victoria híbrida y muerte, en orden fijo.
+La victoria híbrida combina tres condiciones: solapamiento con la \emph{exit zone},
+puntaje mínimo de la \emph{level definition} y ausencia de jefe vivo (ver
+sección~\ref{subsubsec:dominio-entidades}). \texttt{step} concentra gravedad, salto,
 integración de velocidades y resolución \emph{AABB} del \emph{player} y los \emph{enemy}
 terrestres. Las plataformas móviles y los \emph{hazard} temporales se actualizan
 en la misma cadena.
 
-\texttt{UseCases.UpdateGame.updateGame} no recompone esa cadena: lee
+\texttt{UseCases.\allowbreak UpdateGame.\allowbreak updateGame} no recompone esa cadena: lee
 \texttt{GameConfig} y \texttt{GameState}, aplica la política de \emph{frame}
 congelado (cuando el \emph{delta time} es cero o la fase es terminal, no avanza) y fases
-terminales, invoca \texttt{advanceSimulationFrame} cuando corresponde y escribe el resultado
+terminales, invoca \texttt{advanceSimulation\-Frame} cuando corresponde y escribe el resultado
 en el estado del \emph{run}.
 
 \subsection{Orchestration con mónadas}
@@ -180,12 +184,14 @@ Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un AST de
 describen acciones cinematográficas y de sensado (\texttt{SetVelocity},
 \texttt{WaitFrames}, \texttt{MoveTowardPlayer}, ramas por distancia al
 \emph{player} o al punto de aparición, disparo, etc.) sin ejecutar física ni
-tocar \texttt{IO}.
+tocar \texttt{IO}. Los \emph{archetypes} \texttt{patrol}, \texttt{chase} y \texttt{guard}
+nombran patrones reconocibles en pantalla (detalle en el capítulo~\ref{sec:detalles-diseno}).
 
 El interpreter \texttt{runBehaviourStep}, en \texttt{Domain/}, consume un
-\emph{frame} del programa por cada \emph{enemy}: fija velocidades u orientación
-o avanza contadores de espera. \texttt{advanceFrame} invoca ese paso antes de
-\texttt{step}. Así el ritmo de decisión (IA) y el de cinemática (integración y
+\emph{behaviour step} del programa por cada \emph{enemy}: fija velocidades u orientación,
+evalúa condiciones de \emph{sensing} (lectura pura del \emph{world} para medir
+distancias, sin mutarlo) o avanza contadores de espera. \texttt{advanceFrame} invoca ese
+paso antes de \texttt{step}. Así el ritmo de decisión (IA) y el de cinemática (integración y
 colisiones) permanecen desacoplados pero alineados en el mismo \emph{delta
 time}. Cambiar la IA de un archetype equivale a sustituir el programa fuente o
 ajustar el interpreter, no a editar la cadena de gravedad y AABB.
@@ -202,10 +208,69 @@ patrolHorizontal speed leg =
     >>> patrolHorizontal speed leg
 \end{lstlisting}
 
-En el código la recursión se expresa con \texttt{fix}. Cada \emph{frame} el
-interpreter avanza una instrucción. La sintaxis completa del DSL, los programas
-por archetype de \emph{enemy} y las máquinas de estado reactivas se desarrollan
+En el código la recursión se expresa con \texttt{fix}. Cada \emph{frame}, el
+interpreter avanza una instrucción por enemigo (un \emph{behaviour step}). La sintaxis
+completa del DSL, los programas por archetype de \emph{enemy}, la cadena
+\emph{preset}/\emph{hint}/\emph{tuning} y las máquinas de estado reactivas se desarrollan
 en el capítulo~\ref{sec:detalles-diseno}.
+
+\subsection{Catálogo del run}
+\label{subsec:solucion-catalogo}
+
+Antes del primer \emph{frame}, \texttt{BootstrapRun} arma la lista de
+\emph{level definition}s del \emph{run}: lee los JSON fijos del disco, opcionalmente
+reemplaza cada \emph{slot} por una definición pedida a la API de generación y resuelve
+los \texttt{behaviourHint} que queden en el catálogo resultante. La orchestration pura
+vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP queda en \texttt{Adapters/}.
+El framework guarda el catálogo en \texttt{AppState} y materializa el \emph{world}
+inicial con \texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin
+volver a consultar la red.
+
+\begin{center}
+  \captionof{table}{Dos formas de armar el catálogo del \emph{run}.}
+  \label{tab:catalogo-modos}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X@{}}
+    \textbf{Modo} & \textbf{Activación} & \textbf{Origen del contenido} \\
+    \hline
+    JSON fijos &
+    Por defecto (sin \texttt{WONDERBOY\_GENERATE\_LEVELS}). &
+    Tres archivos en \texttt{levels/}, escritos a mano en el repositorio.
+    \emph{Layout} reproducible. \texttt{behaviourHint} opcional en cada enemigo:
+    la IA lo traduce a archetype y \emph{tuning} al arrancar. \\
+    JSON generados por IA &
+    \texttt{WONDERBOY\_GENERATE\_LEVELS} activa. &
+    La API produce un JSON por etapa (intro, desafío, jefe). \emph{Layout} distinto
+    en cada arranque. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
+    \emph{default} de su \texttt{kind}. Si falla la generación de un \emph{slot},
+    se usa el JSON fijo de ese índice. \\
+  \end{tabularx}
+\end{center}
+
+\begin{samepage}
+\begin{center}
+  \captionof{table}{Ports de contenido y sus adaptadores.}
+  \label{tab:puertos-contenido}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
+    \textbf{Puerto (\texttt{UseCases/})} & \textbf{Responsabilidad} &
+    \textbf{Sin servicio / fallo} \\
+    \hline
+    \texttt{LevelGenerator\-Port} &
+    Generar una \emph{level definition} por perfil de etapa
+    (intro, desafío, jefe). &
+    \texttt{Nothing} $\rightarrow$ JSON fijo del disco (\emph{fallback}). \\
+    \texttt{BehaviourResolver\-Port} &
+    Traducir \texttt{behaviourHint} (texto) a \emph{archetype}
+    (\texttt{patrol}, \texttt{chase}, \texttt{guard}) y \texttt{BehaviourTuning}
+    (escala de \texttt{speed}, \texttt{reach}, \texttt{toughness}). &
+    \texttt{Nothing} $\rightarrow$ \emph{default} del \texttt{kind}. \\
+  \end{tabularx}
+\end{center}
+\end{samepage}
+
+Los \emph{stubs} \texttt{NoGenerator} y \texttt{NoResolver} permiten tests sin clave
+de API. El decoding de JSON y \texttt{buildWorld} son puras sobre \texttt{Text}.
 
 \subsection{Frontera con el medio}
 \label{subsec:solucion-frontera}
@@ -243,8 +308,7 @@ derivada. En \texttt{LevelComplete} o \texttt{Victory} la simulación queda cong
 hasta confirmar con Enter o Space. El framework carga el siguiente nivel o reinicia el
 \emph{run} (\texttt{GameOver} también reinicia tras confirmar).
 
-\begin{figure}[htbp]
-  \centering
+\begin{center}
   \begin{tabular}{@{}c@{}}
     Reloj Gloss \\[0.4em]
     $\downarrow$ \\[0.2em]
@@ -255,55 +319,26 @@ hasta confirmar con Enter o Space. El framework carga el siguiente nivel o reini
     $\downarrow$ \\[0.2em]
     \texttt{renderFrame} $\rightarrow$ \texttt{Picture}
   \end{tabular}
-  \caption{Flujo de un \emph{frame} en la frontera con Gloss. La simulación pura
+  \captionof{figure}{Flujo de un \emph{frame} en la frontera con Gloss. La simulación pura
     ocurre en \texttt{advanceSimulationFrame}, invocada desde
     \texttt{updateGame}. Gloss solo suministra tiempo y entrada y muestra el
     resultado.}
   \label{fig:flujo-frame}
-\end{figure}
+\end{center}
 
-\textbf{Bootstrap del catálogo.} Antes del primer \emph{frame}, el adaptador
-\texttt{BootstrapRun} pre-carga el catálogo del \emph{run}: lee los JSON de
-referencia del disco, opcionalmente pide definiciones nuevas a la API de
-mensajes de Anthropic (modelo Claude Haiku por defecto) y resuelve los
-\texttt{behaviourHint} (pistas de comportamiento en lenguaje natural) de cada nivel.
-La orchestration pura vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP y las
-variables de entorno quedan en \texttt{Adapters/}. El framework guarda el catálogo
-resultante en \texttt{AppState} y materializa el \emph{world} inicial con
-\texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin volver a
-consultar la red.
-
-\begin{table}[htbp]
-  \centering
-  \caption{Ports de contenido y sus adaptadores.}
-  \label{tab:puertos-contenido}
-  \begin{tabular}{@{}p{3.6cm}p{4.8cm}p{4.6cm}@{}}
-    \textbf{Puerto (\texttt{UseCases/})} & \textbf{Responsabilidad} &
-    \textbf{Sin servicio / fallo} \\
-    \hline
-    \texttt{LevelGeneratorPort} &
-    Generar una \emph{level definition} por perfil de etapa
-    (intro, desafío, jefe). &
-    \texttt{Nothing} $\rightarrow$ JSON fijo del disco (\emph{fallback}). \\
-    \texttt{BehaviourResolverPort} &
-    Traducir \texttt{behaviourHint} a archetype y \texttt{BehaviourTuning}. &
-    \texttt{Nothing} $\rightarrow$ \emph{default} del \texttt{kind}. \\
-  \end{tabular}
-\end{table}
-
-Los \emph{stubs} \texttt{NoGenerator} y \texttt{NoResolver} (implementaciones vacías del
-puerto) permiten tests e integración continua sin clave de API. El decoding de JSON y
-\texttt{buildWorld} siguen siendo puras sobre \texttt{Text}. Solo la lectura de archivos y
-las llamadas HTTP son \texttt{IO} en el borde.
+El arranque del catálogo (generación, resolución de hints y \emph{fallback}s) se
+describe en la sección~\ref{subsec:solucion-catalogo}. Los adaptadores Anthropic usan
+la API de mensajes (modelo Claude Haiku por defecto).
 
 \subsection{Stack tecnológico}
 \label{subsec:solucion-stack}
 
-\begin{table}[htbp]
-  \centering
-  \caption{Bibliotecas principales y su rol en la solución.}
+\begin{samepage}
+\begin{center}
+  \captionof{table}{Bibliotecas principales y su rol en la solución.}
   \label{tab:stack}
-  \begin{tabular}{@{}p{3.2cm}p{9.8cm}@{}}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}X@{}}
     \textbf{Biblioteca} & \textbf{Rol} \\
     \hline
     Haskell (GHC) &
@@ -328,8 +363,9 @@ las llamadas HTTP son \texttt{IO} en el borde.
     tasty, tasty-hunit &
     Tests unitarios de lógica pura y de orchestration. El detalle de casos
     relevantes se presenta en el capítulo~\ref{sec:detalles-diseno}. \\
-  \end{tabular}
-\end{table}
+  \end{tabularx}
+\end{center}
+\end{samepage}
 
 El ejecutable \texttt{wonderboy-hs} enlaza el framework Gloss con la biblioteca
 del motor. La configuración de compilación y las dependencias exactas figuran en

@@ -48,8 +48,9 @@ los \emph{hazard} son geometría del nivel, los \emph{pickup}s son ítems recole
 interacciones físicas se expresan mediante \emph{collision box}es alineadas a los ejes
 (\emph{AABB}, \emph{axis-aligned bounding box}): cajas rectangulares que no rotan. Con ellas
 modelamos apoyo sobre plataformas, daño por contacto, recolección de ítems y ataques. La
-victoria exige alcanzar la \emph{exit zone} con el puntaje mínimo definido en la
-\emph{level definition}. El combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
+victoria es \emph{híbrida}: no alcanza con llegar a la \emph{exit zone}. Hace falta
+también el puntaje mínimo de la \emph{level definition} y, si el nivel incluye jefe,
+derrotarlo antes. El combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
 \emph{player} como de ciertos \emph{enemy}.
 
 \subsubsection{Modelado explícito de conceptos}
@@ -70,6 +71,33 @@ Esa reificación tiene dos efectos en el diseño. Primero, las funciones de
 totalmente sustituibles. Segundo, el glosario del dominio (\emph{enemy}, \emph{run},
 \emph{exit zone}, etc.) se alinea con los nombres del código: un lector del informe y del
 repositorio usa el mismo vocabulario.
+
+La IA de cada \emph{enemy} se configura en varios niveles de abstracción. Un
+\emph{archetype} (\texttt{patrol}, \texttt{chase}, \texttt{guard}) nombra un patrón de
+comportamiento y se materializa en un programa \emph{DSL} del catálogo. Un
+\emph{preset} (\texttt{behaviourPreset} en JSON) elige ese archetype de forma
+explícita. Un \emph{hint} (\texttt{behaviourHint}) es texto en lenguaje natural que un
+adaptador resuelve con un LLM a \emph{archetype} y \emph{tuning} antes de construir el \emph{world}. El
+\emph{tuning} (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
+(velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
+\emph{preset} ni \emph{hint}, cada \texttt{kind} usa el programa por defecto de su clase.
+El detalle de precedencia y resolución se desarrolla en los
+capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
+
+El catálogo del \emph{run} admite dos formas de obtener las tres
+\emph{level definition}s (sección~\ref{subsec:solucion-catalogo}). Por
+\textbf{defecto} el juego carga los JSON de referencia escritos a mano en
+\texttt{levels/} (\texttt{level1.json}, etc.): el \emph{layout} es fijo y reproducible.
+Con \textbf{generación activada} (\texttt{WONDERBOY\_GENERATE\_LEVELS}), cada etapa
+puede reemplazarse por un JSON nuevo producido por la API de un LLM antes del primer
+\emph{frame}. Si la API falla, ese \emph{slot} conserva el JSON fijo del mismo índice.
+
+Son decisiones distintas. Quién escribe el \emph{layout} (humano en disco o modelo
+vía \texttt{LevelGenerator\-Port}) no determina solo la IA de cada enemigo. En los
+JSON fijos, un \texttt{behaviourHint} opcional se resuelve con IA al arrancar
+(\texttt{BehaviourResolver\-Port}). Los JSON generados por API no traen \emph{hint}:
+cada \emph{enemy} queda con el \emph{default} de su \texttt{kind}. El núcleo solo
+ve \emph{preset} y \emph{tuning} ya materializados.
 
 \subsection{Marco teórico de Programación Funcional}
 \label{subsec:marco-teorico}
@@ -188,7 +216,10 @@ transformación pura y \texttt{IO}.
 
 Los \emph{enemy} siguen patrones distintos (patrol, chase, disparo a distancia).
 Implementarlos con condicionales entrelazados en el paso de física mezcla dos ritmos: el de
-la cinemática y el de la decisión. El free monad plantea otra vía: describir el
+la cinemática y el de la decisión. Un \emph{frame} de simulación agrupa todo lo que ocurre
+en un ciclo de juego (IA, física, combate, victoria). Un \emph{behaviour step} es solo
+el avance de \emph{una} instrucción del programa DSL por enemigo dentro de ese \emph{frame}.
+El free monad plantea otra vía: describir el
 comportamiento como programa en un DSL e interpretarlo junto con el avance del
 \emph{frame}. El desafío es mantener esa separación sin duplicar estado ni romper la
 coherencia temporal del \emph{world}.

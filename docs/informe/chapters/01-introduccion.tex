@@ -46,8 +46,8 @@ mónadas e integración con el entorno externo.
     del \emph{player} con gravedad y salto, apoyo sobre plataformas estáticas y móviles,
     recolección de ítems con efecto sobre puntaje, y combate básico con ataques
     cuerpo a cuerpo y a distancia. El \emph{run} debe soportar pérdida de vidas,
-    \emph{respawn} en un \emph{spawn point} y condición de victoria al alcanzar la
-    \emph{exit zone} con el puntaje mínimo exigido por la \emph{level definition}.
+    \emph{respawn} en un \emph{spawn point} y condición de victoria \emph{híbrida}: llegar a la
+    \emph{exit zone} con el puntaje mínimo exigido y, si hay jefe en el nivel, derrotarlo.
 
   \item Diseñar un motor modular por capas (\texttt{Domain}, \texttt{UseCases},
     \texttt{Adapters}, \texttt{Frameworks}), de modo que la simulación viva en un núcleo
@@ -75,7 +75,9 @@ mónadas e integración con el entorno externo.
 
   \item Cargar \emph{level definition}s desde JSON: geometría de plataformas,
     \emph{spawn point}, \emph{enemy}, ítems, \emph{exit zone} y \emph{hazard}s.
-    \texttt{GameConfig} (gravedad, vidas, combate) vive en código, no en JSON.
+    Opcionalmente, generar etapas vía API y resolver \texttt{behaviourHint} al armar el
+    catálogo del \emph{run}. \texttt{GameConfig} (gravedad, vidas, combate) vive en
+    código, no en JSON.
 \end{enumerate}
 
 Como complemento propio del equipo, se publicó una versión ejecutable del juego en

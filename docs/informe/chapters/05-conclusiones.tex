@@ -30,14 +30,14 @@ instrucción por \emph{frame} antes de integrar física y colisiones. Variar la 
 de un archetype equivale a cambiar el programa o el interpreter, no a entrelazar
 condicionales de decisión con la cinemática del \emph{player}.
 
-Como tercer eje, la autoría asistida de contenido respeta la misma frontera: los
-ports \texttt{LevelGeneratorPort} y \texttt{BehaviourResolverPort} traducen
-peticiones a la API de Anthropic en \texttt{Adapters/}, mientras
-\texttt{BootstrapRun} orquesta el catálogo del \emph{run} sin \texttt{IO}. Un
-\texttt{behaviourHint} en lenguaje natural se materializa en archetype y \emph{tuning}
-antes de \texttt{buildWorld}. Una definición generada reemplaza al JSON fijo solo
-si la llamada tiene éxito. El núcleo de simulación no distingue si el \emph{preset}
-vino del autor o del adaptador.
+Como tercer eje, el contenido del \emph{run} puede venir de JSON fijos en disco
+(escritos a mano) o de niveles generados por la API al arrancar
+(sección~\ref{subsec:solucion-catalogo}). Los \texttt{behaviourHint} de los JSON fijos
+se resuelven con IA antes de \texttt{buildWorld}. Los ports \texttt{LevelGeneratorPort}
+y \texttt{BehaviourResolverPort} traducen esas peticiones en \texttt{Adapters/},
+mientras \texttt{BootstrapRun} orquesta el catálogo sin \texttt{IO}. El núcleo de
+simulación no distingue si el \emph{preset} vino del autor, del resolver o del
+\emph{default} del \texttt{kind}.
 
 El resto de las piezas del motor (carga de \emph{level definition}s,
 pila monádica para vidas y fases de partida, combate y reglas de victoria) se
@@ -48,9 +48,8 @@ comportamiento de un \emph{enemy} se ve al instante en pantalla, lo que acortó
 el ciclo entre modelo y comportamiento observado.
 
 Los tests automatizados se limitaron a \emph{smoke checks} sobre lógica pura y
-orchestration sin \texttt{IO}. No hay regresión visual ni cobertura exhaustiva. El
-alcance del trabajo, por su parte, se acotó a un motor de plataformas 2D con un
-\emph{run} local, sin multijugador, persistencia de partidas ni editor de niveles.
+orchestration sin \texttt{IO}. El alcance del trabajo se acotó a un motor de
+plataformas 2D con un \emph{run} local.
 
 \subsection{Dificultades}
 \label{subsec:conclusiones-dificultades}
@@ -58,8 +57,9 @@ alcance del trabajo, por su parte, se acotó a un motor de plataformas 2D con un
 La parte que más iteración demandó fue la física y las colisiones \emph{AABB}. Mantener
 un paso puro sobre el \emph{world} no eliminó los casos borde del dominio:
 túnel en plataformas finas, elección del eje de menor penetración, distinguir
-aterrizaje de golpe de techo con \texttt{vyBefore}, y el arrastre del
-\emph{player} sobre plataformas móviles sin heredar velocidad al saltar.
+aterrizaje de golpe de techo con \texttt{vyBefore} (velocidad vertical antes de mover
+posición) y el \emph{displacement carry} del \emph{player} sobre plataformas móviles:
+arrastre de posición sin copiar velocidad al saltar.
 Cada regla parecía local, pero interactuaba con las demás en el mismo
 \emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y tests con
 \emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
@@ -79,11 +79,10 @@ El \emph{DSL} y los archetypes cubren un conjunto acotado de patrones. Convendr�
 ampliar primitivas y programas compuestos sin tocar la cadena de física. Los
 jefes siguen dependiendo de un catálogo interno de fases: autorarlos desde la
 \emph{level definition} o desde \emph{hints} dedicados sería el siguiente paso de
-contenido. La generación procedural ya produce \emph{layout}s completos, pero aún
-carece de validación estructural fuerte más allá de \texttt{buildWorld}. Un
-esquema más estricto o un paso de corrección automática reduciría \emph{layout}s
-injugables. Un editor de niveles y persistencia de partidas quedan fuera del
-alcance actual pero encajarían en la misma separación dominio--adaptadores.
+contenido. La generación y la resolución de hints dependen de un modelo externo:
+\texttt{buildWorld} rechaza JSON inválido, pero no garantiza jugabilidad ni un mapeo
+correcto de texto ambiguo. Ante fallo, el motor usa el \emph{fallback} o el
+\emph{default} del \texttt{kind}.
 
 \subsection{Reflexión personal}
 \label{subsec:conclusiones-reflexion}
