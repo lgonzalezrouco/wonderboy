@@ -148,7 +148,6 @@ buildEnemy def
     case enemyDefBehaviourPreset d of
       Just archetype -> programForArchetypeTuned (enemyDefKind d) archetype tuning
       Nothing -> defaultProgramForKind (enemyDefKind d)
-  -- toughness× amplifica la salud al spawnear (piso 1 HP en 'scaleHealth', redundante con el piso del Amplifier).
   tuneHealth e =
     let hp = scaleHealth (unAmplifier (tuningToughness tuning)) (enemyMaxHealth e)
      in e{enemyHealth = hp, enemyMaxHealth = hp}

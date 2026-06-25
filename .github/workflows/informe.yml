@@ -1,0 +1,48 @@
+# Build the course report PDF when docs/informe/ changes on main.
+name: Informe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/informe/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: informe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-informe:
+    name: Build informe PDF
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build LaTeX image
+        uses: docker/build-push-action@v7
+        with:
+          context: docs/informe
+          load: true
+          tags: wonderboy-informe:latest
+          cache-from: type=gha,scope=informe-${{ hashFiles('docs/informe/Dockerfile') }}
+          cache-to: type=gha,mode=max,scope=informe-${{ hashFiles('docs/informe/Dockerfile') }}
+
+      - name: Compile PDF
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/docs/informe:/workdir" \
+            wonderboy-informe:latest
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: informe-pdf
+          path: docs/informe/build/main.pdf
+          if-no-files-found: error

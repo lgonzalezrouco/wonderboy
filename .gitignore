@@ -12,3 +12,15 @@ dist-newstyle/
 *.dyn_o
 *.png
 /Assets/k*
+
+# LaTeX (informe)
+docs/informe/build/
+docs/informe/*.aux
+docs/informe/*.log
+docs/informe/*.out
+docs/informe/*.toc
+docs/informe/*.bbl
+docs/informe/*.blg
+docs/informe/*.fdb_latexmk
+docs/informe/*.fls
+docs/informe/*.synctex.gz

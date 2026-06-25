@@ -76,9 +76,9 @@ import Domain.Model.Projectile (
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
-import Domain.ValueObjects.CombatParams (CombatParams)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (hasFramesLeft)
+import Domain.ValueObjects.Frames (frameCount, hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (Position, posX, posY)
@@ -231,13 +231,38 @@ exitSignVisualHeight :: Float
 exitSignVisualHeight = 42
 
 attackCueHeight :: Float
-attackCueHeight = 34
+attackCueHeight = 42
 
-attackCueGap :: Float
-attackCueGap = 7
+attackCueHandInset :: Float
+attackCueHandInset = 3
 
 attackCueLift :: Float
-attackCueLift = 24
+attackCueLift = 18
+
+attackBodyLeanDegrees :: Float
+attackBodyLeanDegrees = 7
+
+attackBodyLunge :: Float
+attackBodyLunge = 4
+
+-- Con la espada invertida en Y, -90 grados apunta hacia afuera; mas negativo sube la punta.
+attackStartDegrees :: Float
+attackStartDegrees = -135
+
+attackImpactDegrees :: Float
+attackImpactDegrees = -92
+
+attackFollowThroughDegrees :: Float
+attackFollowThroughDegrees = -65
+
+attackImpactPhase :: Float
+attackImpactPhase = 0.55
+
+attackSparkRadius :: Float
+attackSparkRadius = 3
+
+attackSparkPhaseWidth :: Float
+attackSparkPhaseWidth = 0.16
 
 -- | Color del cuerpo durante el destello de daño (solo fallback si falta el sprite).
 damageBodyColor :: Color
@@ -309,21 +334,23 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
           , renderBossArenaWalls w
-          , renderPlayer catalog renderTick (worldPlayer w)
+          , renderPlayer catalog renderTick combatParams (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay combatParams w else Blank
           ]
 
-renderPlayer :: SpriteCatalog -> Int -> Player -> Picture
-renderPlayer catalog renderTick p =
+renderPlayer :: SpriteCatalog -> Int -> CombatParams -> Player -> Picture
+renderPlayer catalog renderTick combatParams p =
   pictures
-    [ case playerSprite catalog renderTick p of
-        Nothing -> aabbToPicture bodyColor box
-        Just sprite ->
-          drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
-    , renderPlayerAttackCue catalog p box
+    [ posePlayerForAttack combatParams p box body
+    , renderPlayerAttackCue catalog combatParams p box
     ]
  where
   box = playerAabb p
+  body =
+    case playerSprite catalog renderTick p of
+      Nothing -> aabbToPicture bodyColor box
+      Just sprite ->
+        drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
   -- Mientras dura la invencibilidad por daño parpadea la silueta teñida de rojo,
   -- alternando con el sprite normal para el clásico destello de "recibió daño".
   hurtFlash =
@@ -752,25 +779,114 @@ renderAttackIcon catalog =
     Nothing -> Color hudAttackColor (rectangleSolid hudAttackBoxWidth hudAttackBoxHeight)
     Just sprite -> drawSpriteAtHeight 20 sprite
 
-renderPlayerAttackCue :: SpriteCatalog -> Player -> Aabb -> Picture
-renderPlayerAttackCue catalog p box
-  | not (hasFramesLeft (playerAttackFrames p)) = Blank
-  | otherwise =
-      Translate cueX cueY $
-        case scHudAttackSword catalog of
-          Nothing -> Color hudAttackColor (rectangleSolid attackCueHeight 12)
-          Just sprite -> Scale faceScale 1 (drawSpriteAtHeight attackCueHeight sprite)
+posePlayerForAttack :: CombatParams -> Player -> Aabb -> Picture -> Picture
+posePlayerForAttack combatParams p box body =
+  case attackPhase combatParams p of
+    Nothing -> body
+    Just phase ->
+      let envelope = sin (pi * phase)
+          faceScale = facingScale (playerFacing p)
+       in Translate (faceScale * attackBodyLunge * envelope) 0 $
+            rotateAround
+              (aabbCenterX box)
+              (aabbMinY box)
+              (-(faceScale * attackBodyLeanDegrees * envelope))
+              body
+
+renderPlayerAttackCue :: SpriteCatalog -> CombatParams -> Player -> Aabb -> Picture
+renderPlayerAttackCue catalog combatParams p box =
+  case attackPhase combatParams p of
+    Nothing -> Blank
+    Just phase ->
+      let angle = attackSwingAngle phase
+       in Translate cueX cueY $
+            Scale faceScale 1 $
+              pictures
+                [ renderAttackSpark phase angle
+                , renderAttackBlade catalog phase angle
+                ]
  where
   facing = playerFacing p
-  faceScale =
-    case facing of
-      FacingLeft -> -1
-      FacingRight -> 1
+  faceScale = facingScale facing
   cueX =
     case facing of
-      FacingLeft -> aabbMinX box - attackCueGap
-      FacingRight -> aabbMaxX box + attackCueGap
+      FacingLeft -> aabbMinX box + attackCueHandInset
+      FacingRight -> aabbMaxX box - attackCueHandInset
   cueY = aabbMinY box + attackCueLift
+
+renderAttackBlade :: SpriteCatalog -> Float -> Float -> Picture
+renderAttackBlade catalog phase angle =
+  Rotate angle $
+    Translate 0 (-(bladeHeight / 2)) $
+      Scale 1 (-1) $
+        case scHudAttackSword catalog of
+          Nothing -> Color hudAttackColor (rectangleSolid 6 bladeHeight)
+          Just sprite -> drawSpriteAtHeight bladeHeight sprite
+ where
+  bladeHeight = attackCueHeight * (1 + 0.08 * sin (pi * phase))
+
+renderAttackSpark :: Float -> Float -> Picture
+renderAttackSpark phase angle
+  | impact <= 0 = Blank
+  | otherwise =
+      let arm = attackSparkRadius * 3 * impact
+       in Rotate angle $
+            Translate 0 (-attackCueHeight - 2) $
+              Color (makeColor 1.0 0.96 0.62 (0.42 * impact)) $
+                pictures
+                  [ circleSolid (attackSparkRadius * impact)
+                  , rectangleSolid arm 1.5
+                  , Rotate 90 (rectangleSolid arm 1.5)
+                  ]
+ where
+  impact = clamp01 (1 - abs (phase - attackImpactPhase) / attackSparkPhaseWidth)
+
+attackPhase :: CombatParams -> Player -> Maybe Float
+attackPhase combatParams p
+  | not (hasFramesLeft frames) = Nothing
+  | otherwise = Just (clamp01 (fromIntegral elapsed / fromIntegral phaseSpan))
+ where
+  frames = playerAttackFrames p
+  total = max 1 (frameCount (cpAttackDuration combatParams))
+  elapsed = total - frameCount frames
+  phaseSpan = max 1 (total - 1)
+
+attackSwingAngle :: Float -> Float
+attackSwingAngle phase
+  | phase <= attackImpactPhase =
+      lerp attackStartDegrees attackImpactDegrees (smoothStep windupT)
+  | otherwise =
+      lerp attackImpactDegrees attackFollowThroughDegrees (easeInCubic recoveryT)
+ where
+  windupT = clamp01 (phase / attackImpactPhase)
+  recoveryT = clamp01 ((phase - attackImpactPhase) / (1 - attackImpactPhase))
+
+facingScale :: Facing -> Float
+facingScale facing =
+  case facing of
+    FacingLeft -> -1
+    FacingRight -> 1
+
+rotateAround :: Float -> Float -> Float -> Picture -> Picture
+rotateAround x y degrees picture =
+  Translate x y $
+    Rotate degrees $
+      Translate (-x) (-y) picture
+
+aabbCenterX :: Aabb -> Float
+aabbCenterX box = (aabbMinX box + aabbMaxX box) / 2
+
+clamp01 :: Float -> Float
+clamp01 = max 0 . min 1
+
+lerp :: Float -> Float -> Float -> Float
+lerp from to t = from + (to - from) * t
+
+smoothStep :: Float -> Float
+smoothStep t = t * t * (3 - 2 * t)
+
+easeInCubic :: Float -> Float
+easeInCubic t = t ^ (3 :: Int)
 
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =

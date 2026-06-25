@@ -1,6 +1,4 @@
-{- | El campo 'enemyDefBehaviourTuning' es salida del resolver, no input del autor:
-al parsear un enemigo del JSON, default-ea a 'Nothing'.
--}
+-- | 'enemyDefBehaviourTuning' es salida del resolver, no input del JSON del autor.
 module Domain.EnemyDefJsonTest where
 
 import Data.Aeson (decode)

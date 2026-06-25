@@ -34,7 +34,7 @@ jobs:
       GHC_VERSION: "9.6.7"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install OpenGL / GLUT (Gloss on Linux)
         if: runner.os == 'Linux'
@@ -48,21 +48,44 @@ jobs:
           sudo mkdir -p /usr/local/.ghcup
           sudo chown -R "$USER:$USER" /usr/local/.ghcup
 
+      - name: Cache GHC (ghcup)
+        uses: actions/cache@v6
+        with:
+          path: |
+            /usr/local/.ghcup
+            ~/.ghcup
+          key: ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}
+          restore-keys: |
+            ghcup-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-
+
       - uses: haskell-actions/setup@v2
+        id: setup-haskell
         with:
           ghc-version: ${{ env.GHC_VERSION }}
           cabal-version: "3.12"
           cabal-update: false
 
-      - name: Cache Cabal store and build dir
-        uses: actions/cache@v4
+      - name: Cache Cabal package index
+        uses: actions/cache@v6
         with:
-          path: |
-            ~/.cabal/store
-            dist-newstyle
-          key: release-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-cabal-${{ hashFiles('**/*.cabal') }}
+          path: ~/.cabal/packages
+          key: cabal-packages-${{ runner.os }}
           restore-keys: |
-            release-${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-cabal-
+            cabal-packages-${{ runner.os }}
+
+      - name: Cache Cabal store
+        uses: actions/cache@v6
+        with:
+          path: ~/.cabal/store
+          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-store-${{ hashFiles('cabal.project', '**/*.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-store-
+
+      - name: Cache Cabal build dir
+        uses: actions/cache@v6
+        with:
+          path: dist-newstyle
+          key: ${{ runner.os }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-dist-release-o2-${{ hashFiles('cabal.project', '**/*.cabal', 'src/**', 'app/**', 'test/**') }}
 
       - name: Cabal update
         run: cabal update
@@ -119,7 +142,7 @@ jobs:
           $artifact = "wonderboy-hs-$env:GITHUB_REF_NAME-${{ matrix.artifact }}.zip"
           Compress-Archive -Path "$bundle\*" -DestinationPath "dist\$artifact" -Force
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: dist/*
@@ -130,12 +153,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: artifacts/*
           generate_release_notes: true
@@ -150,7 +173,7 @@ jobs:
       ITCH_GAME: ${{ vars.ITCH_GAME }}
       VERSION: ${{ github.ref_name }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true

@@ -59,9 +59,7 @@ data BehaviourArchetype
   | GuardArchetype
   deriving (Eq, Show, Generic)
 
-{- | Resultado de resolver un @behaviourHint@: el arquetipo (la /forma/ del FSM) más el
-tuning (la /personalidad/: los 3 multiplicadores). Lo produce el behaviour resolver.
--}
+-- | Arquetipo + tuning producidos por el behaviour resolver.
 data ResolvedBehaviour = ResolvedBehaviour
   { rbArchetype :: BehaviourArchetype
   , rbTuning :: BehaviourTuning
@@ -111,7 +109,6 @@ data EnemyDef = EnemyDef
   , enemyDefBehaviourPreset :: Maybe BehaviourArchetype
   , enemyDefBehaviourHint :: Maybe Text
   , enemyDefBehaviourTuning :: Maybe BehaviourTuning
-  -- ^ Multiplicadores resueltos por el behaviour resolver; 'Nothing' = sin ajuste.
   }
   deriving (Eq, Show, Generic)
 

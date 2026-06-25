@@ -103,6 +103,20 @@ wonderboy-hs/
 - [x] Tests de lógica donde aporten valor (`Domain`, `UseCases`) — opcionales pero recomendados
 - [ ] Informe del trabajo final (según consigna del curso; sin exigencia de demostraciones formales en el repo)
 
+## Informe (LaTeX)
+
+Fuentes del informe en [`docs/informe/`](docs/informe/). Requisito local: **Docker** (Docker Desktop o Docker Engine).
+
+```bash
+make -C docs/informe build   # compila con pdflatex + latexmk dentro del contenedor
+make -C docs/informe clean   # borra docs/informe/build/
+```
+
+El PDF se genera en `docs/informe/build/main.pdf` (no se versiona).
+
+Al mergear cambios bajo `docs/informe/` en `main`, el workflow [Informe](.github/workflows/informe.yml)
+compila el PDF y lo publica como artifact `informe-pdf` en la pestaña **Actions** de GitHub.
+
 ## División de trabajo
 
 | Responsable  | Ámbito                                |

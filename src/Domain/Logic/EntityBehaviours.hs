@@ -140,12 +140,6 @@ archerProgram shootRange cooldown
           (facePlayer >>> waitFrames (frames 1) >>> loop)
   | otherwise = idleProgram
 
-{- | Programa de comportamiento para una variante de movimiento.
-
-El arquetipo chase y el arquetipo guard comparten la misma máquina reactiva
-('reactiveFsm'), que en su rama de spawn ya mira al jugador; hoy no se distinguen
-en comportamiento (la diferencia real vive en los stats por clase).
--}
 programForMotion :: EnemyMotionStats -> BehaviourProgram
 programForMotion (PatrolMotion speed legFrames) = patrolHorizontal speed legFrames
 programForMotion (ReactiveMotion chaseSpeed returnSpeed chaseRange spawnRadius) =
@@ -159,72 +153,37 @@ programForMotion (ArcherMotion shootRange cooldown _ _ _ _) =
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
 defaultProgramForKind = programForMotion . eksMotion . enemyKindStats
 
-{- | Programa de comportamiento para un arquetipo explícito sobre /cualquier/ clase.
-
-A diferencia del esquema anterior —que solo "confirmaba" el movimiento natural de
-la clase y caía a 'idleProgram' cuando el arquetipo no encajaba (p. ej. un caracol
-con @chase@ quedaba quieto)— ahora cualquier clase puede expresar cualquier
-arquetipo. El truco es no escribir un programa nuevo, sino /sintetizar/ el
-'EnemyMotionStats' adecuado al arquetipo ('motionForArchetype') y reutilizar toda
-la maquinaria de 'programForMotion' (los FSM ya existentes). Así no se duplica
-lógica de movimiento y la diferencia entre arquetipos vive donde el propio código
-decía que debía vivir: en los stats.
+{- | Cualquier clase puede expresar cualquier arquetipo: sintetiza stats y reutiliza
+'programForMotion'.
 -}
 programForArchetype :: EnemyKind -> BehaviourArchetype -> BehaviourProgram
 programForArchetype kind = programForMotion . motionForArchetype kind
 
-{- | Stats de movimiento que materializan un arquetipo sobre una clase concreta.
-
-Deriva la /velocidad/ del repertorio natural de la clase ('baseSpeed') —para que un
-golem lento siga siendo lento y un murciélago veloz siga siendo veloz— y elige
-locomoción terrestre o aérea según 'isFlyingKind'. Los /rangos/ y /tramos/ son
-constantes por arquetipo, y son justo lo que distingue 'ChaseArchetype' de
-'GuardArchetype' (antes compartían FSM y eran indistinguibles):
-
-  * 'PatrolArchetype': patrulla ida y vuelta sin reaccionar al jugador. Si la clase
-    ya patrulla, conserva su tramo natural; si no, sintetiza uno estándar.
-  * 'ChaseArchetype': detecta al jugador de lejos ('chaseDetectRange') y lo persigue,
-    deambulando ('chaseRoamRadius') antes de volver al spawn anchor.
-  * 'GuardArchetype': custodia su puesto — solo reacciona de cerca ('guardDetectRange')
-    y vuelve enseguida al spawn anchor ('guardHoldRadius').
-
-El arquero es la excepción: su esencia es el ataque a distancia, así que conserva su
-'ArcherMotion' e ignora los arquetipos de movimiento.
+{- | Materializa un arquetipo sobre una clase: velocidad de su motion natural, rangos
+por arquetipo (chase amplio, guard corto). El arquero conserva 'ArcherMotion'.
 -}
 motionForArchetype :: EnemyKind -> BehaviourArchetype -> EnemyMotionStats
 motionForArchetype kind archetype =
-  case naturalMotion of
-    ArcherMotion{} -> naturalMotion
-    _ -> case archetype of
-      PatrolArchetype -> patrolMotion
-      ChaseArchetype -> reactiveMotion chaseDetectRange chaseRoamRadius
-      GuardArchetype -> reactiveMotion guardDetectRange guardHoldRadius
+  case eksMotion (enemyKindStats kind) of
+    motion@ArcherMotion{} -> motion
+    naturalMotion ->
+      case archetype of
+        PatrolArchetype -> patrolFrom naturalMotion
+        ChaseArchetype -> reactiveFrom naturalMotion chaseDetectRange chaseRoamRadius
+        GuardArchetype -> reactiveFrom naturalMotion guardDetectRange guardHoldRadius
  where
-  naturalMotion = eksMotion (enemyKindStats kind)
-  speed = baseSpeed naturalMotion
+  patrolFrom (PatrolMotion s legs) = PatrolMotion s legs
+  patrolFrom motion = PatrolMotion (baseSpeed motion) defaultPatrolLeg
 
-  -- Patrulla: preserva el tramo natural de las clases que ya patrullan; para las
-  -- reactivas sintetiza un tramo estándar a su velocidad base.
-  patrolMotion = case naturalMotion of
-    PatrolMotion s legs -> PatrolMotion s legs
-    _ -> PatrolMotion speed defaultPatrolLeg
+  reactiveFrom motion range hold =
+    let speed = baseSpeed motion
+        returnSpeed = speed * returnSpeedFactor
+     in if isFlyingKind kind
+          then FlyingReactiveMotion speed returnSpeed range hold speed homePatrolLeg
+          else ReactiveMotion speed returnSpeed range hold
 
-  -- Reactivo (chase/guard): aéreo si la clase vuela, terrestre si no. El @range@
-  -- (detección) y el @hold@ (radio de spawn) los fija el arquetipo que llama; la
-  -- velocidad de retorno es algo menor que la de persecución.
-  reactiveMotion range hold
-    | isFlyingKind kind =
-        FlyingReactiveMotion speed (speed * returnSpeedFactor) range hold speed homePatrolLeg
-    | otherwise =
-        ReactiveMotion speed (speed * returnSpeedFactor) range hold
-
-{- | Modula un 'EnemyMotionStats' con los multiplicadores de la IA.
-
-@speed×@ escala todas las velocidades de movimiento (puede acelerar o frenar); @reach×@
-amplifica los rangos (@chaseRange@, @spawnRadius@, y @shootRange@ del archer) sin reducirlos
-nunca (piso 1.0). Los 'Frames' (tramos de patrulla, cooldown) y los parámetros de proyectil
-NO se tocan. @toughness×@ no se aplica acá: es salud, y se aplica al construir el enemigo
-('Domain.Logic.BuildWorld').
+{- | speed× y reach× sobre velocidades y rangos; frames y proyectil intactos.
+toughness× se aplica en 'BuildWorld'.
 -}
 applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
 applyTuning tuning motion = case motion of
@@ -239,57 +198,35 @@ applyTuning tuning motion = case motion of
   spd = unMultiplier (tuningSpeed tuning)
   rch = unAmplifier (tuningReach tuning)
 
-{- | Programa de comportamiento para un arquetipo con tuning aplicado.
-
-Compone la forma ('motionForArchetype') con los números de la IA ('applyTuning') y
-los interpreta con la maquinaria de FSM existente ('programForMotion'). Es el punto
-único por donde el build construye el comportamiento de un enemigo resuelto.
--}
 programForArchetypeTuned ::
   EnemyKind -> BehaviourArchetype -> BehaviourTuning -> BehaviourProgram
 programForArchetypeTuned kind archetype tuning =
   programForMotion (applyTuning tuning (motionForArchetype kind archetype))
 
-{- | Velocidad de movimiento característica de una clase, leída de su motion natural.
-
-El caso 'ArcherMotion' es inalcanzable en la práctica: 'motionForArchetype' corta en
-@ArcherMotion@ y nunca llega a forzar @speed@ para un arquero. Se define en @0@ solo
-para que 'baseSpeed' sea total bajo @-Wall@; ese @0@ no representa una velocidad real.
--}
+-- | 'ArcherMotion' → 0 solo para totalidad bajo @-Wall@ (inalcanzable vía 'motionForArchetype').
 baseSpeed :: EnemyMotionStats -> Float
 baseSpeed (PatrolMotion s _) = s
 baseSpeed (ReactiveMotion s _ _ _) = s
 baseSpeed (FlyingReactiveMotion s _ _ _ _ _) = s
 baseSpeed ArcherMotion{} = 0
 
--- ---------------------------------------------------------------------------
--- Constantes de los arquetipos sintetizados (píxeles lógicos y frames)
--- ---------------------------------------------------------------------------
-
--- | Velocidad de retorno relativa a la de persecución (vuelve un poco más lento).
 returnSpeedFactor :: Float
 returnSpeedFactor = 0.8
 
--- | Chase: rango de detección amplio — persigue desde lejos.
 chaseDetectRange :: Float
 chaseDetectRange = 140
 
--- | Chase: radio alrededor del spawn dentro del cual deambula sin volver aún.
 chaseRoamRadius :: Float
 chaseRoamRadius = 28
 
--- | Guard: rango de detección corto — solo reacciona cuando el jugador está cerca.
 guardDetectRange :: Float
 guardDetectRange = 60
 
--- | Guard: radio chico — vuelve enseguida a custodiar su puesto.
 guardHoldRadius :: Float
 guardHoldRadius = 10
 
--- | Tramo de patrulla sintetizado para clases que no traen el suyo.
 defaultPatrolLeg :: Frames
 defaultPatrolLeg = frames 90
 
--- | Tramo de patrulla aérea en la fase "en casa" de un perseguidor volador.
 homePatrolLeg :: Frames
 homePatrolLeg = frames 60
