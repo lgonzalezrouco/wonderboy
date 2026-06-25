@@ -4,7 +4,7 @@ política de frame congelado (@dt = 0@) y bucle multi-frame ('runFrames').
 module UseCases.UpdateGameTest where
 
 import Domain.Fixtures (demoWorld, dtFrame, mkTestPickup, worldWithPickups)
-import Domain.Logic.EntityBehaviours (patrolHorizontal)
+import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Model.Enemy (enemyPos, enemyVel, mkEnemy)
 import Domain.Model.EntityBehaviour (waitFrames)
 import Domain.Model.ExitZone (ExitZone (..), defaultExitZone)

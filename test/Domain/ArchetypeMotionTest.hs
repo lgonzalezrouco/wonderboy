@@ -5,7 +5,7 @@ module Domain.ArchetypeMotionTest where
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
 -- Grupo 3 — proyecto
-import Domain.Logic.EntityBehaviours (applyTuning, motionForArchetype)
+import Domain.Logic.BehaviourCatalog (applyTuning, motionForArchetype)
 import Domain.Model.EnemyKind (
   EnemyKind (ArcherKind, BatKind, GolemKind, SnailKind),
   EnemyKindStats (eksMotion),

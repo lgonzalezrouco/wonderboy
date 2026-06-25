@@ -8,7 +8,7 @@ module Domain.Logic.BossCatalog (
 )
 where
 
-import Domain.Logic.EntityBehaviours (patrolHorizontal, reactiveFsm)
+import Domain.Logic.BehaviourCatalog (patrolHorizontal, reactiveFsm)
 import Domain.Model.BossKindStats (
   BossBatStats (..),
   BossGolemStats (..),

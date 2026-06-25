@@ -12,8 +12,8 @@ import Domain.Fixtures (
   testLifeParams,
   testParams,
  )
+import Domain.Logic.BehaviourCatalog (defaultProgramForKind)
 import Domain.Logic.BuildWorld (buildWorld)
-import Domain.Logic.EntityBehaviours (defaultProgramForKind)
 import Domain.Logic.Step (step)
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform (..),

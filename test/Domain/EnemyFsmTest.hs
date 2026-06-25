@@ -11,8 +11,8 @@ import Domain.Fixtures (
   testParams,
   worldWithEnemyAt,
  )
+import Domain.Logic.BehaviourCatalog (defaultProgramForKind, patrolHorizontal)
 import Domain.Logic.Combat (resolveCombat)
-import Domain.Logic.EntityBehaviours (defaultProgramForKind, patrolHorizontal)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Logic.Step (advanceFrame)
 import Domain.Model.Enemy (
