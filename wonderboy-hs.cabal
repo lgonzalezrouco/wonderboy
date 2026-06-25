@@ -186,8 +186,10 @@ library
       , Adapters.Gloss.Camera
       , UseCases.LoadLevel
       , UseCases.GameMonad
+      , UseCases.GenerateLevels
       , UseCases.UpdateGame
       , UseCases.Ports.BehaviourResolverPort
+      , UseCases.Ports.LevelGeneratorPort
       , UseCases.ResolveBehaviours
       , Frameworks.Gloss.GameLoop
       , Adapters.BehaviourResolver
@@ -198,6 +200,7 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
+      , Adapters.LevelGenerator
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
@@ -267,6 +270,7 @@ test-suite wonderboy-hs-test
       , UseCases.LoadLevelTest
       , UseCases.LevelContentTest
       , UseCases.ResolveBehavioursTest
+      , UseCases.GenerateLevelsTest
       , Domain.BehaviourTuningTest
       , Domain.AmplifierTest
       , Domain.ScaleHealthTest
