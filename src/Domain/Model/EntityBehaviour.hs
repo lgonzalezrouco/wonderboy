@@ -3,7 +3,8 @@
 Instrucciones cinemáticas y de sensado puro: velocidad, espera, ramas por
 distancia y movimiento hacia jugador o spawn. Un behaviour step por frame vive
 en @Domain.Logic.RunBehaviour@; @Domain.Logic.Step.advanceFrame@ lo compone con
-la física y @UseCases.UpdateGame.updateGame@ lo eleva a 'GameM'.
+la física dentro de @Domain.Logic.Frame.advanceSimulationFrame@, y
+@UseCases.UpdateGame.updateGame@ eleva el resultado a 'GameM'.
 -}
 module Domain.Model.EntityBehaviour (
   -- * AST

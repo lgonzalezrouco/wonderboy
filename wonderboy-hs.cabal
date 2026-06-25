@@ -153,6 +153,7 @@ library
       , Domain.Logic.Projectiles
       , Domain.Logic.CrumblingPlatforms
       , Domain.Logic.FallingHazards
+      , Domain.Logic.Frame
       , Domain.Logic.EntityBehaviours
       , Domain.Logic.Physics
       , Domain.Logic.MovingPlatforms
@@ -252,6 +253,7 @@ test-suite wonderboy-hs-test
       , Domain.BossPhaseTest
       , Domain.BehaviourTest
       , Domain.Fixtures
+      , Domain.FrameTest
       , Domain.PlayerLifeTest
       , Domain.CombatTest
       , Domain.EnemyFsmTest
