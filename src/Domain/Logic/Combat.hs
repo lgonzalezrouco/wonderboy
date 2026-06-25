@@ -40,7 +40,7 @@ resolveCombat cp input w =
       attackStarted = inputAttack input && not (hasFramesLeft (playerAttackFrames p1))
       p2 = startAttack cp input p1
       w1 = w{worldPlayer = p2}
-      w2 = resolveMelee cp w1
+      w2 = resolveMelee cp attackStarted w1
       p3 = decrementAttack attackStarted (worldPlayer w2)
       w3 = w2{worldPlayer = p3}
       w4 = resolveContact cp w3
@@ -83,21 +83,33 @@ tickInvincibility p
   | otherwise =
       p
 
-resolveMelee :: CombatParams -> World -> World
-resolveMelee cp w =
-  let p = worldPlayer w
-   in if playerAttackFrames p /= cpAttackDuration cp
-        then w
-        else
-          let body = playerAabb p
-              hitbox = meleeHitbox cp body (playerFacing p)
-              hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
-              applyMeleeHit e
-                | hitsEnemy e
-                , playerMayDamageEnemy w e =
-                    e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
-                | otherwise = e
-           in w{worldEnemies = filter (not . isDepleted . enemyHealth) (map applyMeleeHit (worldEnemies w))}
+{- | Aplica el golpe de melee __solo en el frame en que arranca el swing__
+(@attackStarted@).
+
+__Por qué @attackStarted@ y no @playerAttackFrames == cpAttackDuration@?__
+
+La condición de nivel parecía equivalente —"el contador está al máximo, luego es el
+primer frame"— pero falla cuando el swing se inicia por input: 'decrementAttack' no
+baja el contador en el frame de arranque (lo deja lleno a propósito), de modo que el
+frame __siguiente__ todavía lo ve en @cpAttackDuration@ y volvía a pegar. Resultado:
+dos golpes por swing y un Golem (salud 2) muriendo de un solo press. El borde de
+inicio es la señal correcta: exactamente un golpe por swing, sin depender del orden
+frente a 'decrementAttack'.
+-}
+resolveMelee :: CombatParams -> Bool -> World -> World
+resolveMelee cp attackStarted w
+  | not attackStarted = w
+  | otherwise =
+      let p = worldPlayer w
+          body = playerAabb p
+          hitbox = meleeHitbox cp body (playerFacing p)
+          hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
+          applyMeleeHit e
+            | hitsEnemy e
+            , playerMayDamageEnemy w e =
+                e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
+            | otherwise = e
+       in w{worldEnemies = filter (not . isDepleted . enemyHealth) (map applyMeleeHit (worldEnemies w))}
 
 {- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
 

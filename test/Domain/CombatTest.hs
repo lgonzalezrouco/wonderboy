@@ -54,32 +54,29 @@ unit_attackEdgeStartsWindow =
 
 unit_meleeRemovesEnemy :: Assertion
 unit_meleeRemovesEnemy =
-  let p =
-        (spawnPlayer (health 3) (position 0 8))
-          { playerAttackFrames = cpAttackDuration testCombatParams
-          , playerFacing = FacingRight
-          }
+  let p = spawnPlayer (health 3) (position 0 8) -- mira a la derecha por defecto
       w =
         floorWorld
           { worldPlayer = p
           , worldEnemies = [mkEnemy 1 (position 40 8) (patrolHorizontal 10 (frames 10))]
           }
-      w' = resolveCombat testCombatParams noInput w
+      w' = resolveCombat testCombatParams (noInput{inputAttack = True}) w
    in worldEnemies w' @?= []
 
-unit_meleeRemovesEnemyWhenOverlapping :: Assertion
-unit_meleeRemovesEnemyWhenOverlapping =
-  let p =
-        (spawnPlayer (health 3) (position 50 8))
-          { playerAttackFrames = cpAttackDuration testCombatParams
-          , playerFacing = FacingRight
-          }
+{- | El melee también conecta con un enemigo que solapa el __cuerpo__ del jugador
+aunque quede del lado opuesto al facing: cubre la rama @aabbOverlaps body@ de
+'hitsEnemy', distinta del alcance del swing hacia adelante.
+-}
+unit_meleeRemovesOverlappingEnemyBehind :: Assertion
+unit_meleeRemovesOverlappingEnemyBehind =
+  -- Jugador mirando a la derecha; enemigo a la izquierda solapando el cuerpo (no el alcance).
+  let p = spawnPlayer (health 3) (position 50 8)
       w =
         floorWorld
           { worldPlayer = p
-          , worldEnemies = [mkEnemy 1 (position 50 8) (patrolHorizontal 10 (frames 10))]
+          , worldEnemies = [mkEnemy 1 (position 40 8) (patrolHorizontal 10 (frames 10))]
           }
-      w' = resolveCombat testCombatParams noInput w
+      w' = resolveCombat testCombatParams (noInput{inputAttack = True}) w
    in worldEnemies w' @?= []
 
 unit_meleeAttackEdgeWhileOverlapping :: Assertion
@@ -93,6 +90,27 @@ unit_meleeAttackEdgeWhileOverlapping =
           }
       w' = resolveCombat testCombatParams (noInput{inputAttack = True}) w
    in worldEnemies w' @?= []
+
+{- | Regresión: un swing iniciado por __input real__ conecta UNA sola vez.
+
+El daño debe atarse al frame en que arranca el ataque, no al estado
+@playerAttackFrames == cpAttackDuration@: ese estado persiste dos frames cuando el
+swing se inicia por input, porque 'decrementAttack' no baja el contador en el frame de
+arranque. Antes esto causaba dos golpes por swing y un Golem (salud 2) moría de un solo
+press. Acá el Golem debe quedar con salud 1 tras presionar atacar y soltar.
+-}
+unit_meleeInputSwingHitsOnce :: Assertion
+unit_meleeInputSwingHitsOnce =
+  let golem = spawnEnemy 1 GolemKind (position 40 8) (patrolHorizontal 10 (frames 10))
+      attacker = spawnPlayer (health 3) (position 0 8)
+      w0 = floorWorld{worldPlayer = attacker, worldEnemies = [golem]}
+      -- Frame de arranque: el jugador presiona atacar.
+      w1 = resolveCombat testCombatParams (noInput{inputAttack = True}) w0
+      -- Frame siguiente: suelta el botón; no debe volver a pegar.
+      w2 = resolveCombat testCombatParams noInput w1
+   in case worldEnemies w2 of
+        [e] -> enemyHealth e @?= health 1
+        other -> assertFailure ("el Golem debería sobrevivir con 1 HP; quedó: " <> show other)
 
 unit_noMeleeOutsideWindow :: Assertion
 unit_noMeleeOutsideWindow =
@@ -184,21 +202,20 @@ unit_multiEnemyContactOnce =
       w' = resolveCombat testCombatParams noInput w
    in playerHealth (worldPlayer w') @?= health 2
 
-{- | El melee conecta una sola vez en el frame de inicio del swing: un Golem (salud 2)
-queda con salud 1 tras toda la ventana activa, el contador de ataque baja a 0, y un nuevo
-press lo rearma a 'cpAttackDuration'.
+{- | El melee conecta una sola vez en el frame de inicio del swing: arrancado por input,
+un Golem (salud 2) queda con salud 1 tras toda la ventana activa (sin volver a pegar
+mientras el contador baja), el contador de ataque llega a 0, y un nuevo press lo rearma a
+'cpAttackDuration'.
 -}
 unit_meleeWindowCountsDownAndRearms :: Assertion
 unit_meleeWindowCountsDownAndRearms =
   let golem = spawnEnemy 1 GolemKind (position 40 8) (patrolHorizontal 10 (frames 10))
-      attacker =
-        (spawnPlayer (health 3) (position 0 8))
-          { playerAttackFrames = cpAttackDuration testCombatParams
-          , playerFacing = FacingRight
-          }
+      attacker = spawnPlayer (health 3) (position 0 8) -- mira a la derecha por defecto
       w0 = floorWorld{worldPlayer = attacker, worldEnemies = [golem]}
+      -- Arranca el swing por input; luego la ventana corre sin más presses.
+      wStarted = resolveCombat testCombatParams (noInput{inputAttack = True}) w0
       wAfterWindow =
-        iterate (resolveCombat testCombatParams noInput) w0
+        iterate (resolveCombat testCombatParams noInput) wStarted
           !! framesToStepCount (cpAttackDuration testCombatParams)
       wRearmed = resolveCombat testCombatParams (noInput{inputAttack = True}) wAfterWindow
    in do
