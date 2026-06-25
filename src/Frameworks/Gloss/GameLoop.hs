@@ -7,6 +7,7 @@ module Frameworks.Gloss.GameLoop (
 )
 where
 
+import Adapters.BehaviourResolver (resolveLevelIO)
 import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
@@ -40,7 +41,7 @@ import UseCases.GameMonad (
   restartRun,
   runGameM,
  )
-import UseCases.LoadLevel (loadLevelFromText)
+import UseCases.LoadLevel (decodeLevelDefinition, worldFromDefinition)
 import UseCases.UpdateGame (updateGame)
 
 -- | Catálogo del demo (tres niveles). Añadir rutas aquí o pasar otra lista a 'runGameWith'.
@@ -99,9 +100,13 @@ loadWorld relPath = do
   case readResult of
     Left err -> exitWithError err
     Right txt ->
-      case loadLevelFromText txt of
+      case decodeLevelDefinition txt of
         Left (GameError err) -> exitWithError err
-        Right world -> pure world
+        Right def -> do
+          resolved <- resolveLevelIO def
+          case worldFromDefinition resolved of
+            Left (GameError err) -> exitWithError err
+            Right world -> pure world
 
 exitWithError :: String -> IO a
 exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure

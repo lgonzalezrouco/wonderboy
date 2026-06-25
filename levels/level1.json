@@ -17,9 +17,9 @@
   ],
   "movingPlatforms": [],
   "enemies": [
-    { "id": 1, "kind": "snail", "pos": { "x": -120, "y": 8 } },
-    { "id": 2, "kind": "snail", "pos": { "x": 1250, "y": 8 } },
-    { "id": 3, "kind": "snail", "pos": { "x": 2050, "y": 8 } }
+    { "id": 1, "kind": "snail", "pos": { "x": -120, "y": 8 }, "behaviourHint": "deambula lento y pesado, ajeno a quien pase a su lado" },
+    { "id": 2, "kind": "snail", "pos": { "x": 1250, "y": 8 }, "behaviourHint": "un cazador veloz y frágil que se abalanza apenas te ve y no te suelta" },
+    { "id": 3, "kind": "snail", "pos": { "x": 2050, "y": 8 }, "behaviourHint": "un guardián lento pero durísimo que protege su puesto y solo reacciona de cerca" }
   ],
   "pickups": [
     { "id": 1, "pos": { "x": -150, "y": 16 }, "value": 50 },
