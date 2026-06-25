@@ -184,6 +184,7 @@ library
       , Domain.Logic.BossPhase
       , Domain.Logic.BuildWorld
       , Adapters.Gloss.Camera
+      , Adapters.Gloss.Tiling
       , UseCases.LoadLevel
       , UseCases.GameMonad
       , UseCases.GenerateLevels
@@ -264,6 +265,7 @@ test-suite wonderboy-hs-test
       , Domain.CrumblingPlatformTest
       , Domain.StepTest
       , Adapters.Gloss.CameraTest
+      , Adapters.Gloss.TilingTest
       , Domain.LevelLoadTest
       , Domain.LevelFlowTest
       , UseCases.UpdateGameTest

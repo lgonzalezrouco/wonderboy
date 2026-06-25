@@ -41,6 +41,7 @@ import Adapters.Gloss.Sprites (
   enemySprite,
   playerSprite,
  )
+import Adapters.Gloss.Tiling (tilesToCover)
 import Domain.Logic.BossArena (bossArenaWallPlatforms, bossArenaWallsActive)
 import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.CrumblingPlatform (
@@ -1018,7 +1019,7 @@ tileStrip leftSprite midSprite rightSprite box =
   minX = aabbMinX box
   maxX = aabbMaxX box
   width = max 0 (maxX - minX)
-  tileCount = max 1 (ceiling (width / naturalTileW) :: Int)
+  tileCount = tilesToCover width naturalTileW
   tileW = width / fromIntegral tileCount
   tileH = platformVisualHeight
   centerY = topY - tileH / 2
@@ -1057,8 +1058,8 @@ tileRect sprite minX maxX minY maxY =
   naturalTileH = spriteHeight sprite * spriteScaleY
   width = max 0 (maxX - minX)
   height = max 0 (maxY - minY)
-  tileCountX = max 1 (ceiling (width / naturalTileW) :: Int)
-  tileCountY = max 1 (ceiling (height / naturalTileH) :: Int)
+  tileCountX = tilesToCover width naturalTileW
+  tileCountY = tilesToCover height naturalTileH
   tileW = width / fromIntegral tileCountX
   tileH = height / fromIntegral tileCountY
   tileAt ix iy =
