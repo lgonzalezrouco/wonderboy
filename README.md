@@ -36,13 +36,13 @@ Además del juego:
 
 ## Arquitectura
 
-| Área                | Enfoque                                                 |
-| ------------------- | ------------------------------------------------------- |
-| Física y colisiones | Motor **AABB**, desacoplado de la representación visual |
-| Entidades           | Comportamientos vía **DSL** (Free monad + intérpretes)  |
-| IA                  | **Máquinas de estado** simples sobre el DSL             |
-| Contenido           | Carga de **niveles y configuración** desde JSON (Aeson) |
-| Efectos             | `IO` solo en **Adapters** y **Frameworks** (Gloss)      |
+| Área                | Enfoque                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| Física y colisiones | Motor **AABB**, desacoplado de la representación visual                                             |
+| Entidades           | Comportamientos vía **DSL** (Free monad + intérpretes)                                              |
+| IA                  | **Máquinas de estado** simples sobre el DSL                                                         |
+| Contenido           | **Niveles y configuración** desde JSON (Aeson); generación y hints opcionales vía puertos Anthropic |
+| Efectos             | `IO` solo en **Adapters** y **Frameworks** (Gloss)                                                  |
 
 Firma orientativa del motor (denotación pura del paso de simulación):
 
@@ -191,6 +191,32 @@ cabal run wonderboy-hs
 cabal test all
 fourmolu --mode check src app test
 hlint src app test
+```
+
+### Variables de entorno (generación y comportamiento IA)
+
+Sin configuración adicional el juego usa los JSON fijos en `levels/` y los
+arquetipos por defecto de cada `kind`. Con `ANTHROPIC_API_KEY` se habilitan los
+adaptadores HTTP a la API de mensajes de Anthropic (modelo **Claude Haiku 4.5**
+por defecto).
+
+| Variable                    | Efecto                                                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`         | Clave de API. Ausente o vacía: sin llamadas de red; hints y generación degradan a JSON fijo y defaults del `kind`.                              |
+| `WONDERBOY_GENERATE_LEVELS` | Cualquier valor no vacío: al arrancar, intenta generar las tres etapas del run vía API; cada slot fallido usa el `levelN.json` correspondiente. |
+| `WONDERBOY_WORLD_PROMPT`    | Tema opcional (texto libre) para la generación procedural de niveles.                                                                           |
+| `WONDERBOY_GENERATOR_MODEL` | Override del modelo para generación (default: `claude-haiku-4-5`).                                                                              |
+| `WONDERBOY_RESOLVER_MODEL`  | Override del modelo para resolución de `behaviourHint` (default: `claude-haiku-4-5`).                                                           |
+| `WONDERBOY_GENERATOR_DEBUG` | Valor no vacío: log de depuración del generador en stderr.                                                                                      |
+| `WONDERBOY_RESOLVER_DEBUG`  | Valor no vacío: log de depuración del resolver en stderr.                                                                                       |
+
+Ejemplo con generación y resolución de hints:
+
+```bash
+export ANTHROPIC_API_KEY="sk-..."
+export WONDERBOY_GENERATE_LEVELS=1
+export WONDERBOY_WORLD_PROMPT="ruinas inundadas al atardecer"
+cabal run wonderboy-hs
 ```
 
 ## Editor y HLint

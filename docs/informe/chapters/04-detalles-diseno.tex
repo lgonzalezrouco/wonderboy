@@ -1,4 +1,379 @@
 \section{Detalles de Diseño}
 \label{sec:detalles-diseno}
 
-Esta es la sección de detalles de diseño.
+\subsection{Pipeline de un frame}
+\label{subsec:pipeline-frame}
+
+Un \emph{frame} en \texttt{Playing} con \emph{delta time} activo es una sola
+invocación de \texttt{advanceSimulation\-Frame}
+(sección~\ref{subsec:solucion-nucleo}). Un \emph{frame} abarca todo el ciclo de
+simulación. Un \emph{behaviour step} (primer bloque de \texttt{advanceFrame}) avanza
+solo una instrucción del \emph{DSL} por enemigo. El orden interno es fijo:
+
+\begin{enumerate}
+  \item \texttt{advanceFrame}: \texttt{runBehaviourStep} y \texttt{step}
+    (plataformas especiales, física y colisiones)
+  \item combate (contacto y \emph{melee} del \emph{player})
+  \item proyectiles (lanzamiento del \emph{player} y \emph{enemy shot}s)
+  \item \emph{falling hazard}s (peligros que caen desde el techo del nivel)
+  \item transiciones de fase del jefe
+  \item \texttt{resolvePickups} y victoria de nivel (\texttt{resolvePlayingWin})
+  \item \emph{out-of-bounds} (caída fuera del nivel) y muerte o \emph{respawn}
+  \item \texttt{resolveFramePhase} si victoria y pérdida de vida coinciden
+\end{enumerate}
+
+En fases \texttt{GameOver}, \texttt{LevelComplete} o \texttt{Victory}, o con
+\emph{delta time} congelado, \texttt{updateGame} no invoca
+\texttt{advanceSimulation\-Frame}. \texttt{resolveFramePhase} anula la victoria en
+el mismo \emph{frame} ante \texttt{GameOver} o \emph{respawn}.
+\texttt{updateGame} lee \texttt{GameConfig}, delega el \emph{frame} al dominio y escribe
+el \texttt{GameState} con \texttt{modify}. No reexpone la pila \texttt{GameM}
+(sección~\ref{subsec:solucion-monadas}).
+
+\subsection{Física cinemática}
+\label{subsec:fisica}
+
+La cinemática del \emph{player} y de los \emph{enemy} terrestres sigue la misma
+ley en unidades del juego (px, px/s, px/s\textsuperscript{2}). Tras registrar si
+el \emph{player} estaba en el suelo (\texttt{wasOnGround}), el motor aplica en
+orden: \emph{input} horizontal ($v_x$ según signo del movimiento y velocidad máxima),
+gravedad ($v_y' = v_y - g \cdot \Delta t$), salto (si hubo \emph{press} de salto y
+\texttt{wasOnGround}, $v_y$ pasa al impulso autorizado) e integración de posición
+($\mathit{pos}' = \mathit{pos} + \mathit{vel} \cdot \Delta t$). El salto solo
+cuenta si la tecla se pulsa en ese \emph{frame}, no si permanece apretada.
+
+El \emph{input}, la gravedad y el salto se calculan una sola vez por \emph{frame}.
+Solo después, el movimiento del \emph{player} y sus colisiones pueden repartirse en
+pasos más chicos.
+
+En cada \emph{frame} el jugador recorre en vertical una distancia $|v_y| \cdot \Delta t$
+(velocidad vertical por tiempo del \emph{frame}). Si el motor integrara ese salto de
+una sola vez, podría \emph{tunelar}: terminar un \emph{frame} al otro lado de una
+plataforma fina sin que, en ningún instante intermedio, la \emph{collision box}
+solape el sólido. Es el mismo fenómeno que en física de juegos se llama
+\emph{tunneling}: el cuerpo ``salta'' el obstáculo porque el paso de integración es
+más grande que el grosor del collider.
+
+Para evitarlo, el motor toma la plataforma más fina del nivel y, si
+$|v_y| \cdot \Delta t$ supera la mitad de su altura, divide el desplazamiento en
+entre $1$ y $16$ sub-pasos de igual duración ($\Delta t / n$). En cada sub-paso
+integra posición y comprueba colisiones. Así el choque se detecta en algún instante
+intermedio. El \emph{input} y la gravedad no se repiten: solo se subdivide el
+tramo ya calculado.
+
+Los \emph{enemy} voladores solo actualizan posición, sin gravedad ni colisión con
+plataformas. Los terrestres caen con gravedad y colisionan como el jugador, pero en
+un único paso (sin subdivisión).
+
+\subsection{Colisiones AABB}
+\label{subsec:colisiones}
+
+Cada \emph{entity} usa una \emph{collision box} alineada a los ejes (\emph{AABB}). Las
+plataformas se anclan en la esquina inferior izquierda (\emph{bottom-left}) y el
+\emph{foot position} (punto de apoyo en el borde inferior de la caja) del jugador y de
+los enemigos cae en el centro de ese borde.
+
+Cuando dos \emph{AABB} se solapan, cada eje tiene una \emph{penetración}: la
+distancia mínima que habría que desplazar al jugador en ese eje para separar las
+cajas. En horizontal hay dos candidatos (empujar a izquierda o derecha). En
+vertical, hacia arriba o hacia abajo. El motor toma el menor de cada par y compara
+ambos mínimos.
+
+Ante un solapamiento jugador--sólido, elige el eje de \emph{menor penetración}:
+empujar en $X$ si la separación horizontal es más chica (choque lateral) y en $Y$
+si la vertical lo es (suelo o techo). Resolver siempre el eje vertical primero
+confundiría una pared con un aterrizaje (o un techo con un apoyo): corriendo
+contra el costado de una plataforma el jugador terminaría encima, saltando contra
+una pared quedaría clavado hacia abajo. Cuando las penetraciones son casi iguales,
+un sesgo favorece $Y$ para tratar el contacto como apoyo.
+
+En el eje vertical interviene \texttt{vyBefore}, la componente vertical del jugador
+\emph{después} de aplicar \emph{input}, gravedad y salto pero \emph{antes} de mover
+posición. Al detectar solapamiento, esa velocidad ya refleja la intención de
+movimiento (caer, quedar quieto o subir), aunque la caja aún no se haya
+desplazado. Solo se aterriza o se corrige techo si \texttt{vyBefore} $\leq 0$ (caía o
+estaba en reposo). Si el jugador subía ($\texttt{vyBefore} > 0$), un choque superior se
+trata como golpe de techo, no como piso. Las plataformas se procesan ordenadas por
+borde superior descendente. Se repite hasta ocho pasadas o hasta que no quede
+solapamiento. Los enemigos terrestres comparten la regla. Los voladores la
+ignoran.
+
+\subsection{Plataformas especiales}
+\label{subsec:plataformas-especiales}
+
+\textbf{Plataformas móviles.} Cada una hace \emph{ping-pong} entre dos extremos con ancla
+\emph{bottom-left} y velocidad constante. Se avanzan antes de la física del
+\emph{player}. Si el jugador está en el suelo y apoyado sobre el tramo superior
+de una móvil, su posición se desplaza con la plataforma ese \emph{frame}
+(\emph{displacement carry}): la plataforma ``arrastra'' al jugador sumando su
+desplazamiento del \emph{frame} a la posición, sin modificar \texttt{playerVel}. Así
+sube con la plataforma mientras permanece apoyado. Al saltar deja de arrastrarse y
+no hereda la velocidad horizontal de la plataforma: el salto sale con la velocidad
+propia del jugador, no con la de la móvil.
+
+\textbf{Plataformas desmoronables.} Permanecen sólidas para el jugador hasta que
+descansa encima. Entonces arranca un contador fijo de frames (15 en la
+implementación actual) y siguen sólidas durante la cuenta. Al terminar, dejan de
+colisionar con el jugador, caen verticalmente y se eliminan bajo la línea de
+muerte. Los enemigos las tratan como sólidas hasta que desaparecen.
+
+\textbf{Arena de jefe.} Campo opcional en la \emph{level definition}. Al cruzar
+el umbral horizontal el \emph{run} marca que el combate con el jefe está activo. Mientras
+haya jefe vivo, paredes virtuales laterales confinan al \emph{player} dentro de la región
+y la cámara no sale de esos límites.
+El detalle de combate del jefe se resume en la sección~\ref{subsec:combate}.
+
+\subsection{DSL de comportamiento}
+\label{subsec:dsl}
+
+Desde el punto de vista del jugador, tres \emph{archetypes} nombran patrones
+reconocibles: \texttt{patrol} (recorre sin reaccionar), \texttt{chase} (persigue
+desde lejos) y \texttt{guard} (reacciona solo de cerca). Los \emph{presets}
+\texttt{chase} y \texttt{guard} comparten la misma FSM reactiva en el catálogo: la
+diferencia está en velocidades y en el \texttt{BehaviourTuning} (\emph{reach} más
+alto en \texttt{chase}). Un hint como ``deambula lento y pesado'' suele resolverse a
+\texttt{patrol} con \texttt{speed} bajo. En el motor, cada patrón es un programa del
+catálogo interpretado paso a paso.
+
+Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un \emph{free monad}
+sobre el \emph{functor} \texttt{Entity\-Action} (cada nodo del \emph{AST} es una acción
+posible). El interpreter \texttt{runBehaviour\-Step} consume \emph{una} instrucción por
+\emph{enemy} y por \emph{frame} (un \emph{behaviour step}). Puede leer el \emph{world} para
+\emph{sensing}: medir distancias al \emph{player} o al \emph{spawn anchor} sin mutar
+el estado, solo para decidir ramas o orientación. Luego \texttt{step} integra física
+para todos los \emph{enemy} en el mismo \emph{frame}. Los bucles infinitos
+(patrullas, \emph{FSM}s reactivas) se escriben con \texttt{fix} y recursión en el
+\emph{AST}, no con mutación. Una \emph{FSM} (\emph{finite state machine}) alterna
+estados según condiciones del \emph{world}.
+
+\texttt{IfPlayerWithinRange} e \texttt{IfNearSpawn} son nodos de decisión en el
+\emph{AST}, no de movimiento. En un \emph{behaviour step} miden distancia horizontal
+(al \emph{player} o al \emph{spawn anchor}) y, según el resultado, deciden qué
+instrucción sigue: continúan el programa por \texttt{thenBranch} o
+\texttt{elseBranch}. La velocidad y la orientación las fijan las instrucciones de
+esa rama (\texttt{MoveTowardPlayer}, \texttt{FacePlayer}, \texttt{WaitFrames},
+etc.), no el condicional.
+
+\begin{samepage}
+\begin{center}
+  \captionof{table}{Primitivas del DSL (un paso por \emph{frame} salvo \texttt{WaitFrames}).}
+  \label{tab:dsl-primitivas}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4cm} >{\raggedright\arraybackslash}X@{}}
+    \textbf{Instrucción} & \textbf{Efecto en un \emph{behaviour step}} \\
+    \hline
+    \texttt{SetVelocity} & Fija \texttt{enemyVel}. \\
+    \texttt{WaitFrames} & Mantiene la velocidad y decrementa el contador. \\
+    \texttt{IfPlayerWithin\-Range} &
+    Mide distancia horizontal al \emph{player} y continúa por \texttt{thenBranch} o
+    \texttt{elseBranch}. \\
+    \texttt{IfNearSpawn} &
+    Mide proximidad horizontal al \emph{spawn anchor} y continúa por
+    \texttt{thenBranch} o \texttt{elseBranch}. \\
+    \texttt{MoveToward\-Player} & Velocidad horizontal hacia el \emph{player}. \\
+    \texttt{MoveToward\-Spawn} & Velocidad horizontal hacia el spawn anchor. \\
+    \texttt{MoveToward\-Player2D} & Velocidad en el plano hacia el \emph{player} (voladores). \\
+    \texttt{MoveToward\-Spawn2D} & Velocidad en el plano hacia el spawn anchor (voladores). \\
+    \texttt{FacePlayer} & Orienta hacia el \emph{player} y fija velocidad cero. \\
+    \texttt{SetFacing\-Toward\-Player} & Orienta hacia el \emph{player} sin cambiar velocidad. \\
+    \texttt{Shoot} & Dispara si el cooldown lo permite. \\
+  \end{tabularx}
+\end{center}
+\end{samepage}
+
+Los programas compuestos viven en \texttt{Domain.\allowbreak Logic.\allowbreak Behaviour\-Catalog}:
+
+\begin{itemize}
+  \item \textbf{Patrulla horizontal} (\texttt{patrolHorizontal}): alterna
+    velocidad $\pm speed$ con esperas de $n$ frames por tramo. Típica del caracol.
+  \item \textbf{FSM reactiva terrestre} (\texttt{reactiveFsm}): si el
+    \emph{player} entra en rango, persigue. Si está cerca del spawn, mira al
+    \emph{player}. Si no, vuelve al spawn. Los \emph{presets} \texttt{chase} y
+    \texttt{guard} (plantillas de archetype) comparten el mismo programa. La diferencia está en los
+    parámetros de movimiento y en el \texttt{Behaviour\-Tuning} opcional.
+  \item \textbf{FSM aérea} (\texttt{flyingReactiveFsm}): igual en espíritu, con
+    chase omnidireccional y patrulla horizontal en el spawn para murciélagos.
+  \item \textbf{Arquero} (\texttt{archerProgram}): en rango, mira y dispara. Fuera
+    de rango, mira y espera.
+\end{itemize}
+
+Sin \emph{preset} ni \emph{hint}, cada \texttt{kind} usa el programa por defecto de su
+clase (\texttt{snail} patrulla, \texttt{golem} FSM terrestre, \texttt{bat} FSM aérea,
+\texttt{archer} disparo, \texttt{bossGolem} y \texttt{bossBat} catálogo de fases).
+
+\begin{samepage}
+\begin{center}
+  \captionof{table}{Parámetros de \texttt{BehaviourTuning} y dónde se aplican.}
+  \label{tab:behaviour-tuning}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
+    \textbf{Campo} & \textbf{Efecto} & \textbf{Módulo} \\
+    \hline
+    \texttt{speed} &
+    Escala velocidades del programa \emph{DSL}. &
+    \texttt{BehaviourCatalog.\allowbreak applyTuning} \\
+    \texttt{reach} &
+    Escala rangos de detección y de disparo. &
+    \texttt{BehaviourCatalog.\allowbreak applyTuning} \\
+    \texttt{toughness} &
+    Escala puntos de salud del enemigo. &
+    \texttt{BuildWorld} al materializar el \emph{world} \\
+  \end{tabularx}
+\end{center}
+\end{samepage}
+
+Al construir el \emph{world}, \texttt{programForEnemy\-Def} elige el programa según
+precedencia (sección~\ref{subsubsec:dominio-modelado}): \texttt{behaviour\-Preset}
+explícito en JSON $>$ \emph{preset} y \emph{tuning} resueltos desde
+\texttt{behaviour\-Hint} $>$ \texttt{defaultProgram\-ForKind}. Un \emph{preset}
+incompatible con la clase de movimiento cae a \texttt{idleProgram} (quedarse quieto).
+Los jefes ignoran \emph{presets} y \emph{hints}. Cargan fases desde el catálogo interno
+(sección~\ref{subsec:combate}).
+
+\subsection{Combate y proyectiles}
+\label{subsec:combate}
+
+Tras la física, \texttt{resolveCombat} aplica daño por contacto: cualquier
+solapamiento \emph{collision box} jugador--enemigo daña, sin pisotón. Respeta
+\emph{frames} de invencibilidad del \emph{player}. El \emph{melee} extiende la caja del
+\emph{player} según su orientación durante la ventana de ataque. El alcance y el
+daño vienen de \texttt{CombatParams}.
+
+\texttt{resolveProjectiles} integra proyectiles del \emph{player} (lanzamiento con
+\emph{cooldown} y arco balístico) y \emph{enemy shot}s generados por \texttt{Shoot} en el
+\emph{DSL}. Colisionan con sólidos y con cuerpos. Al impactar aplican daño y desaparecen.
+Los \emph{falling hazard}s caen a velocidad autorizada, dañan por solapamiento y,
+con \texttt{loopDelay} opcional en el JSON, reactivan en el spawn tras una espera.
+
+La victoria híbrida exige las tres condiciones ya descritas
+(sección~\ref{subsubsec:dominio-entidades}).
+\texttt{resolveHazardsAndDeath} comprueba caída bajo la línea de muerte (derivada de la
+plataforma más baja) y reduce vidas o marca \texttt{GameOver}. El \emph{respawn} ubica al
+jugador en el \emph{spawn point}, elimina sus proyectiles y desactiva el modo de \emph{boss arena}.
+
+Cada nivel admite como máximo un jefe. A diferencia del resto de enemigos, no
+recibe \texttt{behaviourPreset} en el JSON: un catálogo interno fija umbrales de
+salud y un programa por fase. Tras el combate del \emph{frame},
+\texttt{resolveBossPhases} compara la salud con umbrales del catálogo y con un snapshot
+pre-combate (\texttt{wBefore}). Si corresponde, sustituye el programa activo del jefe.
+
+\subsection{Niveles}
+\label{subsec:niveles}
+
+La \emph{level definition} es JSON: \texttt{minScore}, \texttt{spawn}, listas de
+plataformas (estáticas, móviles, desmoronables), \emph{enemy}s con \texttt{kind},
+\texttt{behaviour\-Preset} o \texttt{behaviour\-Hint} opcionales, \emph{pickup}s,
+\emph{falling hazard}s, \texttt{exit} y \texttt{bossArena} opcional. Los
+rectángulos usan \texttt{pos} (esquina inferior izquierda), \texttt{width} y \texttt{height}.
+
+\textbf{Catálogo del \emph{run}.} Ver tabla~\ref{tab:catalogo-modos} y
+\texttt{BootstrapRun} (sección~\ref{subsec:solucion-catalogo}). Ante fallo de generación o
+de resolución de hint, el motor conserva el \emph{fallback} del \emph{slot} o el
+\emph{default} del \texttt{kind} y la partida no se aborta.
+
+\textbf{Niveles generados por LLM.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
+adaptador consulta la API del LLM (Anthropic) una vez por perfil (intro, desafío, jefe) y devuelve
+un JSON completo que reemplaza al archivo fijo del mismo índice. El prompt
+fija el schema, reglas
+de jugabilidad y un ejemplo few-shot del JSON fijo del mismo índice. Un tema
+opcional (\envvar{WONDERBOY_WORLD_PROMPT}) orienta el diseño. La respuesta se decodifica
+y se valida con \texttt{buildWorld}. Hay un reintento por etapa ante fallo de red o JSON
+inválido. El JSON generado no incluye \texttt{behaviourHint}: cada \emph{enemy} queda con
+el \emph{default} de su \texttt{kind}.
+
+\textbf{\emph{Hints} en JSON fijos.} En los niveles escritos a mano, el autor describe el
+comportamiento de un \emph{enemy} con \texttt{behaviour\-Hint}. Al arrancar,
+\texttt{BehaviourResolver\-Port} traduce ese texto a \emph{archetype} y
+\texttt{Behaviour\-Tuning} (sección~\ref{subsec:dsl}). Equivale a
+haber escrito \texttt{behaviourPreset} en JSON, pero inferido del texto. El resolver pide
+un objeto JSON con esos cuatro campos. \texttt{archer} es una \texttt{kind} con programa
+propio, no un archetype del catálogo terrestre. La construcción pura del \emph{world} solo
+ve \emph{preset} y \emph{tuning} ya materializados antes de \texttt{buildWorld}.
+
+El caso de uso \texttt{loadLevel\-FromText} decodifica con Aeson y llama a
+\texttt{buildWorld}, que valida y materializa un \texttt{World} o devuelve
+\texttt{LevelBuildError}. Errores de \emph{decode} o de construcción se elevan a
+\texttt{GameError} en el borde con \texttt{IO}. El núcleo solo ve
+\texttt{Text}.
+
+Validaciones relevantes: \texttt{minScore} $\geq 0$, identificadores únicos por
+colección, como máximo un \emph{enemy} de tipo jefe. Si hay \texttt{bossArena},
+debe existir jefe en el nivel. Los jefes no admiten \texttt{behaviourPreset} ni
+\texttt{behaviourHint}.
+
+Fragmento con \emph{hint} ilustrativo:
+
+\begin{lstlisting}[language={}]
+{
+  "minScore": 300,
+  "spawn": {"x": -200, "y": 24},
+  "platforms": [
+    {"pos": {"x": -280, "y": 0}, "width": 405, "height": 8}
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "kind": "snail",
+      "pos": {"x": -120, "y": 8},
+      "behaviourHint": "deambula lento y pesado, ajeno a quien pase"
+    }
+  ],
+  "pickups": [],
+  "exit": {"pos": {"x": 2540, "y": 8}, "width": 36, "height": 64}
+}
+\end{lstlisting}
+
+\subsection{Tests}
+\label{subsec:pruebas}
+
+La suite usa \texttt{tasty} y \texttt{tasty-hunit}. Los módulos \texttt{*Test}
+registran casos con descubrimiento automático en \texttt{test/Main.hs}. El
+dominio se prueba con \emph{world}s fijos en \texttt{Domain.\allowbreak Fixtures} y
+comparación \texttt{(@?=)}. La orchestration usa \texttt{runGameM} sin \texttt{IO}.
+\texttt{updateGame} es polimórfica en \texttt{MonadReader} y
+\texttt{MonadState}, lo que permite instancias mínimas en
+\texttt{UpdateGame\-Test}.
+
+Son \emph{smoke checks} (tests de sanidad) sobre lógica delicada. Otros módulos cubren la arena del jefe,
+plataformas especiales y flujo de nivel con el mismo criterio. Ejemplos representativos:
+
+\begin{samepage}
+\begin{center}
+  \captionof{table}{Tests ilustrativos del motor.}
+  \label{tab:pruebas}
+  \smallskip
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.8cm} >{\raggedright\arraybackslash}X@{}}
+    \textbf{Módulo} & \textbf{Qué verifica} \\
+    \hline
+    \texttt{StepTest} &
+    \texttt{dt = 0} es identidad, aterrizaje, techo, pared y sub-pasos. \\
+    \texttt{AabbTest} &
+    Solapamiento y utilidades de caja. \\
+    \texttt{Behaviour\-Test}, \texttt{EnemyFsm\-Test} &
+    Un paso del interpreter y ramas de la FSM reactiva. \\
+    \texttt{Combat\-Test}, \texttt{Projectile\-Test} &
+    Contacto, melee y disparos. \\
+    \texttt{LevelLoad\-Test}, \texttt{LoadLevel\-Test} &
+    JSON válido o rechazado y \texttt{buildWorld}. \\
+    \texttt{FrameTest} &
+    Orden del \emph{pipeline} y reglas de fase en un \emph{frame} completo. \\
+    \texttt{BootstrapRun\-Test} &
+    Fusión generado/\emph{fallback} y catálogo final del \emph{run}. \\
+    \texttt{ResolveBehaviours\-Test} &
+    Resolución de \texttt{behaviour\-Hint} vía \emph{stub} del puerto. \\
+    \texttt{BehaviourCatalog\-Test} &
+    \texttt{programForEnemy\-Def} y \emph{tuning} sobre archetypes. \\
+    \texttt{UpdateGame\-Test} &
+    Simulación congelada en \texttt{GameOver}, \emph{pickup}s y \texttt{runFrames}. \\
+  \end{tabularx}
+\end{center}
+\end{samepage}
+
+Complementariamente, durante pruebas manuales en el juego se puede alternar con
+\texttt{F1} la superposición de \emph{hitboxes} de todas las \emph{entities} y
+de las plataformas, para verificar en pantalla la alineación entre sprites y
+cajas de colisión.
+
+El test \texttt{unit\_stepZeroIsIdentityAtSpawn} fija el contrato de frame
+congelado: con \emph{delta time} cero, \texttt{step} devuelve el \emph{world}
+entrante sin importar el resto de la cadena.

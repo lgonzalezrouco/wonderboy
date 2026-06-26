@@ -1,4 +1,213 @@
 \section{Contexto y Problema}
 \label{sec:contexto-problema}
 
-Esta es la sección de contexto y problema.
+\subsection{Contexto del dominio}
+\label{subsec:contexto-dominio}
+
+El juego que modelamos es una simulación de plataformas en 2D sobre un
+\emph{game plane}: posiciones y
+tamaños se miden en \emph{logical pixel}s, con el eje horizontal hacia la derecha y el
+vertical hacia arriba. El tiempo de simulación no es continuo en el modelo: avanza en
+\emph{frame}s discretos. Cada \emph{frame} recibe un \emph{delta time} (segundos asignados
+a ese paso) y produce una nueva instantánea del estado jugable.
+
+\subsubsection{Tiempo y espacio}
+\label{subsubsec:dominio-tiempo-espacio}
+
+El reloj real entrega intervalos variables entre llamadas al motor, pero la lógica de juego
+razona sobre pasos finitos. Un \emph{frame} agrupa todas las actualizaciones de un ciclo:
+entrada del \emph{player}, movimiento de \emph{entity}, detección de colisiones y
+resolución de interacciones. El \emph{delta time} escala desplazamientos y velocidades
+dentro de ese paso. Así el dominio separa \emph{qué} cambia en cada \emph{frame} lógico de
+\emph{cuándo} ocurre en el reloj del sistema. La correspondencia entre ambos es
+responsabilidad de la capa que integra el bucle externo, no del modelo de simulación en sí.
+
+\subsubsection{Estado de simulación y contenido estático}
+\label{subsubsec:dominio-estado-estatico}
+
+Antes de jugar un nivel se carga una \emph{level definition}: geometría de plataformas,
+\emph{spawn point}, ubicación de \emph{enemy} e ítems, \emph{exit zone}, \emph{hazard} y
+parámetros como el puntaje mínimo para ganar. Ese contenido es estático durante la partida
+en el nivel. En cambio, el \emph{world} es la instantánea en ejecución: el \emph{player},
+cada \emph{enemy} vivo, las plataformas con su posición actual (incluidas las móviles), los
+ítems aún no recolectados y las regiones activas del nivel. Cada \emph{frame} reemplaza el
+\emph{world} anterior por uno nuevo.
+
+El \emph{run} abarca varios niveles en una misma partida: vidas y otras decisiones que
+persisten al pasar de etapa. El puntaje es por nivel y se reinicia al cargar cada etapa.
+Al entrar en un nivel el \emph{world} se
+reinicia a partir de la \emph{level definition}. Al perder una vida, el \emph{respawn}
+reubica al \emph{player} en un \emph{spawn point} sin recargar todo el \emph{layout} del nivel.
+
+\subsubsection{Entidades e interacciones}
+\label{subsubsec:dominio-entidades}
+
+Una \emph{entity} es todo aquello con identidad que se mueve e interactúa en el tiempo: el
+\emph{player} (único controlable por nivel) y los \emph{enemy} hostiles. Las plataformas y
+los \emph{hazard} son geometría del nivel, los \emph{pickup}s son ítems recolectables. Las
+interacciones físicas se expresan mediante \emph{collision box}es alineadas a los ejes
+(\emph{AABB}, \emph{axis-aligned bounding box}): cajas rectangulares que no rotan. Con ellas
+modelamos apoyo sobre plataformas, daño por contacto, recolección de ítems y ataques. La
+victoria es \emph{híbrida}: no alcanza con llegar a la \emph{exit zone}. Hace falta
+también el puntaje mínimo de la \emph{level definition} y, si el nivel incluye jefe,
+derrotarlo antes. El combate incluye golpes cuerpo a cuerpo y proyectiles tanto del
+\emph{player} como de ciertos \emph{enemy}.
+
+\subsubsection{Modelado explícito de conceptos}
+\label{subsubsec:dominio-modelado}
+
+Además de describir el juego en prosa, el motor \emph{nombra} cada idea relevante como
+tipo o constructor. La \emph{level definition} (\emph{layout} autorado) y el \emph{world}
+(instantánea en ejecución) no comparten representación. Las fases de partida
+(\texttt{Playing}, \texttt{GameOver}, victoria de nivel) son variantes de un ADT, no
+strings ni enteros mágicos. Magnitudes como \emph{delta time}, puntaje, salud o
+velocidad van en \emph{value objects} con reglas de construcción (\texttt{Multiplier}
+y \texttt{Amplifier} en \texttt{BehaviourTuning}, \emph{frame} congelado si el
+\emph{delta time} es cero). El combate y la colisión hablan de
+\emph{collision box}es \emph{AABB}, no de coordenadas sueltas en funciones largas.
+
+Esa reificación tiene dos efectos en el diseño. Primero, las funciones de
+\texttt{Domain/Logic} hacen \emph{pattern matching} sobre significado de juego y quedan
+totalmente sustituibles. Segundo, el glosario del dominio (\emph{enemy}, \emph{run},
+\emph{exit zone}, etc.) se alinea con los nombres del código.
+
+La IA de cada \emph{enemy} se configura en varios niveles de abstracción. Un
+\texttt{kind} (\texttt{EnemyKind}) nombra la \textbf{clase} del enemigo
+(\texttt{snail}, \texttt{golem}, \texttt{bat}, \texttt{archer}, jefes, etc.): fija
+stats compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
+volador) y el programa por defecto del catálogo cuando no hay otra indicación. Sobre
+esa base, un \emph{archetype} nombra un patrón de comportamiento (detalle en
+sección~\ref{subsec:dsl}) y se materializa en un programa \emph{DSL} del catálogo. Un
+\emph{preset} (\texttt{behaviourPreset} en JSON) elige ese archetype de forma
+explícita. Un \emph{hint} (\texttt{behaviourHint}) es texto en lenguaje natural que un
+adaptador resuelve con la API del LLM a \emph{archetype} y \emph{tuning} antes de construir el \emph{world}. El
+\emph{tuning} (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
+(velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
+\emph{preset} ni \emph{hint}, cada enemigo conserva el programa por defecto de su
+\texttt{kind}.
+El detalle de precedencia y resolución se desarrolla en los
+capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
+
+El catálogo del \emph{run} admite dos formas de obtener las tres
+\emph{level definition}s (tabla en sección~\ref{subsec:solucion-catalogo}): por defecto,
+JSON de referencia en \texttt{levels/}, o con \envvar{WONDERBOY_GENERATE_LEVELS}, etapas
+opcionales generadas por la API del LLM (Anthropic) antes del primer \emph{frame}.
+
+\subsection{Marco teórico de Programación Funcional}
+\label{subsec:marco-teorico}
+
+\subsubsection{Referential transparency y funciones puras}
+\label{subsubsec:teoria-pureza}
+
+Una expresión tiene \emph{referential transparency} cuando puede sustituirse por otra de
+igual valor sin alterar el comportamiento del programa. En un núcleo de simulación eso
+implica funciones puras: mismas entradas, mismas salidas, sin lectura ni escritura de estado
+global mutable ni dependencia de la hora del sistema. Hughes~\cite{hughes1989whyfp} subraya
+que esa disciplina favorece piezas pequeñas y reutilizables, porque el significado de cada
+fragmento es local.
+
+La inmutabilidad de datos encaja con ese enfoque: en lugar de modificar un \emph{world} in
+situ, cada \emph{frame} produce un valor nuevo. El costo en copias se mitiga en la práctica
+por estructuras inmutables y por acotar la pureza al dominio de la simulación, delegando
+los efectos reales a la frontera del sistema.
+
+\subsubsection{Tipos algebraicos y composición}
+\label{subsubsec:teoria-adts}
+
+Los tipos algebraicos de datos (ADTs) modelan variantes disjuntas con constructores
+explícitos: estados de una \emph{entity}, resultados de una colisión, nodos de un árbol de
+comportamiento. Hutton~\cite{hutton2016programming} presenta esa técnica como forma directa
+de hacer visibles las reglas del dominio en el tipo, de modo que casos no contemplados
+queden fuera del programa bien tipado.
+
+La composición de funciones y las \emph{higher-order functions} permiten expresar patrones
+reutilizables (recorridos, acumulaciones, estrategias de actualización) sin duplicar
+estructura. Hughes~\cite{hughes1989whyfp} las considera una de las herramientas centrales
+para modularizar programas funcionales.
+
+\subsubsection{Lazy evaluation}
+\label{subsubsec:teoria-lazy}
+
+Haskell evalúa expresiones con \emph{lazy evaluation}: un valor se calcula solo cuando su resultado
+es necesario. Eso permite definir estructuras potencialmente infinitas o flujos derivados
+del estado, y combinar transformaciones sin forzar intermedio. Hughes~\cite{hughes1989whyfp}
+muestra cómo la \emph{laziness} aporta modularidad al separar generación y consumo de datos. En un
+motor de juego el camino crítico sigue siendo finito cada \emph{frame}. La \emph{laziness} aporta
+sobre todo flexibilidad al componer lógica auxiliar y al mantener separadas descripciones de
+datos de su evaluación efectiva.
+
+\subsubsection{Functor, Applicative y mónadas}
+\label{subsubsec:teoria-monadas}
+
+Las clases \texttt{Functor} y \texttt{Applicative} generalizan la idea de aplicar una
+función dentro de un contexto (\texttt{fmap}) y de encadenar computaciones que ya portan ese
+contexto (\texttt{(<*>\kern-0.2em)}), sin exponer su estructura interna. Son el escalón previo a
+\texttt{Monad}, que añade composición secuencial mediante \texttt{(>\textgreater=)} cuando el resultado
+de un paso determina el siguiente \cite{hutton2016programming}.
+
+Las mónadas formalizan un marco para simular efectos
+(estado, entorno, errores) dentro de un lenguaje puro: el tipo de una computación indica
+qué efecto puede ocurrir. Transformadores como \texttt{StateT}, \texttt{ReaderT} y
+\texttt{ExceptT} instancian ese patrón en pilas que el motor usa para orquestar el
+\emph{run} y la configuración sin contaminar la simulación pura.
+
+\subsubsection{Free monads}
+\label{subsubsec:teoria-free}
+
+Un \emph{free monad} separa la \emph{descripción} de una secuencia de acciones de su
+\emph{interpretación}. El AST del DSL de comportamientos de \emph{entity} expresa
+primitivas (moverse, esperar, atacar). Un interpreter puro en el dominio las ejecuta sobre
+el \emph{world}. Variar la IA equivale a cambiar el programa fuente del DSL o el interpreter,
+no a entrelazar condicionales de comportamiento con la física del paso~\cite{free}.
+
+\subsection{El problema}
+\label{subsec:el-problema}
+
+Un juego de plataformas en tiempo real pone a prueba el marco anterior en varios aspectos
+concretos. No se trata de ``usar Haskell'', sino de preservar un modelo denotacional
+legible mientras se integra con un entorno imperativo (entrada, reloj, archivos, dibujado).
+
+\subsubsection{Estado global}
+\label{subsubsec:problema-estado}
+
+Cada \emph{frame} debe considerar al \emph{player}, a todos los \emph{enemy} activos, a las
+plataformas móviles y a los ítems restantes en un mismo \emph{world}. Ese agregado es
+estado global en el sentido del dominio: ninguna actualización parcial puede ignorar el
+resto sin romper colisiones o reglas de combate. La inmutabilidad sugiere reemplazar el
+\emph{world} entero. La orchestration del \emph{run} (vidas, puntaje entre niveles) exige
+además un efecto de estado fuera del paso local. El desafío es mantener la función de paso
+pura sobre el \emph{world}, de modo que cualquier actualización del estado global no se haga 
+de forma oculta, sino que esté explícitamente gestionada y tipada en una capa aparte que se 
+encargue de coordinar esas transformaciones visibles.
+
+\subsubsection{Tiempo discreto y reloj continuo}
+\label{subsubsec:problema-tiempo}
+
+El hardware entrega \emph{delta time} variable. La simulación debe ser determinista dado
+ese valor y la entrada del \emph{frame}. La abstracción natural es una función de paso que,
+a partir del \emph{world} actual, del tiempo asignado y de la entrada del jugador, devuelve
+el \emph{world} siguiente. El problema es fijar esa interfaz sin mezclar en ella lectura del
+teclado ni mediciones del reloj: ambos son datos que llegan desde fuera como parámetros del
+paso.
+
+\subsubsection{Entrada y medio externo}
+\label{subsubsec:problema-medio}
+
+El motor depende de efectos ajenos al núcleo de simulación: pulsaciones del jugador,
+carga de JSON con la \emph{level definition}, reloj y rendering. No son entidades del
+\emph{world}, son fuentes de datos y destinos de salida en la frontera. Si esos efectos
+se intercalan dentro de la física o de las reglas de combate, desaparece la \emph{referential
+transparency} del dominio y los tests sobre el paso de simulación requieren mockear
+hardware. El problema es delimitar una frontera estable entre
+transformación pura y \texttt{IO}.
+
+\subsubsection{Comportamiento e interpretación}
+\label{subsubsec:problema-comportamiento}
+
+Los \emph{enemy} siguen patrones distintos (patrol, chase, disparo a distancia).
+Implementarlos con condicionales entrelazados en el paso de física mezcla dos ritmos: el de
+la cinemática y el de la decisión. Un \emph{frame} de simulación agrupa todo lo que ocurre
+en un ciclo de juego (IA, física, combate, victoria). El \emph{free monad} plantea otra vía: describir el
+comportamiento como programa en un DSL e interpretarlo junto con el avance del
+\emph{frame}. El desafío es mantener esa separación sin duplicar estado ni romper la
+coherencia temporal del \emph{world}.
