@@ -51,7 +51,7 @@ no importa capas superiores.
     \texttt{Adapters/} & \texttt{IO} concreto &
     Traducción entre medios externos y tipos del dominio: teclado Gloss
     $\rightarrow$ \texttt{Input}, disco $\rightarrow$ \texttt{Text},
-    API del LLM (Anthropic) $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
+    API del LLM $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
     \texttt{Gloss.Input}, \texttt{LevelGenerator}, \texttt{BehaviourResolver} \\
     \texttt{Frameworks/} & \texttt{IO} &
     Wiring del bucle de juego: \texttt{playIO}, estado de aplicación
@@ -205,7 +205,7 @@ en el capítulo~\ref{sec:detalles-diseno}.
 
 Antes del primer \emph{frame}, \texttt{BootstrapRun} arma la lista de
 \emph{level definition}s del \emph{run}: lee los JSON fijos del disco, opcionalmente
-reemplaza cada \emph{slot} por una definición pedida a la API del LLM (Anthropic) y resuelve
+reemplaza cada \emph{slot} por una definición pedida a la API del LLM y resuelve
 los \texttt{behaviourHint} del catálogo resultante mediante \texttt{BehaviourResolver\-Port}. La orchestration pura
 vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP queda en \texttt{Adapters/}.
 El framework guarda el catálogo en \texttt{AppState} y materializa el \emph{world}
@@ -226,7 +226,7 @@ volver a consultar la red.
     \texttt{BehaviourResolver\-Port} lo traduce a archetype y \emph{tuning} al arrancar. \\
     JSON generados por LLM &
     \envvar{WONDERBOY_GENERATE_LEVELS} activa. &
-    La API del LLM (Anthropic) produce un JSON por etapa (intro, desafío, jefe). Cada
+    La API del LLM produce un JSON por etapa (intro, desafío, jefe). Cada
     arranque puede ofrecer un \emph{layout} distinto y un \emph{world} nuevo, sin repetir
     siempre los mismos niveles. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
     \emph{default} de su \texttt{kind}. Si falla la generación de un \emph{slot},
@@ -345,7 +345,7 @@ la API de mensajes de Anthropic (modelo Claude Haiku por defecto).
     Deserialización de \emph{level definition}s desde JSON. La lectura del archivo
     es \texttt{IO}. El \emph{decode} es puro sobre \texttt{Text}. \\
     \texttt{http-client}~\cite{hackageSupportLibs} &
-    Cliente HTTP para los adaptadores de la API del LLM (Anthropic): generación de niveles y
+    Cliente HTTP para los adaptadores de la API del LLM: generación de niveles y
     resolución de \texttt{behaviourHint} (sección~\ref{subsec:solucion-frontera}). \\
     tasty, tasty-hunit~\cite{hackageSupportLibs} &
     Tests unitarios de lógica pura y de orchestration. El detalle de casos

@@ -12,7 +12,7 @@ implementamos sostuvo esa frontera de punta a punta:
 un \emph{frame} completo sin \texttt{IO}. \texttt{updateGame} solo aplica
 política de fases y eleva ese resultado al \texttt{GameState}. La orchestration
 del \emph{run} queda en \texttt{UseCases/} con \texttt{StateT}, \texttt{ReaderT}
-y \texttt{ExceptT}. Gloss, el teclado, el disco y la API del LLM (Anthropic) se limitan a
+y \texttt{ExceptT}. Gloss, el teclado, el disco y la API del LLM se limitan a
 \texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no fue solo
 organización de carpetas: permitió razonar sobre el paso de simulación como
 función sustituible y delegar los efectos del entorno a un borde estable.
