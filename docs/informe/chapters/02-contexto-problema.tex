@@ -69,18 +69,22 @@ y \texttt{Amplifier} en \texttt{BehaviourTuning}, \emph{frame} congelado si el
 Esa reificación tiene dos efectos en el diseño. Primero, las funciones de
 \texttt{Domain/Logic} hacen \emph{pattern matching} sobre significado de juego y quedan
 totalmente sustituibles. Segundo, el glosario del dominio (\emph{enemy}, \emph{run},
-\emph{exit zone}, etc.) se alinea con los nombres del código: un lector del informe y del
-repositorio usa el mismo vocabulario.
+\emph{exit zone}, etc.) se alinea con los nombres del código.
 
 La IA de cada \emph{enemy} se configura en varios niveles de abstracción. Un
-\emph{archetype} (\texttt{patrol}, \texttt{chase}, \texttt{guard}) nombra un patrón de
-comportamiento y se materializa en un programa \emph{DSL} del catálogo. Un
+\texttt{kind} (\texttt{EnemyKind}) nombra la \textbf{clase} del enemigo
+(\texttt{snail}, \texttt{golem}, \texttt{bat}, \texttt{archer}, jefes, etc.): fija
+stats compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
+volador) y el programa por defecto del catálogo cuando no hay otra indicación. Sobre
+esa base, un \emph{archetype} (\texttt{patrol}, \texttt{chase}, \texttt{guard}) nombra
+un patrón de comportamiento y se materializa en un programa \emph{DSL} del catálogo. Un
 \emph{preset} (\texttt{behaviourPreset} en JSON) elige ese archetype de forma
 explícita. Un \emph{hint} (\texttt{behaviourHint}) es texto en lenguaje natural que un
 adaptador resuelve con un LLM a \emph{archetype} y \emph{tuning} antes de construir el \emph{world}. El
 \emph{tuning} (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
 (velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
-\emph{preset} ni \emph{hint}, cada \texttt{kind} usa el programa por defecto de su clase.
+\emph{preset} ni \emph{hint}, cada enemigo conserva el programa por defecto de su
+\texttt{kind}.
 El detalle de precedencia y resolución se desarrolla en los
 capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
 
@@ -92,18 +96,17 @@ Con \envvar{WONDERBOY_GENERATE_LEVELS} activada, cada etapa
 puede reemplazarse por un JSON nuevo producido por la API de un LLM antes del primer
 \emph{frame}. Si la API falla, ese \emph{slot} conserva el JSON fijo del mismo índice.
 
-Son decisiones distintas. Quién escribe el \emph{layout} (humano en disco o modelo
-vía \texttt{LevelGenerator\-Port}) no determina solo la IA de cada enemigo. En los
-JSON fijos, un \texttt{behaviourHint} opcional se resuelve con IA al arrancar
-(\texttt{BehaviourResolver\-Port}). Los JSON generados por API no traen \emph{hint}:
-cada \emph{enemy} queda con el \emph{default} de su \texttt{kind}. El núcleo solo
-ve \emph{preset} y \emph{tuning} ya materializados.
+Generar el \emph{layout} y fijar la conducta de cada enemigo son decisiones
+independientes. Que la \emph{level definition} provenga de un JSON desde el disco o
+de \texttt{LevelGenerator\-Port} no condiciona, por sí solo, cómo actuará cada
+\emph{enemy}. En los niveles de referencia, un \texttt{behaviourHint} opcional puede
+traducirse al arrancar la partida mediante \texttt{BehaviourResolver\-Port}; en los
+generados por API no hay hints, y cada enemigo adopta el programa por defecto de su
+\texttt{kind}. El núcleo de dominio solo consume \emph{preset} y \emph{tuning} ya
+materializados.
 
 \subsection{Marco teórico de Programación Funcional}
 \label{subsec:marco-teorico}
-
-La materia propone leer los programas como descripciones de valores y mantener un núcleo
-donde el significado no dependa de efectos ocultos.
 
 \subsubsection{Referential transparency y funciones puras}
 \label{subsubsec:teoria-pureza}
