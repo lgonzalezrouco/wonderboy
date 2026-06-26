@@ -154,7 +154,7 @@ contexto (\texttt{(<*>\kern-0.2em)}), sin exponer su estructura interna. Son el 
 \texttt{Monad}, que añade composición secuencial mediante \texttt{(>\textgreater=)} cuando el resultado
 de un paso determina el siguiente \cite{hutton2016programming}.
 
-Wadler~\cite{wadler1995monads} formaliza las mónadas como marco para simular efectos
+Las mónadas formalizan un marco para simular efectos
 (estado, entorno, errores) dentro de un lenguaje puro: el tipo de una computación indica
 qué efecto puede ocurrir. Transformadores como \texttt{StateT}, \texttt{ReaderT} y
 \texttt{ExceptT} instancian ese patrón en pilas que el motor usa para orquestar el

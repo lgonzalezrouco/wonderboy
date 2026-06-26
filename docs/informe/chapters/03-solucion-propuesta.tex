@@ -14,8 +14,8 @@ archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
 \subsection{Arquitectura por capas}
 \label{subsec:solucion-capas}
 
-El repositorio sigue una arquitectura en cuatro niveles, inspirada en
-arquitectura limpia y hexagonal~\cite{martin2017cleanarchitecture,cockburn2005hexagonal}.
+El repositorio sigue una arquitectura en cuatro niveles, inspirada en la
+arquitectura hexagonal~\cite{cockburn2005hexagonal}.
 La regla de dependencias es unidireccional:
 \texttt{Frameworks} y \texttt{Adapters} pueden usar \texttt{UseCases} y
 \texttt{Domain}. \texttt{UseCases} importa solo \texttt{Domain}. \texttt{Domain}
@@ -342,7 +342,7 @@ la API de mensajes (modelo Claude Haiku por defecto).
     Haskell (GHC)~\cite{ghc967} &
     Lenguaje del motor. Inmutabilidad y tipos algebraicos en el dominio,
     lazy evaluation donde simplifica la composición. \\
-    Gloss~\cite{gloss} &
+    Gloss~\cite{hackageSupportLibs} &
     Ventana, bucle \texttt{playIO}, eventos de teclado y primitivas de dibujo.
     Integrado en \texttt{Frameworks/} y \texttt{Adapters/Gloss/}
     (sección~\ref{subsec:solucion-frontera}). \\
