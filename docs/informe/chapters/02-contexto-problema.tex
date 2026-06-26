@@ -76,11 +76,11 @@ La IA de cada \emph{enemy} se configura en varios niveles de abstracción. Un
 (\texttt{snail}, \texttt{golem}, \texttt{bat}, \texttt{archer}, jefes, etc.): fija
 stats compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
 volador) y el programa por defecto del catálogo cuando no hay otra indicación. Sobre
-esa base, un \emph{archetype} (\texttt{patrol}, \texttt{chase}, \texttt{guard}) nombra
-un patrón de comportamiento y se materializa en un programa \emph{DSL} del catálogo. Un
+esa base, un \emph{archetype} nombra un patrón de comportamiento (detalle en
+sección~\ref{subsec:dsl}) y se materializa en un programa \emph{DSL} del catálogo. Un
 \emph{preset} (\texttt{behaviourPreset} en JSON) elige ese archetype de forma
 explícita. Un \emph{hint} (\texttt{behaviourHint}) es texto en lenguaje natural que un
-adaptador resuelve con un LLM a \emph{archetype} y \emph{tuning} antes de construir el \emph{world}. El
+adaptador resuelve con la API del LLM a \emph{archetype} y \emph{tuning} antes de construir el \emph{world}. El
 \emph{tuning} (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
 (velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
 \emph{preset} ni \emph{hint}, cada enemigo conserva el programa por defecto de su
@@ -89,21 +89,9 @@ El detalle de precedencia y resolución se desarrolla en los
 capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
 
 El catálogo del \emph{run} admite dos formas de obtener las tres
-\emph{level definition}s (sección~\ref{subsec:solucion-catalogo}). Por
-\textbf{defecto} el juego carga los JSON de referencia escritos a mano en
-\texttt{levels/} (\texttt{level1.json}, etc.): el \emph{layout} es fijo y reproducible.
-Con \envvar{WONDERBOY_GENERATE_LEVELS} activada, cada etapa
-puede reemplazarse por un JSON nuevo producido por la API de un LLM antes del primer
-\emph{frame}. Si la API falla, ese \emph{slot} conserva el JSON fijo del mismo índice.
-
-Generar el \emph{layout} y fijar la conducta de cada enemigo son decisiones
-independientes. Que la \emph{level definition} provenga de un JSON desde el disco o
-de \texttt{LevelGenerator\-Port} no condiciona, por sí solo, cómo actuará cada
-\emph{enemy}. En los niveles de referencia, un \texttt{behaviourHint} opcional puede
-traducirse al arrancar la partida mediante \texttt{BehaviourResolver\-Port}; en los
-generados por API no hay hints, y cada enemigo adopta el programa por defecto de su
-\texttt{kind}. El núcleo de dominio solo consume \emph{preset} y \emph{tuning} ya
-materializados.
+\emph{level definition}s (tabla en sección~\ref{subsec:solucion-catalogo}): por defecto,
+JSON de referencia en \texttt{levels/}; con \envvar{WONDERBOY_GENERATE_LEVELS}, etapas
+opcionales generadas por la API del LLM (Anthropic) antes del primer \emph{frame}.
 
 \subsection{Marco teórico de Programación Funcional}
 \label{subsec:marco-teorico}
@@ -219,9 +207,7 @@ transformación pura y \texttt{IO}.
 Los \emph{enemy} siguen patrones distintos (patrol, chase, disparo a distancia).
 Implementarlos con condicionales entrelazados en el paso de física mezcla dos ritmos: el de
 la cinemática y el de la decisión. Un \emph{frame} de simulación agrupa todo lo que ocurre
-en un ciclo de juego (IA, física, combate, victoria). Un \emph{behaviour step} es solo
-el avance de \emph{una} instrucción del programa DSL por enemigo dentro de ese \emph{frame}.
-El free monad plantea otra vía: describir el
+en un ciclo de juego (IA, física, combate, victoria). El \emph{free monad} plantea otra vía: describir el
 comportamiento como programa en un DSL e interpretarlo junto con el avance del
 \emph{frame}. El desafío es mantener esa separación sin duplicar estado ni romper la
 coherencia temporal del \emph{world}.

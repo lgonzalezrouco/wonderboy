@@ -17,7 +17,7 @@ solo una instrucción del \emph{DSL} por enemigo. El orden interno es fijo:
   \item proyectiles (lanzamiento del \emph{player} y \emph{enemy shot}s)
   \item \emph{falling hazard}s (peligros que caen desde el techo del nivel)
   \item transiciones de fase del jefe
-  \item \texttt{resolvePickups} y victoria híbrida (\texttt{resolvePlayingWin})
+  \item \texttt{resolvePickups} y victoria de nivel (\texttt{resolvePlayingWin})
   \item \emph{out-of-bounds} (caída fuera del nivel) y muerte o \emph{respawn}
   \item \texttt{resolveFramePhase} si victoria y pérdida de vida coinciden
 \end{enumerate}
@@ -266,24 +266,25 @@ plataformas (estáticas, móviles, desmoronables), \emph{enemy}s con \texttt{kin
 \emph{falling hazard}s, \texttt{exit} y \texttt{bossArena} opcional. Los
 rectángulos usan \texttt{pos} (esquina inferior izquierda), \texttt{width} y \texttt{height}.
 
-\textbf{Catálogo del \emph{run}.} Al arrancar, \texttt{BootstrapRun} fusiona JSON fijos,
-generación opcional por API y resolución de hints (sección~\ref{subsec:solucion-catalogo}).
-Si un \emph{slot} generado falla, conserva el JSON fijo de ese índice. Si un hint no se
-resuelve, el enemigo cae al \emph{default} de su \texttt{kind}. La partida no se aborta.
+\textbf{Catálogo del \emph{run}.} Ver tabla~\ref{tab:catalogo-modos} y
+\texttt{BootstrapRun} (sección~\ref{subsec:solucion-catalogo}). Ante fallo de generación o
+de resolución de hint, el motor conserva el \emph{fallback} del \emph{slot} o el
+\emph{default} del \texttt{kind}; la partida no se aborta.
 
-\textbf{Niveles generados por IA.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
-adaptador consulta la API una vez por perfil (intro, desafío, jefe) y devuelve un JSON
-completo que reemplaza al archivo fijo del mismo índice. El prompt fija el schema, reglas
+\textbf{Niveles generados por LLM.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
+adaptador consulta la API del LLM (Anthropic) una vez por perfil (intro, desafío, jefe) y devuelve
+un JSON completo que reemplaza al archivo fijo del mismo índice. El prompt
+fija el schema, reglas
 de jugabilidad y un ejemplo few-shot del JSON fijo del mismo índice. Un tema
 opcional (\envvar{WONDERBOY_WORLD_PROMPT}) orienta el diseño. La respuesta se decodifica
 y se valida con \texttt{buildWorld}. Hay un reintento por etapa ante fallo de red o JSON
 inválido. El JSON generado no incluye \texttt{behaviourHint}: cada \emph{enemy} queda con
 el \emph{default} de su \texttt{kind}.
 
-\textbf{\emph{Hints} en JSON fijos.} En los niveles escritos a mano, el autor describe la
-IA de un \emph{enemy} con \texttt{behaviour\-Hint}. Al arrancar, el adaptador traduce ese
-texto a un \emph{archetype} (\texttt{patrol}, \texttt{chase} o \texttt{guard}) y a un
-\texttt{Behaviour\-Tuning} (\emph{speed}, \emph{reach}, \emph{toughness}). Equivale a
+\textbf{\emph{Hints} en JSON fijos.} En los niveles escritos a mano, el autor describe el
+comportamiento de un \emph{enemy} con \texttt{behaviour\-Hint}. Al arrancar,
+\texttt{BehaviourResolver\-Port} traduce ese texto a \emph{archetype} y
+\texttt{Behaviour\-Tuning} (sección~\ref{subsec:dsl}). Equivale a
 haber escrito \texttt{behaviourPreset} en JSON, pero inferido del texto. El resolver pide
 un objeto JSON con esos cuatro campos. \texttt{archer} es una \texttt{kind} con programa
 propio, no un archetype del catálogo terrestre. La construcción pura del \emph{world} solo

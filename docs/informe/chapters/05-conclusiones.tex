@@ -12,7 +12,7 @@ implementamos sostuvo esa frontera de punta a punta:
 un \emph{frame} completo sin \texttt{IO}. \texttt{updateGame} solo aplica
 política de fases y eleva ese resultado al \texttt{GameState}. La orchestration
 del \emph{run} queda en \texttt{UseCases/} con \texttt{StateT}, \texttt{ReaderT}
-y \texttt{ExceptT}. Gloss, el teclado, el disco y la API Anthropic se limitan a
+y \texttt{ExceptT}. Gloss, el teclado, el disco y la API del LLM (Anthropic) se limitan a
 \texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no fue solo
 organización de carpetas: permitió razonar sobre el paso de simulación como
 función sustituible y delegar los efectos del entorno a un borde estable.
@@ -30,14 +30,12 @@ instrucción por \emph{frame} antes de integrar física y colisiones. Variar la 
 de un archetype equivale a cambiar el programa o el interpreter, no a entrelazar
 condicionales de decisión con la cinemática del \emph{player}.
 
-Como tercer eje, el contenido del \emph{run} puede venir de JSON fijos en disco
-(escritos a mano) o de niveles generados por la API al arrancar
-(sección~\ref{subsec:solucion-catalogo}). Los \texttt{behaviourHint} de los JSON fijos
-se resuelven con IA antes de \texttt{buildWorld}. Los ports \texttt{LevelGeneratorPort}
-y \texttt{BehaviourResolverPort} traducen esas peticiones en \texttt{Adapters/},
-mientras \texttt{BootstrapRun} orquesta el catálogo sin \texttt{IO}. El núcleo de
-simulación no distingue si el \emph{preset} vino del autor, del resolver o del
-\emph{default} del \texttt{kind}.
+Como tercer eje, el catálogo del \emph{run} puede armarse con JSON fijos o con
+generación opcional por la API del LLM de Anthropic
+(sección~\ref{subsec:solucion-catalogo}).
+\texttt{BootstrapRun} orquesta el ensamblado sin \texttt{IO}; el núcleo de simulación no
+distingue si el \emph{preset} vino del autor, del resolver o del \emph{default} del
+\texttt{kind}.
 
 El resto de las piezas del motor (carga de \emph{level definition}s,
 pila monádica para vidas y fases de partida, combate y reglas de victoria) se

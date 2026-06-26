@@ -46,8 +46,8 @@ mónadas e integración con el entorno externo.
     del \emph{player} con gravedad y salto, apoyo sobre plataformas estáticas y móviles,
     recolección de ítems con efecto sobre puntaje, y combate básico con ataques
     cuerpo a cuerpo y a distancia. El \emph{run} debe soportar pérdida de vidas,
-    \emph{respawn} en un \emph{spawn point} y condición de victoria \emph{híbrida}: llegar a la
-    \emph{exit zone} con el puntaje mínimo exigido y, si hay jefe en el nivel, derrotarlo.
+    \emph{respawn} en un \emph{spawn point} y condición de victoria \emph{híbrida}
+    (sección~\ref{subsubsec:dominio-entidades}).
 
   \item Diseñar un motor modular por capas (\texttt{Domain}, \texttt{UseCases},
     \texttt{Adapters}, \texttt{Frameworks}), de modo que la simulación viva en un núcleo
@@ -63,7 +63,9 @@ mónadas e integración con el entorno externo.
   \item Modelar comportamientos de \emph{entity} (en particular \emph{enemy}) mediante un
     \emph{DSL} basado en \emph{free monad}: el \emph{AST} describe
     acciones como desplazarse, esperar o atacar, y un interpreter puro en el dominio las ejecuta
-    sobre el \emph{world}. Esa separación permite combinar patrones de IA (patrol,
+    sobre el \emph{world}. Esa separación permite combinar patrones de IA\footnote{En
+    este informe, \emph{IA} designa el comportamiento programado de los enemigos, no
+    inteligencia artificial generativa.} (patrol,
     chase, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
     efectos del entorno.
 
@@ -75,8 +77,9 @@ mónadas e integración con el entorno externo.
 
   \item Cargar \emph{level definition}s desde JSON: geometría de plataformas,
     \emph{spawn point}, \emph{enemy}, ítems, \emph{exit zone} y \emph{hazard}s.
-    Opcionalmente, generar etapas vía API y resolver \texttt{behaviourHint} al armar el
-    catálogo del \emph{run}. \texttt{GameConfig} (gravedad, vidas, combate) vive en
+    Opcionalmente, generar etapas mediante la API del LLM (Anthropic) y resolver
+    \texttt{behaviourHint} al armar el catálogo del \emph{run}. \texttt{GameConfig}
+    (gravedad, vidas, combate) vive en
     código, no en JSON.
 \end{enumerate}
 
@@ -93,11 +96,7 @@ iteración cerraba un ciclo completo (modelo de dominio, integración en el \emp
 prueba manual en el juego) antes de avanzar al siguiente bloque.
 
 Los cambios entraron al repositorio mediante \emph{pull requests} revisadas entre
-integrantes. En esas revisiones comprobamos que el bloque compilara, que la lógica nueva
-respetara la frontera de pureza de \texttt{Domain/}, que los casos del dominio quedaran
-cubiertos en el \emph{pattern matching}, y que los \emph{smoke checks} agregados
-reprodujeran el comportamiento esperado. Esa code review complementó la validación
-visual en pantalla.
+integrantes, complementadas por la validación manual en pantalla.
 
 Un pipeline de continuous integration en GitHub ejecuta en cada cambio la compilación con
 tests habilitados, la suite \texttt{tasty}, la validación del paquete Cabal, la
@@ -111,7 +110,7 @@ alternativas, a contrastar técnicas de Programación Funcional y a señalar deb
 borradores intermedios. En ningún caso delegamos la decisión final: cada elección de diseño
 quedó argumentada y acordada por el equipo.
 
-En la escritura del código la asistencia se limitó sobre todo a sintaxis de Haskell y a
-piezas repetitivas de estructura. Todo lo que incorporamos pasó por las revisiones entre
+En la escritura del código recurrimos a la asistencia sobre todo para sintaxis de Haskell
+y piezas repetitivas de estructura. Todo lo que incorporamos pasó por las revisiones entre
 integrantes y por el pipeline de CI: lo releímos, lo corregimos y lo validamos contra el
 comportamiento esperado en pantalla o en tests.

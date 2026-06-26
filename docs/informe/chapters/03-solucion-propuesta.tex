@@ -51,7 +51,7 @@ no importa capas superiores.
     \texttt{Adapters/} & \texttt{IO} concreto &
     Traducción entre medios externos y tipos del dominio: teclado Gloss
     $\rightarrow$ \texttt{Input}, disco $\rightarrow$ \texttt{Text},
-    API Anthropic $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
+    API del LLM (Anthropic) $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
     \texttt{Gloss.Input}, \texttt{LevelGenerator}, \texttt{BehaviourResolver} \\
     \texttt{Frameworks/} & \texttt{IO} &
     Wiring del bucle de juego: \texttt{playIO}, estado de aplicación
@@ -100,14 +100,11 @@ advanceSimulationFrame
   -> PlayingFrame -> FrameResult
 \end{lstlisting}
 
-El primer paso interno es \texttt{advanceFrame}: por cada \emph{enemy} activo, un
-\emph{behaviour step} (una instrucción del programa \emph{DSL}) y después integración de
-física y colisiones en \texttt{step}. Un \emph{frame} abarca todo el pipeline
-(sección~\ref{subsec:pipeline-frame}). El \emph{behaviour step} es solo la parte de
-decisión de la IA dentro de ese ciclo. A continuación se encadenan combate, proyectiles,
-peligros, fases de jefe, \emph{pickup}s, victoria híbrida y muerte, en orden fijo.
-La victoria híbrida sigue las tres condiciones de
-sección~\ref{subsubsec:dominio-entidades}. \texttt{step} concentra gravedad, salto,
+El primer paso interno es \texttt{advanceFrame}, seguido del resto del pipeline
+(sección~\ref{subsec:pipeline-frame}). A continuación se encadenan combate, proyectiles,
+peligros, fases de jefe, \emph{pickup}s, victoria de nivel
+(sección~\ref{subsubsec:dominio-entidades}) y muerte, en orden fijo.
+\texttt{step} concentra gravedad, salto,
 integración de velocidades y resolución \emph{AABB} del \emph{player} y los \emph{enemy}
 terrestres. Las plataformas móviles y los \emph{hazard} temporales se actualizan
 en la misma cadena.
@@ -182,17 +179,9 @@ Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un AST de
 describen acciones cinematográficas y de sensado (\texttt{SetVelocity},
 \texttt{WaitFrames}, \texttt{MoveTowardPlayer}, ramas por distancia al
 \emph{player} o al punto de aparición, disparo, etc.) sin ejecutar física ni
-tocar \texttt{IO}. Los \emph{archetypes} \texttt{patrol}, \texttt{chase} y \texttt{guard}
-nombran patrones reconocibles en pantalla (detalle en el capítulo~\ref{sec:detalles-diseno}).
-
-El interpreter \texttt{runBehaviourStep}, en \texttt{Domain/}, consume un
-\emph{behaviour step} del programa por cada \emph{enemy}: fija velocidades u orientación,
-evalúa condiciones de \emph{sensing} (lectura pura del \emph{world} para medir
-distancias, sin mutarlo) o avanza contadores de espera. \texttt{advanceFrame} invoca ese
-paso antes de \texttt{step}. Así el ritmo de decisión (IA) y el de cinemática (integración y
-colisiones) permanecen desacoplados pero alineados en el mismo \emph{delta
-time}. Cambiar la IA de un archetype equivale a sustituir el programa fuente o
-ajustar el interpreter, no a editar la cadena de gravedad y AABB.
+tocar \texttt{IO}. \texttt{advanceFrame} invoca \texttt{runBehaviourStep} antes de
+\texttt{step}: el ritmo de decisión (IA) y el de cinemática permanecen desacoplados en el
+mismo \emph{delta time} (sección~\ref{subsec:dsl}).
 
 Un patrón de patrulla horizontal ilustra la idea sin entrar en todos los
 constructores del AST:
@@ -206,8 +195,7 @@ patrolHorizontal speed leg =
     >>> patrolHorizontal speed leg
 \end{lstlisting}
 
-En el código la recursión se expresa con \texttt{fix}. Cada \emph{frame}, el
-interpreter avanza una instrucción por enemigo (un \emph{behaviour step}). La sintaxis
+En el código la recursión se expresa con \texttt{fix}. La sintaxis
 completa del DSL, los programas por archetype de \emph{enemy}, la cadena
 \emph{preset}/\emph{hint}/\emph{tuning} y las máquinas de estado reactivas se desarrollan
 en el capítulo~\ref{sec:detalles-diseno}.
@@ -217,8 +205,8 @@ en el capítulo~\ref{sec:detalles-diseno}.
 
 Antes del primer \emph{frame}, \texttt{BootstrapRun} arma la lista de
 \emph{level definition}s del \emph{run}: lee los JSON fijos del disco, opcionalmente
-reemplaza cada \emph{slot} por una definición pedida a la API de generación y resuelve
-los \texttt{behaviourHint} que queden en el catálogo resultante. La orchestration pura
+reemplaza cada \emph{slot} por una definición pedida a la API del LLM (Anthropic) y resuelve
+los \texttt{behaviourHint} del catálogo resultante mediante \texttt{BehaviourResolver\-Port}. La orchestration pura
 vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP queda en \texttt{Adapters/}.
 El framework guarda el catálogo en \texttt{AppState} y materializa el \emph{world}
 inicial con \texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin
@@ -235,11 +223,12 @@ volver a consultar la red.
     Por defecto (sin \envvar{WONDERBOY_GENERATE_LEVELS}). &
     Tres archivos en \texttt{levels/}, escritos a mano en el repositorio.
     \emph{Layout} reproducible. \texttt{behaviourHint} opcional en cada enemigo:
-    la IA lo traduce a archetype y \emph{tuning} al arrancar. \\
-    JSON generados por IA &
+    \texttt{BehaviourResolver\-Port} lo traduce a archetype y \emph{tuning} al arrancar. \\
+    JSON generados por LLM &
     \envvar{WONDERBOY_GENERATE_LEVELS} activa. &
-    La API produce un JSON por etapa (intro, desafío, jefe). \emph{Layout} distinto
-    en cada arranque. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
+    La API del LLM (Anthropic) produce un JSON por etapa (intro, desafío, jefe). Cada
+    arranque puede ofrecer un \emph{layout} distinto y un \emph{world} nuevo, sin repetir
+    siempre los mismos niveles. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
     \emph{default} de su \texttt{kind}. Si falla la generación de un \emph{slot},
     se usa el JSON fijo de ese índice. \\
   \end{tabularx}
@@ -268,7 +257,7 @@ volver a consultar la red.
 \end{samepage}
 
 Los \emph{stubs} \texttt{NoGenerator} y \texttt{NoResolver} permiten tests sin clave
-de API. El decoding de JSON y \texttt{buildWorld} son puras sobre \texttt{Text}.
+de la API del LLM. El decoding de JSON y \texttt{buildWorld} son puras sobre \texttt{Text}.
 
 \subsection{Frontera con el medio}
 \label{subsec:solucion-frontera}
@@ -325,8 +314,8 @@ hasta confirmar con Enter o Space. El framework carga el siguiente nivel o reini
 \end{center}
 
 El arranque del catálogo (generación, resolución de hints y \emph{fallback}s) se
-describe en la sección~\ref{subsec:solucion-catalogo}. Los adaptadores Anthropic usan
-la API de mensajes (modelo Claude Haiku por defecto).
+describe en la sección~\ref{subsec:solucion-catalogo}. Los adaptadores de la API del LLM usan
+la API de mensajes de Anthropic (modelo Claude Haiku por defecto).
 
 \subsection{Stack tecnológico}
 \label{subsec:solucion-stack}
@@ -356,7 +345,7 @@ la API de mensajes (modelo Claude Haiku por defecto).
     Deserialización de \emph{level definition}s desde JSON. La lectura del archivo
     es \texttt{IO}. El \emph{decode} es puro sobre \texttt{Text}. \\
     \texttt{http-client}~\cite{hackageSupportLibs} &
-    Cliente HTTP para los adaptadores Anthropic de generación de niveles y
+    Cliente HTTP para los adaptadores de la API del LLM (Anthropic): generación de niveles y
     resolución de \texttt{behaviourHint} (sección~\ref{subsec:solucion-frontera}). \\
     tasty, tasty-hunit~\cite{hackageSupportLibs} &
     Tests unitarios de lógica pura y de orchestration. El detalle de casos
