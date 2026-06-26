@@ -146,13 +146,13 @@ para todos los \emph{enemy} en el mismo \emph{frame}. Los bucles infinitos
 \emph{AST}, no con mutación. Una \emph{FSM} (\emph{finite state machine}) alterna
 estados según condiciones del \emph{world}.
 
-Las ramas condicionales (\texttt{IfPlayerWithinRange}, \texttt{IfNearSpawn}) no
-ejecutan las dos alternativas: en un \emph{behaviour step} evalúan la condición
-(distancia horizontal al \emph{player} o al \emph{spawn anchor}) y \emph{eligen
-rama}, es decir, continúan el programa por \texttt{thenBranch} o
-\texttt{elseBranch}. Esa elección no fija velocidad ni orientación. Solo decide qué
-instrucción sigue. La rama elegida se interpretará en \emph{frames} posteriores
-(\texttt{MoveTowardPlayer}, \texttt{WaitFrames}, etc.).
+\texttt{IfPlayerWithinRange} e \texttt{IfNearSpawn} son nodos de decisión en el
+\emph{AST}, no de movimiento. En un \emph{behaviour step} miden distancia horizontal
+(al \emph{player} o al \emph{spawn anchor}) y, según el resultado, deciden qué
+instrucción sigue: continúan el programa por \texttt{thenBranch} o
+\texttt{elseBranch}. La velocidad y la orientación las fijan las instrucciones de
+esa rama (\texttt{MoveTowardPlayer}, \texttt{FacePlayer}, \texttt{WaitFrames},
+etc.), no el condicional.
 
 \begin{samepage}
 \begin{center}
@@ -165,11 +165,11 @@ instrucción sigue. La rama elegida se interpretará en \emph{frames} posteriore
     \texttt{SetVelocity} & Fija \texttt{enemyVel}. \\
     \texttt{WaitFrames} & Mantiene la velocidad y decrementa el contador. \\
     \texttt{IfPlayerWithin\-Range} &
-    Evalúa distancia horizontal al \emph{player} y elige \texttt{thenBranch} o
+    Mide distancia horizontal al \emph{player} y continúa por \texttt{thenBranch} o
     \texttt{elseBranch}. \\
     \texttt{IfNearSpawn} &
-    Evalúa proximidad al \emph{spawn anchor} y elige \texttt{thenBranch} o
-    \texttt{elseBranch}. \\
+    Mide proximidad horizontal al \emph{spawn anchor} y continúa por
+    \texttt{thenBranch} o \texttt{elseBranch}. \\
     \texttt{MoveToward\-Player} & Velocidad horizontal hacia el \emph{player}. \\
     \texttt{MoveToward\-Spawn} & Velocidad horizontal hacia el spawn anchor. \\
     \texttt{MoveToward\-Player2D} & Velocidad en el plano hacia el \emph{player} (voladores). \\
@@ -269,7 +269,7 @@ rectángulos usan \texttt{pos} (esquina inferior izquierda), \texttt{width} y \t
 \textbf{Catálogo del \emph{run}.} Ver tabla~\ref{tab:catalogo-modos} y
 \texttt{BootstrapRun} (sección~\ref{subsec:solucion-catalogo}). Ante fallo de generación o
 de resolución de hint, el motor conserva el \emph{fallback} del \emph{slot} o el
-\emph{default} del \texttt{kind}; la partida no se aborta.
+\emph{default} del \texttt{kind} y la partida no se aborta.
 
 \textbf{Niveles generados por LLM.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
 adaptador consulta la API del LLM (Anthropic) una vez por perfil (intro, desafío, jefe) y devuelve
