@@ -54,8 +54,7 @@ La parte que más iteración demandó fue la física y las colisiones \emph{AABB
 un paso puro sobre el \emph{world} no eliminó los casos borde del dominio:
 túnel en plataformas finas, elección del eje de menor penetración, distinguir
 aterrizaje de golpe de techo con \texttt{vyBefore} (velocidad vertical antes de mover
-posición) y el \emph{displacement carry} del \emph{player} sobre plataformas móviles:
-arrastre de posición sin copiar velocidad al saltar.
+posición) y el \emph{displacement carry} del \emph{player} sobre plataformas móviles.
 Cada regla parecía local, pero interactuaba con las demás en el mismo
 \emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y tests con
 \emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
