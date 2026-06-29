@@ -4,7 +4,8 @@
 {- | Esquema de definición de nivel (contenido autoral, no estado de runtime).
 
 Tipos alineados con @levels/*.json@; la construcción del 'World' vive en
-@Domain.Logic.BuildWorld@.
+@Domain.Logic.BuildWorld@. La serialización JSON (codec DTO) vive en
+@UseCases.Serialization.LevelCodec@, no aquí.
 -}
 module Domain.Model.LevelDefinition (
   BehaviourArchetype (..),
@@ -25,18 +26,7 @@ module Domain.Model.LevelDefinition (
 )
 where
 
-import Data.Aeson (
-  FromJSON (..),
-  ToJSON (..),
-  object,
-  withObject,
-  (.:),
-  (.:?),
-  (.=),
- )
-import Data.Aeson.Types (Parser)
-import Data.Maybe (fromMaybe)
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import Domain.Model.BossArena (BossArenaDef (..))
@@ -77,7 +67,6 @@ data RectDef = RectDef
 -- | Plataforma estática en el JSON del nivel.
 newtype PlatformDef = PlatformDef {unPlatformDef :: RectDef}
   deriving (Eq, Show, Generic)
-  deriving newtype (FromJSON, ToJSON)
 
 -- | Plataforma móvil en el JSON del nivel.
 data MovingPlatformDef = MovingPlatformDef
@@ -146,159 +135,6 @@ data LevelDefinition = LevelDefinition
   }
   deriving (Eq, Show, Generic)
 
-instance FromJSON RectDef where
-  parseJSON = withObject "Rect" $ \o ->
-    RectDef <$> o .: "pos" <*> o .: "width" <*> o .: "height"
-
-instance ToJSON RectDef where
-  toJSON r =
-    object
-      [ "pos" .= rectPos r
-      , "width" .= rectWidth r
-      , "height" .= rectHeight r
-      ]
-
-instance FromJSON MovingPlatformDef where
-  parseJSON = withObject "MovingPlatform" $ \o ->
-    MovingPlatformDef
-      <$> o .: "id"
-      <*> o .: "pos"
-      <*> o .: "width"
-      <*> o .: "height"
-      <*> o .: "endA"
-      <*> o .: "endB"
-      <*> o .: "speed"
-      <*> o .: "startTowardB"
-
-instance ToJSON MovingPlatformDef where
-  toJSON mp =
-    object
-      [ "id" .= mpDefId mp
-      , "pos" .= mpDefPos mp
-      , "width" .= mpDefWidth mp
-      , "height" .= mpDefHeight mp
-      , "endA" .= mpDefEndA mp
-      , "endB" .= mpDefEndB mp
-      , "speed" .= mpDefSpeed mp
-      , "startTowardB" .= mpDefStartTowardB mp
-      ]
-
-instance FromJSON CrumblingPlatformDef where
-  parseJSON = withObject "CrumblingPlatform" $ \o ->
-    CrumblingPlatformDef
-      <$> o .: "id"
-      <*> o .: "pos"
-      <*> o .: "width"
-      <*> o .: "height"
-
-instance ToJSON CrumblingPlatformDef where
-  toJSON cp =
-    object
-      [ "id" .= cpDefId cp
-      , "pos" .= cpDefPos cp
-      , "width" .= cpDefWidth cp
-      , "height" .= cpDefHeight cp
-      ]
-
-instance FromJSON EnemyDef where
-  parseJSON = withObject "Enemy" $ \o -> do
-    kind <- o .: "kind" >>= parseOrFail parseEnemyKind
-    preset <- o .:? "behaviourPreset" >>= traverse (parseOrFail parseBehaviourArchetype)
-    EnemyDef
-      <$> o .: "id"
-      <*> pure kind
-      <*> o .: "pos"
-      <*> pure preset
-      <*> o .:? "behaviourHint"
-      <*> pure Nothing
-
-instance ToJSON EnemyDef where
-  toJSON e =
-    object $
-      [ "id" .= enemyDefId e
-      , "kind" .= enemyKindToText (enemyDefKind e)
-      , "pos" .= enemyDefPos e
-      ]
-        ++ maybe [] (\p -> ["behaviourPreset" .= archetypeToText p]) (enemyDefBehaviourPreset e)
-        ++ maybe [] (\h -> ["behaviourHint" .= h]) (enemyDefBehaviourHint e)
-
-instance FromJSON PickupDef where
-  parseJSON = withObject "Pickup" $ \o ->
-    PickupDef <$> o .: "id" <*> o .: "pos" <*> o .: "value"
-
-instance ToJSON PickupDef where
-  toJSON p =
-    object
-      [ "id" .= pickupDefId p
-      , "pos" .= pickupDefPos p
-      , "value" .= pickupDefValue p
-      ]
-
-instance FromJSON FallingHazardDef where
-  parseJSON = withObject "FallingHazard" $ \o ->
-    FallingHazardDef
-      <$> o .: "id"
-      <*> o .: "pos"
-      <*> o .: "width"
-      <*> o .: "height"
-      <*> o .: "fallSpeed"
-      <*> o .:? "loopDelay"
-
-instance ToJSON FallingHazardDef where
-  toJSON fh =
-    object $
-      [ "id" .= fhDefId fh
-      , "pos" .= fhDefPos fh
-      , "width" .= fhDefWidth fh
-      , "height" .= fhDefHeight fh
-      , "fallSpeed" .= fhDefFallSpeed fh
-      ]
-        ++ maybe [] (\d -> ["loopDelay" .= d]) (fhDefLoopDelay fh)
-
-instance FromJSON LevelDefinition where
-  parseJSON = withObject "Level" $ \o ->
-    LevelDefinition
-      <$> o .: "minScore"
-      <*> o .: "spawn"
-      <*> o .: "platforms"
-      <*> o .: "movingPlatforms"
-      <*> o .: "enemies"
-      <*> o .: "pickups"
-      <*> (fromMaybe [] <$> o .:? "fallingHazards")
-      <*> (fromMaybe [] <$> o .:? "crumblingPlatforms")
-      <*> o .:? "bossArena"
-      <*> o .: "exit"
-
-instance ToJSON LevelDefinition where
-  toJSON lvl =
-    object $
-      [ "minScore" .= levelMinScore lvl
-      , "spawn" .= levelSpawn lvl
-      , "platforms" .= levelPlatforms lvl
-      , "movingPlatforms" .= levelMovingPlatforms lvl
-      , "enemies" .= levelEnemies lvl
-      , "pickups" .= levelPickups lvl
-      , "fallingHazards" .= levelFallingHazards lvl
-      , "crumblingPlatforms" .= levelCrumblingPlatforms lvl
-      , "exit" .= levelExit lvl
-      ]
-        ++ maybe [] (\a -> ["bossArena" .= a]) (levelBossArena lvl)
-
-enemyKindToText :: EnemyKind -> Text
-enemyKindToText kind = case kind of
-  SnailKind -> "snail"
-  BatKind -> "bat"
-  GolemKind -> "golem"
-  ArcherKind -> "archer"
-  BossGolemKind -> "bossGolem"
-  BossBatKind -> "bossBat"
-
-archetypeToText :: BehaviourArchetype -> Text
-archetypeToText archetype = case archetype of
-  PatrolArchetype -> "patrol"
-  ChaseArchetype -> "chase"
-  GuardArchetype -> "guard"
-
 -- | Parsea clase de enemigo desde texto de nivel.
 parseEnemyKind :: Text -> Either LevelBuildError EnemyKind
 parseEnemyKind txt = case txt of
@@ -317,9 +153,3 @@ parseBehaviourArchetype txt = case txt of
   "chase" -> Right ChaseArchetype
   "guard" -> Right GuardArchetype
   _ -> Left (levelBuildError ("unknown behaviour preset: " <> txt))
-
-parseOrFail :: (Text -> Either LevelBuildError a) -> Text -> Parser a
-parseOrFail p txt =
-  case p txt of
-    Right value -> pure value
-    Left (LevelBuildError msg) -> fail (unpack msg)

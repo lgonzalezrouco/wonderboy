@@ -7,7 +7,7 @@ import Data.Maybe (isNothing)
 import Data.Text (Text)
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
-import Adapters.BehaviourResolver (ResolverReply (..), extractJsonObject, resolvedFromReply)
+import Adapters.Anthropic.Content (ResolverReply (..), extractJsonObject, resolvedFromReply)
 import Domain.Model.LevelDefinition (
   BehaviourArchetype (ChaseArchetype),
   ResolvedBehaviour (..),

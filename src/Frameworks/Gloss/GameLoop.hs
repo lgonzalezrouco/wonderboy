@@ -7,7 +7,7 @@ module Frameworks.Gloss.GameLoop (
 )
 where
 
-import Adapters.BootstrapRun (bootstrapCatalogIO)
+import Adapters.BootstrapRunIO (bootstrapCatalogIO)
 import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)

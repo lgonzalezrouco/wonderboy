@@ -22,7 +22,7 @@ import Domain.Model.LevelDefinition (
  )
 import Domain.ValueObjects.BehaviourTuning (identityTuning)
 import Domain.ValueObjects.Position (position)
-import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
+import UseCases.Ports.LevelContentPort (LevelContentPort (..))
 import UseCases.ResolveBehaviours (resolveLevelBehaviours)
 
 newtype Stub a = Stub {runStub :: a}
@@ -34,7 +34,8 @@ cannedTable =
   , ("guards the gate", GuardArchetype)
   ]
 
-instance BehaviourResolverPort Stub where
+instance LevelContentPort Stub where
+  generateLevel _ = Stub Nothing
   resolveBehaviourHint _ hint =
     Stub (fmap (`ResolvedBehaviour` identityTuning) (lookup hint cannedTable))
 

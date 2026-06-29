@@ -29,9 +29,7 @@ where
 
 import Data.Maybe (fromMaybe)
 
-import Data.Aeson (eitherDecodeStrict)
 import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
 
 import Domain.Logic.BehaviourCatalog (defaultProgramForKind)
 import Domain.Logic.BuildWorld (buildWorld)
@@ -73,6 +71,7 @@ import UseCases.GameMonad (
   physicsParamsFromConfig,
   throwParamsFromConfig,
  )
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
 -- | Física y combate alineados con 'defaultConfig' (única fuente de verdad).
 testParams :: PhysicsParams
@@ -126,7 +125,7 @@ demoJsonFixture =
 
 -- | Decodes the demo level definition from 'demoJsonFixture'.
 decodeDemoLevel :: Either String LevelDefinition
-decodeDemoLevel = eitherDecodeStrict (encodeUtf8 demoJsonFixture)
+decodeDemoLevel = decodeLevelText demoJsonFixture
 
 {- | World built from the demo level (shared orchestration fixture).
 
@@ -135,10 +134,12 @@ fixture, not user input.
 -}
 demoWorld :: World
 demoWorld =
-  case buildWorld <$> decodeDemoLevel of
-    Right (Right w) -> w
-    Right (Left (LevelBuildError msg)) -> error (show msg)
+  case decodeDemoLevel of
     Left err -> error err
+    Right def ->
+      case buildWorld def of
+        Left (LevelBuildError msg) -> error (show msg)
+        Right w -> w
 
 -- | Spawn point shared by floor-based pickup and combat fixtures.
 testSpawn :: Position

@@ -1,5 +1,5 @@
 {- | Orquestación del catálogo de niveles: perfiles estándar y mapeo vía
-'LevelGeneratorPort'. Sin 'IO'; espeja 'UseCases.ResolveBehaviours'.
+'LevelContentPort'. Sin 'IO'; espeja 'UseCases.ResolveBehaviours'.
 -}
 module UseCases.GenerateLevels (
   defaultProfiles,
@@ -12,20 +12,28 @@ import Data.Text (Text)
 
 -- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (LevelDefinition)
-import UseCases.Ports.LevelGeneratorPort (
-  LevelGeneratorPort (..),
+import Domain.Model.LevelRole (LevelRole (..))
+import UseCases.Ports.LevelContentPort (
+  LevelContentPort (..),
   LevelProfile (..),
-  LevelRole (..),
  )
 
-defaultProfiles :: Maybe Text -> [LevelProfile]
-defaultProfiles theme =
-  [ LevelProfile 0 IntroRole theme
-  , LevelProfile 1 ChallengeRole theme
-  , LevelProfile 2 BossRole theme
-  ]
+{- | Perfiles estándar del run, uno por rol, con su few-shot adjunto.
+
+@examples@ son los niveles fijos ya decodificados (uno por slot, en orden); cada
+uno se adjunta como 'profileExample' del perfil correspondiente para que el
+generador lo use de few-shot sin releer el archivo. Slots sin ejemplo disponible
+quedan en 'Nothing'.
+-}
+defaultProfiles :: Maybe Text -> [LevelDefinition] -> [LevelProfile]
+defaultProfiles theme examples =
+  zipWith3
+    (\idx role example -> LevelProfile idx role theme example)
+    [0 ..]
+    [IntroRole, ChallengeRole, BossRole]
+    (map Just examples ++ repeat Nothing)
 
 -- | Un 'Maybe' por perfil; 'Nothing' señala fallback al archivo fijo.
 generateCatalog ::
-  (LevelGeneratorPort m) => [LevelProfile] -> m [Maybe LevelDefinition]
-generateCatalog = traverse generateLevel
+  (LevelContentPort m) => [LevelProfile] -> m [Maybe LevelDefinition]
+generateCatalog = generateLevels

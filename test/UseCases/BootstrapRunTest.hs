@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- | Tests de 'mergeGeneratedWithFallbacks', 'selectCatalogSources' y
-'bootstrapCatalog' con puertos mockeados (puro vía 'Identity').
+'bootstrapCatalog' con puerto mockeado (puro vía 'Identity').
 -}
 module UseCases.BootstrapRunTest where
 
@@ -31,11 +31,8 @@ import UseCases.BootstrapRun (
   mergeGeneratedWithFallbacks,
   selectCatalogSources,
  )
-import UseCases.Ports.BehaviourResolverPort (
-  BehaviourResolverPort (..),
- )
-import UseCases.Ports.LevelGeneratorPort (
-  LevelGeneratorPort (..),
+import UseCases.Ports.LevelContentPort (
+  LevelContentPort (..),
   LevelProfile (..),
  )
 
@@ -49,11 +46,9 @@ cannedGenerated =
   , (2, levelForIndex 102)
   ]
 
-instance LevelGeneratorPort BootstrapStub where
+instance LevelContentPort BootstrapStub where
   generateLevel profile =
     BootstrapStub (lookup (profileIndex profile) cannedGenerated)
-
-instance BehaviourResolverPort BootstrapStub where
   resolveBehaviourHint _ _ =
     BootstrapStub (Just (ResolvedBehaviour ChaseArchetype identityTuning))
 
