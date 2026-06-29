@@ -1,12 +1,11 @@
 {- | Orquestación del catálogo de un run: generación IA con fallback a archivos
-fijos y resolución de @behaviourHint@ vía puertos. Sin 'IO'; espeja el arranque
-que antes vivía en @Frameworks.Gloss.GameLoop@.
+fijos y resolución de @behaviourHint@ vía el puerto único 'LevelContentPort'. Sin
+'IO'; espeja el arranque que antes vivía en @Frameworks.Gloss.GameLoop@.
 -}
 module UseCases.BootstrapRun (
   mergeGeneratedWithFallbacks,
   mergeCatalogSources,
   selectCatalogSources,
-  finalizeCatalog,
   bootstrapCatalog,
 )
 where
@@ -18,8 +17,7 @@ import Data.Text (Text)
 -- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (LevelDefinition)
 import UseCases.GenerateLevels (defaultProfiles, generateCatalog)
-import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
-import UseCases.Ports.LevelGeneratorPort (LevelGeneratorPort (..))
+import UseCases.Ports.LevelContentPort (LevelContentPort (..))
 import UseCases.ResolveBehaviours (resolveLevelBehaviours)
 
 {- | Combina definiciones generadas con fallbacks de archivo por índice.
@@ -38,7 +36,7 @@ mergeGeneratedWithFallbacks generated fileFallbacks =
 
 {- | Fusiona generación con fallbacks, o devuelve solo fallbacks si está desactivada.
 
-El adaptador pasa 'generateCatalogIO'; los tests usan 'generateCatalog' vía el puerto.
+El adaptador pasa 'runAnthropicContent'; los tests usan 'generateCatalog' vía el puerto.
 -}
 mergeCatalogSources ::
   (Applicative m) =>
@@ -52,40 +50,34 @@ mergeCatalogSources True genAction fileFallbacks =
 
 {- | Elige fuentes del catálogo antes de resolver comportamientos.
 
-Con @generateEnabled@, consulta 'LevelGeneratorPort' y fusiona con fallbacks;
+Con @generateEnabled@, consulta 'LevelContentPort' y fusiona con fallbacks;
 si no, devuelve los fallbacks sin tocar el puerto.
 -}
 selectCatalogSources ::
-  (LevelGeneratorPort m) =>
+  (LevelContentPort m) =>
   Bool ->
   Maybe Text ->
   [LevelDefinition] ->
   m [LevelDefinition]
-selectCatalogSources generateEnabled theme =
+selectCatalogSources generateEnabled theme fileFallbacks =
   mergeCatalogSources
     generateEnabled
-    (generateCatalog (defaultProfiles theme))
-
--- | Resuelve @behaviourHint@ en cada nivel del catálogo.
-finalizeCatalog ::
-  (BehaviourResolverPort m) =>
-  [LevelDefinition] ->
-  m [LevelDefinition]
-finalizeCatalog = traverse resolveLevelBehaviours
+    (generateCatalog (defaultProfiles theme fileFallbacks))
+    fileFallbacks
 
 {- | Catálogo completo listo para el run: fuentes + resolución de comportamiento.
 
 @fileFallbacks@ son definiciones ya decodificadas (una por slot del run).
 -}
 bootstrapCatalog ::
-  (LevelGeneratorPort m, BehaviourResolverPort m) =>
+  (LevelContentPort m) =>
   Bool ->
   Maybe Text ->
   [LevelDefinition] ->
   m [LevelDefinition]
 bootstrapCatalog generateEnabled theme fileFallbacks =
   selectCatalogSources generateEnabled theme fileFallbacks
-    >>= finalizeCatalog
+    >>= traverse resolveLevelBehaviours
 
 padTo :: Int -> [Maybe a] -> [Maybe a]
 padTo n xs = take n (xs ++ repeat Nothing)

@@ -1,5 +1,5 @@
 {- | Orquesta la resolución de @behaviourHint@ sobre una 'LevelDefinition' vía el
-puerto 'BehaviourResolverPort', rellenando preset y tuning antes del build puro.
+puerto 'LevelContentPort', rellenando preset y tuning antes del build puro.
 
 Precedencia: preset explícito > hint resuelto > default del kind. Los pares
 @(kind, hint)@ distintos se resuelven una sola vez ('nub') para evitar consultas
@@ -21,10 +21,10 @@ import Domain.Model.LevelDefinition (
   LevelDefinition (..),
   ResolvedBehaviour (..),
  )
-import UseCases.Ports.BehaviourResolverPort (BehaviourResolverPort (..))
+import UseCases.Ports.LevelContentPort (LevelContentPort (..))
 
 resolveLevelBehaviours ::
-  (BehaviourResolverPort m) => LevelDefinition -> m LevelDefinition
+  (LevelContentPort m) => LevelDefinition -> m LevelDefinition
 resolveLevelBehaviours def = do
   let needs = nub [kh | e <- levelEnemies def, Just kh <- [resolutionKey e]]
   resolved <- traverse resolvePair needs
@@ -44,11 +44,10 @@ resolveLevelBehaviours def = do
 
   applyResolved table e
     | Nothing <- enemyDefBehaviourPreset e
-    , Just h <- enemyDefBehaviourHint e =
-        let mrb = join (lookup (enemyDefKind e, h) table)
-         in e
-              { enemyDefBehaviourPreset = rbArchetype <$> mrb
-              , enemyDefBehaviourTuning = rbTuning <$> mrb
-              }
-    | otherwise =
+    , Just h <- enemyDefBehaviourHint e
+    , Just rb <- join (lookup (enemyDefKind e, h) table) =
         e
+          { enemyDefBehaviourPreset = Just (rbArchetype rb)
+          , enemyDefBehaviourTuning = Just (rbTuning rb)
+          }
+    | otherwise = e

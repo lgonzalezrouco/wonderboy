@@ -3,8 +3,8 @@
 -- | Boss arena lock: confinement and hybrid win while boss lives.
 module Domain.BossArenaTest where
 
-import Data.Aeson (eitherDecodeStrict)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text (Text)
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
 import Domain.Fixtures (
   dtFrame,
@@ -179,9 +179,9 @@ unit_wallsInactiveAfterBossDefeated = do
 
 unit_buildWorldWithBossArena :: Assertion
 unit_buildWorldWithBossArena =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":80,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1},\"bossArena\":{\"left\":50,\"right\":150}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":80,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1},\"bossArena\":{\"left\":50,\"right\":150}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -190,9 +190,9 @@ unit_buildWorldWithBossArena =
 
 unit_rejectBossArenaWithoutBoss :: Assertion
 unit_rejectBossArenaWithoutBoss =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1},\"bossArena\":{\"left\":50,\"right\":150}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1},\"bossArena\":{\"left\":50,\"right\":150}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of

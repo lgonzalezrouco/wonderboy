@@ -7,6 +7,7 @@ module Domain.ValueObjects.HealthRatio (
   healthRatio,
   healthRatioValue,
   healthAtOrBelowRatio,
+  maxHealthRatio,
 )
 where
 
@@ -27,6 +28,10 @@ healthRatio r
 -- | Valor numérico del umbral (solo para depuración o catálogo estático).
 healthRatioValue :: HealthRatio -> Float
 healthRatioValue (HealthRatio r) = r
+
+-- | Umbral máximo (100 % de la salud). Fallback seguro para catálogos estáticos.
+maxHealthRatio :: HealthRatio
+maxHealthRatio = HealthRatio 1.0
 
 -- | Verdadero si @current / max ≤ ratio@ (con @max > 0@).
 healthAtOrBelowRatio :: Health -> Health -> HealthRatio -> Bool

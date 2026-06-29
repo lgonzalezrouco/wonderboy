@@ -52,7 +52,7 @@ no importa capas superiores.
     Traducción entre medios externos y tipos del dominio: teclado Gloss
     $\rightarrow$ \texttt{Input}, disco $\rightarrow$ \texttt{Text},
     API del LLM $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
-    \texttt{Gloss.Input}, \texttt{LevelGenerator}, \texttt{BehaviourResolver} \\
+    \texttt{Gloss.Input}, \texttt{Anthropic.Content}, \texttt{BootstrapRunIO} \\
     \texttt{Frameworks/} & \texttt{IO} &
     Wiring del bucle de juego: \texttt{playIO}, estado de aplicación
     ajeno al dominio, llamadas a \texttt{runGameM} y \texttt{updateGame}. &
@@ -206,8 +206,8 @@ en el capítulo~\ref{sec:detalles-diseno}.
 Antes del primer \emph{frame}, \texttt{BootstrapRun} arma la lista de
 \emph{level definition}s del \emph{run}: lee los JSON fijos del disco, opcionalmente
 reemplaza cada \emph{slot} por una definición pedida a la API del LLM y resuelve
-los \texttt{behaviourHint} del catálogo resultante mediante \texttt{BehaviourResolver\-Port}. La orchestration pura
-vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} HTTP queda en \texttt{Adapters/}.
+los \texttt{behaviourHint} del catálogo resultante mediante \texttt{LevelContentPort}. La orchestration pura
+vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} de arranque (disco y red) queda en \texttt{Adapters/}.
 El framework guarda el catálogo en \texttt{AppState} y materializa el \emph{world}
 inicial con \texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin
 volver a consultar la red.
@@ -223,7 +223,7 @@ volver a consultar la red.
     Por defecto (sin \envvar{WONDERBOY_GENERATE_LEVELS}). &
     Tres archivos en \texttt{levels/}, escritos a mano en el repositorio.
     \emph{Layout} reproducible. \texttt{behaviourHint} opcional en cada enemigo:
-    \texttt{BehaviourResolver\-Port} lo traduce a archetype y \emph{tuning} al arrancar. \\
+    \texttt{LevelContentPort} lo traduce a archetype y \emph{tuning} al arrancar. \\
     JSON generados por LLM &
     \envvar{WONDERBOY_GENERATE_LEVELS} activa. &
     La API del LLM produce un JSON por etapa (intro, desafío, jefe). Cada
@@ -243,21 +243,20 @@ volver a consultar la red.
     \textbf{Puerto (\texttt{UseCases/})} & \textbf{Responsabilidad} &
     \textbf{Sin servicio / fallo} \\
     \hline
-    \texttt{LevelGenerator\-Port} &
-    Generar una \emph{level definition} por perfil de etapa
-    (intro, desafío, jefe). &
-    \texttt{Nothing} $\rightarrow$ JSON fijo del disco (\emph{fallback}). \\
-    \texttt{BehaviourResolver\-Port} &
-    Traducir \texttt{behaviourHint} (texto) a \emph{archetype}
+    \texttt{LevelContentPort} &
+    Generar una \emph{level definition} por perfil de etapa (intro, desafío, jefe)
+    y traducir \texttt{behaviourHint} (texto) a \emph{archetype}
     (\texttt{patrol}, \texttt{chase}, \texttt{guard}) y \texttt{BehaviourTuning}
     (escala de \texttt{speed}, \texttt{reach}, \texttt{toughness}). &
-    \texttt{Nothing} $\rightarrow$ \emph{default} del \texttt{kind}. \\
+    \texttt{Nothing} en generación $\rightarrow$ JSON fijo del disco.
+    \texttt{Nothing} en resolución de hint $\rightarrow$ \emph{default} del \texttt{kind}. \\
   \end{tabularx}
 \end{center}
 \end{samepage}
 
-Los \emph{stubs} \texttt{NoGenerator} y \texttt{NoResolver} permiten tests sin clave
-de la API del LLM. El decoding de JSON y \texttt{buildWorld} son puras sobre \texttt{Text}.
+El \emph{stub} \texttt{NoContent} permite tests sin clave de la API del LLM. El adaptador
+\texttt{Anthropic.Content} implementa el puerto en producción. El decoding de JSON y
+\texttt{buildWorld} son puras sobre \texttt{Text}.
 
 \subsection{Frontera con el medio}
 \label{subsec:solucion-frontera}
@@ -275,7 +274,7 @@ lanzamiento. \texttt{LevelFile} lee bytes del disco y devuelve
 recibe un \texttt{GameView} y produce la imagen del \emph{frame} (sprites, cámara con
 scroll y \emph{tiling} del fondo).
 
-\texttt{GameView} es un tipo de dominio de solo lectura: proyecta \emph{world},
+\texttt{GameView} es un tipo de solo lectura de la capa de casos de uso: proyecta \emph{world},
 vidas, fase, puntaje, datos del \emph{HUD} y parámetros de combate necesarios para
 dibujar. El \emph{HUD} (\emph{heads-up display}) es la capa de información en pantalla
 (vidas, puntaje) que no forma parte del \emph{world} simulado. El framework lo construye
