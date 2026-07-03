@@ -28,12 +28,10 @@ no hace falta relleno porque cada slot tiene siempre su archivo (un slot sin él
 aborta el arranque antes de llegar acá).
 -}
 defaultProfiles :: Maybe Text -> [LevelRole] -> [LevelDefinition] -> [LevelProfile]
-defaultProfiles theme roles examples =
+defaultProfiles theme =
   zipWith3
     (\idx role example -> LevelProfile idx role theme (Just example))
     [0 ..]
-    roles
-    examples
 
 -- | Un 'Maybe' por perfil; 'Nothing' señala fallback al archivo fijo.
 generateCatalog ::
