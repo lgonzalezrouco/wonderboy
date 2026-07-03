@@ -42,8 +42,6 @@ import Adapters.Gloss.Sprites (
   playerSprite,
  )
 import Adapters.Gloss.Tiling (tilesToCover)
-import Domain.Logic.BossArena (bossArenaWallPlatforms, bossArenaWallsActive)
-import Domain.Logic.Combat (meleeHitbox)
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
   crumblingPlatformAabb,
@@ -56,7 +54,6 @@ import Domain.Model.FallingHazard (
   fallingHazardIsActive,
  )
 import Domain.Model.GamePhase (GamePhase (..))
-import Domain.Model.GameView (GameView (..))
 import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
 import Domain.Model.Pickup (Pickup, pickupAabb, pickupPos)
 import Domain.Model.Platform (Platform, platformAabb)
@@ -84,6 +81,7 @@ import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (Position, posX, posY)
 import Domain.ValueObjects.Score (scorePoints)
+import UseCases.Engine.GameView (GameView (..))
 
 hudMargin :: Float
 hudMargin = 14
@@ -287,7 +285,7 @@ renderFrame catalog renderTick showHitboxes gv =
     [ Scale renderZoom renderZoom $
         pictures
           [ renderBackground catalog (gvLevelIndex gv)
-          , renderWorldLayer catalog renderTick showHitboxes (gvCombatParams gv) (gvWorld gv)
+          , renderWorldLayer catalog renderTick showHitboxes gv
           ]
     , renderHud catalog gv showHitboxes
     , renderBossBar gv
@@ -318,9 +316,11 @@ backgroundHeight :: Float
 backgroundHeight = fromIntegral windowHeight
 
 -- | Capa del mundo con transformación de cámara.
-renderWorldLayer :: SpriteCatalog -> Int -> Bool -> CombatParams -> World -> Picture
-renderWorldLayer catalog renderTick showHitboxes combatParams w =
-  let cameraX = cameraXForWorld w
+renderWorldLayer :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
+renderWorldLayer catalog renderTick showHitboxes gv =
+  let w = gvWorld gv
+      combatParams = gvCombatParams gv
+      cameraX = cameraXForWorld w
       -- Borde derecho del mapa: la única pared que se dibuja es la del final
       -- (la que toca este borde); las demás quedan invisibles.
       rightEdge = snd <$> worldHorizontalSpan w
@@ -334,9 +334,9 @@ renderWorldLayer catalog renderTick showHitboxes combatParams w =
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
-          , renderBossArenaWalls w
+          , renderBossArenaWalls (gvBossArenaWalls gv)
           , renderPlayer catalog renderTick combatParams (worldPlayer w)
-          , if showHitboxes then renderHitboxOverlay combatParams w else Blank
+          , if showHitboxes then renderHitboxOverlay (gvMeleeHitbox gv) w else Blank
           ]
 
 renderPlayer :: SpriteCatalog -> Int -> CombatParams -> Player -> Picture
@@ -496,16 +496,12 @@ renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
 
--- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
-renderBossArenaWalls :: World -> Picture
-renderBossArenaWalls w =
-  case worldBossArena w of
-    Just arena
-      | bossArenaWallsActive w ->
-          pictures (map renderArenaWall (bossArenaWallPlatforms arena))
-    _ -> Blank
- where
-  renderArenaWall plat = aabbToPicture bossArenaWallColor (platformAabb plat)
+{- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
+  Recibe las plataformas ya pre-calculadas por 'UseCases.Engine.GameView.gameViewFromState'.
+-}
+renderBossArenaWalls :: [Platform] -> Picture
+renderBossArenaWalls =
+  pictures . map (aabbToPicture bossArenaWallColor . platformAabb)
 
 bossArenaWallColor :: Color
 bossArenaWallColor = makeColor 0.95 0.45 0.2 0.55
@@ -541,16 +537,16 @@ renderExitDoor catalog box =
       drawSpriteBottomCenter box midSprite
     _ -> Blank
 
--- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
-renderHitboxOverlay :: CombatParams -> World -> Picture
-renderHitboxOverlay combatParams w =
+{- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
+  'mMeleeHitbox' es la hitbox de melee pre-calculada por 'UseCases.Engine.GameView'.
+-}
+renderHitboxOverlay :: Maybe Aabb -> World -> Picture
+renderHitboxOverlay mMeleeHitbox w =
   let p = worldPlayer w
       playerBox = playerAabb p
       meleeOverlay =
-        [ aabbOutline
-            hudAttackColor
-            (meleeHitbox combatParams playerBox (playerFacing p))
-        | hasFramesLeft (playerAttackFrames p)
+        [ aabbOutline hudAttackColor box
+        | box <- maybe [] pure mMeleeHitbox
         ]
    in pictures
         ( [ aabbOutline platformColor (platformAabb plat)

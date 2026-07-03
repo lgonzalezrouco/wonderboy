@@ -1,16 +1,21 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | 'enemyDefBehaviourTuning' es salida del resolver, no input del JSON del autor.
 module Domain.EnemyDefJsonTest where
 
-import Data.Aeson (decode)
-import Data.ByteString.Lazy.Char8 (pack)
-import Test.Tasty.HUnit (Assertion, (@?=))
+import Data.Text (Text)
+import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
-import Domain.Model.LevelDefinition (EnemyDef (..))
+import Domain.Model.LevelDefinition (EnemyDef (..), levelEnemies)
 
 unit_tuningDefaultsToNothing :: Assertion
 unit_tuningDefaultsToNothing =
-  (enemyDefBehaviourTuning <$> decoded) @?= Just Nothing
- where
-  decoded =
-    decode (pack "{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":0,\"y\":0}}") ::
-      Maybe EnemyDef
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
+        Left err -> assertFailure ("decode failed: " ++ err)
+        Right lvl ->
+          case levelEnemies lvl of
+            [enemy] -> enemyDefBehaviourTuning enemy @?= Nothing
+            _ -> assertFailure "expected exactly one enemy"

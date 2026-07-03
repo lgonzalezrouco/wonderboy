@@ -7,7 +7,7 @@ module Frameworks.Gloss.GameLoop (
 )
 where
 
-import Adapters.BootstrapRun (bootstrapCatalogIO)
+import Adapters.BootstrapRunIO (bootstrapCatalogIO)
 import Adapters.Gloss.Config (backgroundColor, windowHeight, windowWidth)
 import Adapters.Gloss.Input (KeyState, buildInput, handleKeyEvent, noKeys)
 import Adapters.Gloss.Rendering (renderFrame)
@@ -41,15 +41,14 @@ import UseCases.GameMonad (
   runGameM,
  )
 import UseCases.LoadLevel (worldFromCatalog)
+import UseCases.RunLayout (layoutPaths)
 import UseCases.UpdateGame (updateGame)
 
--- | Catálogo del demo (tres niveles). Añadir rutas aquí o pasar otra lista a 'runGameWith'.
+{- | Catálogo del run, derivado de 'UseCases.RunLayout.runLayout' (la única fuente
+de verdad). Para cambiar los niveles, editá @runLayout@, no esta lista.
+-}
 demoLevelPaths :: [FilePath]
-demoLevelPaths =
-  [ "levels/level1.json"
-  , "levels/level2.json"
-  , "levels/level3.json"
-  ]
+demoLevelPaths = layoutPaths
 
 -- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState

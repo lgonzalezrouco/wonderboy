@@ -3,8 +3,8 @@
 -- | Pure crumbling platform simulation tests.
 module Domain.CrumblingPlatformTest where
 
-import Data.Aeson (decode, eitherDecodeStrict, encode)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text (Text)
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
 import Domain.Fixtures (
   dtFrame,
@@ -24,7 +24,7 @@ import Domain.Model.CrumblingPlatform (
  )
 import Domain.Model.Enemy (spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind (SnailKind))
-import Domain.Model.LevelDefinition (CrumblingPlatformDef (..), LevelBuildError (..))
+import Domain.Model.LevelDefinition (CrumblingPlatformDef (..), LevelBuildError (..), levelCrumblingPlatforms)
 import Domain.Model.Player (
   Player (..),
   playerOnGround,
@@ -116,22 +116,20 @@ unit_enemyDoesNotTriggerCrumble =
 
 unit_crumblingPlatformDefRoundTrip :: Assertion
 unit_crumblingPlatformDefRoundTrip =
-  let def =
-        CrumblingPlatformDef
-          { cpDefId = 1
-          , cpDefPos = position 620 120
-          , cpDefWidth = 48
-          , cpDefHeight = 8
-          }
-   in case decode (encode def) of
-        Nothing -> assertFailure "round trip decode failed"
-        Just def' -> cpDefWidth def' @?= 48
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"crumblingPlatforms\":[{\"id\":1,\"pos\":{\"x\":620,\"y\":120},\"width\":48,\"height\":8}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
+        Left err -> assertFailure ("round trip decode failed: " ++ err)
+        Right lvl ->
+          case levelCrumblingPlatforms lvl of
+            [def] -> cpDefWidth def @?= 48
+            _ -> assertFailure "expected exactly one crumbling platform"
 
 unit_buildWorldCrumblingPlatform :: Assertion
 unit_buildWorldCrumblingPlatform =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8}],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"crumblingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":48,\"height\":8}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8}],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"crumblingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":48,\"height\":8}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -143,9 +141,9 @@ unit_buildWorldCrumblingPlatform =
 
 unit_rejectInvalidCrumblingWidth :: Assertion
 unit_rejectInvalidCrumblingWidth =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"crumblingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":0,\"height\":8}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"crumblingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":0,\"height\":8}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of

@@ -7,19 +7,22 @@ module UseCases.LoadLevel (
 )
 where
 
-import Data.Aeson (eitherDecodeStrict)
+import Data.Maybe (listToMaybe)
 import Data.Text (Text, unpack)
-import Data.Text.Encoding (encodeUtf8)
 import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Model.LevelDefinition (LevelBuildError (..), LevelDefinition)
 import Domain.Model.World (World)
 import UseCases.GameMonad (GameError (..))
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
--- | Decodifica JSON estricto a 'LevelDefinition'.
+{- | Decodifica JSON a 'LevelDefinition' vía el codec DTO de @UseCases.Serialization.LevelCodec@.
+
+La serialización JSON vive en @UseCases.Serialization@, no en @Domain/@.
+-}
 decodeLevelDefinition :: Text -> Either GameError LevelDefinition
 decodeLevelDefinition txt =
-  case eitherDecodeStrict (encodeUtf8 txt) of
-    Left err -> Left (GameError ("invalid level JSON: " ++ err))
+  case decodeLevelText txt of
+    Left err -> Left (GameError err)
     Right lvl -> Right lvl
 
 {- | Construye el 'World' a partir de una 'LevelDefinition' ya decodificada.
@@ -48,10 +51,7 @@ loadLevelFromText txt = decodeLevelDefinition txt >>= worldFromDefinition
 worldFromCatalog :: [LevelDefinition] -> Int -> Either GameError World
 worldFromCatalog defs idx
   | idx < 0 = Left invalidIndex
-  | otherwise =
-      case drop idx defs of
-        (def : _) -> worldFromDefinition def
-        _ -> Left invalidIndex
+  | otherwise = maybe (Left invalidIndex) worldFromDefinition (listToMaybe (drop idx defs))
  where
   invalidIndex = GameError ("invalid level index: " ++ show idx)
 

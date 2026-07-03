@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 {- | Coordenada 2D en el espacio del juego.
 
 Representa un punto (x, y) en píxeles lógicos.
@@ -14,12 +12,11 @@ module Domain.ValueObjects.Position (
 )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import GHC.Generics (Generic)
 
 -- `Generic` viene de `GHC.Generics` (parte de `base`).
--- Lo derivamos por completitud; en milestones posteriores Aeson lo usa para
--- serializar/deserializar a JSON sin necesidad de escribir instancias a mano.
+-- La serialización JSON de posiciones vive en `UseCases.Serialization.LevelCodec`,
+-- no aquí — el dominio no depende de aeson.
 
 {- | Par de coordenadas (x, y) en píxeles lógicos.
 
@@ -85,14 +82,3 @@ y la resolución de colisión (en lugar de desestructurar y reconstruir en cada 
 -}
 translate :: Float -> Float -> Position -> Position
 translate dx dy (Position (x, y)) = position (x + dx) (y + dy)
-
-instance FromJSON Position where
-  parseJSON = withObject "Position" $ \o ->
-    position <$> o .: "x" <*> o .: "y"
-
-instance ToJSON Position where
-  toJSON (Position (x, y)) =
-    object
-      [ "x" .= x
-      , "y" .= y
-      ]

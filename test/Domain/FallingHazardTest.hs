@@ -3,8 +3,8 @@
 -- | Pure falling hazard simulation tests.
 module Domain.FallingHazardTest where
 
-import Data.Aeson (decode, eitherDecodeStrict, encode)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text (Text)
+import UseCases.Serialization.LevelCodec (decodeLevelText)
 
 import Domain.Fixtures (
   dtFrame,
@@ -18,7 +18,7 @@ import Domain.Model.FallingHazard (
   FallingHazardPhase (..),
   spawnFallingHazard,
  )
-import Domain.Model.LevelDefinition (FallingHazardDef (..), LevelBuildError (..))
+import Domain.Model.LevelDefinition (FallingHazardDef (..), LevelBuildError (..), levelFallingHazards)
 import Domain.Model.Player (playerHealth, playerInvincibilityFrames, spawnPlayer)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.CombatParams (cpContactDamage)
@@ -133,24 +133,20 @@ unit_hazardRespectsInvincibility =
 
 unit_fallingHazardDefRoundTrip :: Assertion
 unit_fallingHazardDefRoundTrip =
-  let def =
-        FallingHazardDef
-          { fhDefId = 1
-          , fhDefPos = position 3200 180
-          , fhDefWidth = 24
-          , fhDefHeight = 24
-          , fhDefFallSpeed = 140
-          , fhDefLoopDelay = Just 90
-          }
-   in case decode (encode def) of
-        Nothing -> assertFailure "round trip decode failed"
-        Just def' -> fhDefLoopDelay def' @?= Just 90
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"fallingHazards\":[{\"id\":1,\"pos\":{\"x\":3200,\"y\":180},\"width\":24,\"height\":24,\"fallSpeed\":140,\"loopDelay\":90}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
+        Left err -> assertFailure ("round trip decode failed: " ++ err)
+        Right lvl ->
+          case levelFallingHazards lvl of
+            [def] -> fhDefLoopDelay def @?= Just 90
+            _ -> assertFailure "expected exactly one falling hazard"
 
 unit_buildWorldFallingHazard :: Assertion
 unit_buildWorldFallingHazard =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8}],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"fallingHazards\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":16,\"height\":16,\"fallSpeed\":100,\"loopDelay\":60}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8}],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"fallingHazards\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":16,\"height\":16,\"fallSpeed\":100,\"loopDelay\":60}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -162,9 +158,9 @@ unit_buildWorldFallingHazard =
 
 unit_rejectInvalidFallSpeed :: Assertion
 unit_rejectInvalidFallSpeed =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"fallingHazards\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":16,\"height\":16,\"fallSpeed\":0}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"fallingHazards\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":80},\"width\":16,\"height\":16,\"fallSpeed\":0}],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of

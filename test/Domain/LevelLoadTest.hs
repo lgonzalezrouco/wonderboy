@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | JSON level definition decode, build, and validation tests.
 module Domain.LevelLoadTest where
 
-import Data.Aeson (decode, eitherDecodeStrict, encode)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text (Text)
 import Domain.Fixtures (decodeDemoLevel)
 import Domain.Logic.BuildWorld (buildWorld)
 import Domain.Model.LevelDefinition (
@@ -17,6 +15,7 @@ import Domain.Model.LevelDefinition (
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Score (score)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
+import UseCases.Serialization.LevelCodec (decodeLevelText, encodeLevelDefinitionText)
 
 withDecodedFixture :: (LevelDefinition -> Assertion) -> Assertion
 withDecodedFixture f =
@@ -31,9 +30,9 @@ unit_decodeDemoFixture =
 unit_roundTripDemoFields :: Assertion
 unit_roundTripDemoFields =
   withDecodedFixture $ \lvl ->
-    case decode (encode lvl) of
-      Nothing -> assertFailure "round trip decode failed"
-      Just lvl' -> do
+    case decodeLevelText (encodeLevelDefinitionText lvl) of
+      Left err -> assertFailure ("round trip decode failed: " ++ err)
+      Right lvl' -> do
         levelMinScore lvl' @?= levelMinScore lvl
         length (levelEnemies lvl') @?= length (levelEnemies lvl)
 
@@ -49,17 +48,17 @@ unit_buildWorldDemo =
 
 unit_rejectUnknownKind :: Assertion
 unit_rejectUnknownKind =
-  let bad =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"dragon\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 bad) of
+  let bad :: Text
+      bad = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"dragon\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText bad of
         Left _ -> pure ()
         Right _ -> assertFailure "expected decode failure for unknown kind"
 
 unit_rejectDuplicateEnemyId :: Assertion
 unit_rejectDuplicateEnemyId =
-  let bad =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":0,\"y\":0}},{\"id\":1,\"kind\":\"bat\",\"pos\":{\"x\":10,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 bad) of
+  let bad :: Text
+      bad = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":0,\"y\":0}},{\"id\":1,\"kind\":\"bat\",\"pos\":{\"x\":10,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText bad of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -68,9 +67,9 @@ unit_rejectDuplicateEnemyId =
 
 unit_rejectBadMovingPlatform :: Assertion
 unit_rejectBadMovingPlatform =
-  let bad =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":0},\"width\":8,\"height\":8,\"endA\":{\"x\":0,\"y\":0},\"endB\":{\"x\":10,\"y\":5},\"speed\":10,\"startTowardB\":true}],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 bad) of
+  let bad :: Text
+      bad = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[{\"id\":1,\"pos\":{\"x\":0,\"y\":0},\"width\":8,\"height\":8,\"endA\":{\"x\":0,\"y\":0},\"endB\":{\"x\":10,\"y\":5},\"speed\":10,\"startTowardB\":true}],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText bad of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -79,15 +78,15 @@ unit_rejectBadMovingPlatform =
 
 unit_rejectMalformedJson :: Assertion
 unit_rejectMalformedJson =
-  case eitherDecodeStrict @LevelDefinition (encodeUtf8 "not json") of
+  case decodeLevelText "not json" of
     Left _ -> pure ()
     Right _ -> assertFailure "expected malformed JSON to fail decode"
 
 unit_rejectNegativeMinScore :: Assertion
 unit_rejectNegativeMinScore =
-  let bad =
-        "{\"minScore\":-1,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 bad) of
+  let bad :: Text
+      bad = "{\"minScore\":-1,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText bad of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -96,9 +95,9 @@ unit_rejectNegativeMinScore =
 
 unit_bossGolemDecode :: Assertion
 unit_bossGolemDecode =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -107,9 +106,9 @@ unit_bossGolemDecode =
 
 unit_bossRejectsBehaviourPreset :: Assertion
 unit_bossRejectsBehaviourPreset =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0},\"behaviourPreset\":\"patrol\"}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0},\"behaviourPreset\":\"patrol\"}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of
@@ -118,9 +117,9 @@ unit_bossRejectsBehaviourPreset =
 
 unit_bossRejectsDuplicateBoss :: Assertion
 unit_bossRejectsDuplicateBoss =
-  let json =
-        "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}},{\"id\":2,\"kind\":\"bossBat\",\"pos\":{\"x\":10,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
-   in case eitherDecodeStrict @LevelDefinition (encodeUtf8 json) of
+  let json :: Text
+      json = "{\"minScore\":0,\"spawn\":{\"x\":0,\"y\":0},\"platforms\":[],\"movingPlatforms\":[],\"enemies\":[{\"id\":1,\"kind\":\"bossGolem\",\"pos\":{\"x\":0,\"y\":0}},{\"id\":2,\"kind\":\"bossBat\",\"pos\":{\"x\":10,\"y\":0}}],\"pickups\":[],\"exit\":{\"pos\":{\"x\":0,\"y\":0},\"width\":1,\"height\":1}}"
+   in case decodeLevelText json of
         Left err -> assertFailure err
         Right lvl ->
           case buildWorld lvl of

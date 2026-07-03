@@ -166,7 +166,7 @@ library
       , Domain.Model.EnemyKind
       , Domain.Model.Enemy
       , Domain.Model.GamePhase
-      , Domain.Model.GameView
+      , Domain.Model.LevelRole
       , Domain.Model.MovingPlatform
       , Domain.Model.Pickup
       , Domain.Model.Platform
@@ -186,15 +186,20 @@ library
       , Adapters.Gloss.Camera
       , Adapters.Gloss.Tiling
       , UseCases.LoadLevel
+      , UseCases.Serialization.LevelCodec
+      , UseCases.Engine.GameConfig
+      , UseCases.Engine.GameState
+      , UseCases.Engine.GameView
       , UseCases.GameMonad
       , UseCases.GenerateLevels
       , UseCases.BootstrapRun
+      , UseCases.RunLayout
       , UseCases.UpdateGame
-      , UseCases.Ports.BehaviourResolverPort
-      , UseCases.Ports.LevelGeneratorPort
+      , UseCases.Ports.LevelContentPort
       , UseCases.ResolveBehaviours
       , Frameworks.Gloss.GameLoop
-      , Adapters.BehaviourResolver
+      , Adapters.Anthropic.Client
+      , Adapters.Anthropic.Content
     other-modules:
         Adapters.Gloss.Config
       , Adapters.Gloss.Input
@@ -202,13 +207,13 @@ library
       , Adapters.Gloss.Sprites
       , Adapters.Gloss.Time
       , Adapters.LevelFile
-      , Adapters.LevelGenerator
-      , Adapters.BootstrapRun
+      , Adapters.BootstrapRunIO
       , Paths_wonderboy_hs
     autogen-modules:
         Paths_wonderboy_hs
     build-depends:
       , aeson >=2.1 && <2.3
+      , async >=2.2 && <2.3
       , bmp == 1.2.*
       , bytestring >=0.11 && <0.13
       , containers >=0.6 && <0.8
@@ -254,6 +259,7 @@ test-suite wonderboy-hs-test
       , Domain.BehaviourCatalogTest
       , Domain.HealthRatioTest
       , Domain.BossPhaseTest
+      , Domain.BossCatalogTest
       , Domain.BehaviourTest
       , Domain.Fixtures
       , Domain.FrameTest
