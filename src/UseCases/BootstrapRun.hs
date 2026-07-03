@@ -19,6 +19,7 @@ import Domain.Model.LevelDefinition (LevelDefinition)
 import UseCases.GenerateLevels (defaultProfiles, generateCatalog)
 import UseCases.Ports.LevelContentPort (LevelContentPort (..))
 import UseCases.ResolveBehaviours (resolveLevelBehaviours)
+import UseCases.RunLayout (layoutRoles)
 
 {- | Combina definiciones generadas con fallbacks de archivo por índice.
 
@@ -62,7 +63,7 @@ selectCatalogSources ::
 selectCatalogSources generateEnabled theme fileFallbacks =
   mergeCatalogSources
     generateEnabled
-    (generateCatalog (defaultProfiles theme fileFallbacks))
+    (generateCatalog (defaultProfiles theme layoutRoles fileFallbacks))
     fileFallbacks
 
 {- | Catálogo completo listo para el run: fuentes + resolución de comportamiento.

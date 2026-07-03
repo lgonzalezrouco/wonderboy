@@ -193,6 +193,7 @@ library
       , UseCases.GameMonad
       , UseCases.GenerateLevels
       , UseCases.BootstrapRun
+      , UseCases.RunLayout
       , UseCases.UpdateGame
       , UseCases.Ports.LevelContentPort
       , UseCases.ResolveBehaviours

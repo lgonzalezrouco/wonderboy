@@ -60,9 +60,19 @@ baseLevel =
 levelForIndex :: Int -> LevelDefinition
 levelForIndex idx = baseLevel{levelMinScore = idx}
 
+{- | Roles del run estándar, inyectados a 'defaultProfiles' como lo hace el
+bootstrap ('UseCases.RunLayout.layoutRoles').
+-}
+threeRoles :: [LevelRole]
+threeRoles = [IntroRole, ChallengeRole, BossRole]
+
+-- | Un ejemplo (nivel fijo) por rol, en orden.
+threeExamples :: [LevelDefinition]
+threeExamples = map levelForIndex [0, 1, 2]
+
 unit_defaultProfilesHasThreeLevels :: Assertion
 unit_defaultProfilesHasThreeLevels =
-  map (\p -> (profileIndex p, profileRole p)) (defaultProfiles Nothing [])
+  map (\p -> (profileIndex p, profileRole p)) (defaultProfiles Nothing threeRoles threeExamples)
     @?= [ (0, IntroRole)
         , (1, ChallengeRole)
         , (2, BossRole)
@@ -70,17 +80,28 @@ unit_defaultProfilesHasThreeLevels =
 
 unit_defaultProfilesPropagatesTheme :: Assertion
 unit_defaultProfilesPropagatesTheme =
-  map profileTheme (defaultProfiles (Just "ice") [])
+  map profileTheme (defaultProfiles (Just "ice") threeRoles threeExamples)
     @?= [Just "ice", Just "ice", Just "ice"]
 
 unit_defaultProfilesAttachesExamples :: Assertion
 unit_defaultProfilesAttachesExamples =
-  map profileExample (defaultProfiles Nothing [levelForIndex 0, levelForIndex 1])
-    @?= [Just (levelForIndex 0), Just (levelForIndex 1), Nothing]
+  map profileExample (defaultProfiles Nothing threeRoles threeExamples)
+    @?= [ Just (levelForIndex 0)
+        , Just (levelForIndex 1)
+        , Just (levelForIndex 2)
+        ]
+
+{- | Roles y ejemplos se recorren en lockstep: con menos ejemplos que roles salen
+menos perfiles, sin perfiles fantasma con 'profileExample' vacío. No ocurre en
+producción (cada slot trae su archivo), pero fija la totalidad de 'zipWith3'.
+-}
+unit_defaultProfilesPairsInLockstep :: Assertion
+unit_defaultProfilesPairsInLockstep =
+  length (defaultProfiles Nothing threeRoles [levelForIndex 0]) @?= 1
 
 unit_generateCatalogResolvesEachProfile :: Assertion
 unit_generateCatalogResolvesEachProfile =
-  catalog (defaultProfiles Nothing [])
+  catalog (defaultProfiles Nothing threeRoles threeExamples)
     @?= [ Just (levelForIndex 0)
         , Just (levelForIndex 1)
         , Just (levelForIndex 2)
@@ -97,5 +118,5 @@ unit_unresolvedProfileStaysNothing =
   profilesWithUnresolvedBoss :: [LevelProfile]
   profilesWithUnresolvedBoss =
     [ if profileRole p == BossRole then p{profileIndex = 99} else p
-    | p <- defaultProfiles Nothing []
+    | p <- defaultProfiles Nothing threeRoles threeExamples
     ]
