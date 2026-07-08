@@ -5,8 +5,7 @@
 En la prosa usamos términos en castellano del dominio del juego. Conservamos
 \textit{frame} y \textit{lazy} como en el código y la bibliografía Haskell. Los
 identificadores Haskell (\texttt{World}, \texttt{advanceSimulationFrame}, etc.)
-aparecen en \texttt{\ldots} o en listados. El glosario canónico del repositorio es
-\texttt{CONTEXT.md}.
+aparecen en \texttt{\ldots} o en listados.
 
 \subsection{Contexto del dominio}
 \label{subsec:contexto-dominio}
@@ -22,12 +21,10 @@ a ese paso) y produce una nueva instantánea del estado jugable.
 \label{subsubsec:dominio-tiempo-espacio}
 
 El reloj real entrega intervalos variables entre llamadas al motor, pero la lógica de juego
-razona sobre pasos finitos. Un frame agrupa todas las actualizaciones de un ciclo:
-entrada del jugador, movimiento de entidad, detección de colisiones y
-resolución de interacciones. El intervalo de tiempo escala desplazamientos y velocidades
-dentro de ese paso. Así el dominio separa qué cambia en cada frame lógico de
-cuándo ocurre en el reloj del sistema. La correspondencia entre ambos es
-responsabilidad de la capa que integra el bucle externo, no del modelo de simulación en sí.
+razona sobre pasos finitos. Un frame agrupa entrada, movimiento, colisiones e
+interacciones. \texttt{DeltaTime} escala desplazamientos y velocidades dentro del paso.
+Así el dominio separa qué cambia en cada frame lógico de cuándo ocurre en el reloj del
+sistema. Esa correspondencia queda fuera del modelo de simulación.
 
 \subsubsection{Estado de simulación y contenido estático}
 \label{subsubsec:dominio-estado-estatico}
@@ -74,18 +71,17 @@ y \texttt{Amplifier} en \texttt{BehaviourTuning}, frame congelado si el
 intervalo de tiempo es cero). El combate y la colisión hablan de
 cajas de colisión AABB, no de coordenadas sueltas en funciones largas.
 
-Esa reificación tiene dos efectos en el diseño. Primero, las funciones de
-\texttt{Domain/Logic} hacen coincidencia de patrones sobre significado de juego y quedan
-totalmente sustituibles. Segundo, el glosario del dominio (enemigo, partida,
-zona de salida, etc.) se alinea con los nombres del código.
+Esa reificación hace que la lógica pura opere sobre tipos con significado de juego y quede
+totalmente sustituible. El glosario del dominio (enemigo, partida, zona de salida, etc.)
+coincide con los nombres del código.
 
 La IA de cada enemigo se configura en varios niveles de abstracción. Un
 \texttt{kind} (\texttt{EnemyKind}) nombra la \textbf{clase} del enemigo
 (\texttt{snail}, \texttt{golem}, \texttt{bat}, \texttt{archer}, jefes, etc.): fija
-stats compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
+atributos compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
 volador) y el programa por defecto del catálogo cuando no hay otra indicación. Sobre
 esa base, un arquetipo nombra un patrón de comportamiento (detalle en
-sección~\ref{subsec:dsl}) y se materializa en un programa DSL del catálogo. Una
+sección~\ref{subsec:dsl}) y se materializa en un programa del catálogo. Una
 plantilla (\texttt{behaviourPreset} en JSON) elige ese arquetipo de forma
 explícita. Una pista (\texttt{behaviourHint}) es texto en lenguaje natural que un
 adaptador resuelve con la API del LLM a arquetipo y ajuste antes de construir el mundo. El
@@ -98,7 +94,7 @@ capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
 
 El catálogo de la partida admite dos formas de obtener las tres
 definiciones de nivel (tabla en sección~\ref{subsec:solucion-catalogo}): por defecto,
-JSON de referencia en \texttt{levels/}, o con \envvar{WONDERBOY_GENERATE_LEVELS}, etapas
+tres JSON de referencia embebidos en el proyecto, o con \envvar{WONDERBOY_GENERATE_LEVELS}, etapas
 opcionales generadas por la API del LLM antes del primer frame.
 
 \subsection{Marco teórico de Programación Funcional}
@@ -114,10 +110,9 @@ global mutable ni dependencia de la hora del sistema. Hughes~\cite{hughes1989why
 que esa disciplina favorece piezas pequeñas y reutilizables, porque el significado de cada
 fragmento es local.
 
-La inmutabilidad de datos encaja con ese enfoque: en lugar de modificar un mundo in
-situ, cada frame produce un valor nuevo. El costo en copias se mitiga en la práctica
-por estructuras inmutables y por acotar la pureza al dominio de la simulación, delegando
-los efectos reales a la frontera del sistema.
+La inmutabilidad encaja con ese enfoque: en lugar de modificar un mundo in
+situ, cada frame produce un valor nuevo. Los efectos reales se acotan a la frontera del
+sistema, fuera del núcleo de simulación.
 
 \subsubsection{Tipos algebraicos y composición}
 \label{subsubsec:teoria-adts}
@@ -133,7 +128,7 @@ reutilizables (recorridos, acumulaciones, estrategias de actualización) sin dup
 estructura. Hughes~\cite{hughes1989whyfp} las considera una de las herramientas centrales
 para modularizar programas funcionales.
 
-\subsubsection{Lazy evaluation}
+\subsubsection{Evaluación \textit{lazy}}
 \label{subsubsec:teoria-lazy}
 
 Haskell evalúa expresiones de forma lazy: un valor se calcula solo cuando su resultado
@@ -141,8 +136,8 @@ es necesario. Hughes~\cite{hughes1989whyfp} muestra cómo eso aporta modularidad
 generación y consumo de datos. En un motor de juego el camino crítico es finito en cada
 frame: la simulación produce un mundo nuevo y Gloss lo consume al dibujar.
 
-Para no afirmar una virtud sin evidencia, medimos residencia de memoria con el ejecutable
-\texttt{wonderboy-bench}, que pliega 500\,000 invocaciones de
+Para no afirmar una virtud sin evidencia, medimos residencia de memoria con una
+medición dedicada al motor, que pliega 500\,000 invocaciones de
 \texttt{advanceSimulationFrame} en dos modos: \texttt{strict} (fuerza el mundo en cada
 paso, como el bucle real) y \texttt{lazy} (acumula checksums sin forzar mundos
 intermedios). Con \texttt{+RTS -s}, el modo \texttt{strict} alcanzó unos 152\,MB de
@@ -164,69 +159,55 @@ contexto (\texttt{(<*>\kern-0.2em)}), sin exponer su estructura interna. Son el 
 \texttt{Monad}, que añade composición secuencial mediante \texttt{(>\textgreater=)} cuando el resultado
 de un paso determina el siguiente \cite{hutton2016programming}.
 
-Las mónadas formalizan un marco para simular efectos
-(estado, entorno, errores) dentro de un lenguaje puro: el tipo de una computación indica
-qué efecto puede ocurrir. Transformadores como \texttt{StateT}, \texttt{ReaderT} y
-\texttt{ExceptT} instancian ese patrón en pilas que el motor usa para orquestar la
-partida y la configuración sin contaminar la simulación pura.
+Las mónadas formalizan efectos (estado, entorno, errores) en el tipo de una
+computación \cite{hutton2016programming}. \texttt{StateT}, \texttt{ReaderT} y
+\texttt{ExceptT} son los transformadores que usamos en la orquestación
+(cap.~\ref{subsec:solucion-monadas}).
 
-\subsubsection{Free monads}
+\subsubsection{Mónadas libres}
 \label{subsubsec:teoria-free}
 
-Un free monad separa la descripción de una secuencia de acciones de su
-interpretación. El AST del DSL de comportamientos de entidad expresa
-primitivas (moverse, esperar, atacar). Un interpreter puro en el dominio las ejecuta sobre
-el mundo. Variar la IA equivale a cambiar el programa fuente del DSL o el interpreter,
-no a entrelazar condicionales de comportamiento con la física del paso~\cite{free}.
+Una mónada libre separa la descripción de acciones de su interpretación~\cite{free}.
+El árbol de sintaxis del lenguaje de comportamiento expresa primitivas (moverse, esperar, atacar) y un
+intérprete puro las ejecuta sobre el mundo en cada frame.
 
 \subsection{El problema}
 \label{subsec:el-problema}
 
-Un juego de plataformas en tiempo real pone a prueba el marco anterior en varios aspectos
-concretos. El desafío es preservar un modelo denotacional
-legible mientras se integra con un entorno imperativo (entrada, reloj, archivos, dibujado).
+Un juego de plataformas en tiempo real pone a prueba el marco anterior. El desafío es
+preservar un modelo denotacional legible mientras se integra con un entorno imperativo
+(entrada, reloj, archivos, dibujado).
 
 \subsubsection{Estado global}
 \label{subsubsec:problema-estado}
 
 Cada frame debe considerar al jugador, a todos los enemigos activos, a las
-plataformas móviles y a los ítems restantes en un mismo mundo. Ese agregado es
-estado global en el sentido del dominio: ninguna actualización parcial puede ignorar el
-resto sin romper colisiones o reglas de combate. La inmutabilidad sugiere reemplazar el
-mundo entero. La orquestación de la partida (vidas, puntaje entre niveles) también requiere
-un efecto de estado fuera del paso local. El desafío es mantener la función de paso
-pura sobre el mundo, de modo que cualquier actualización del estado global no se haga 
-de forma oculta, sino que esté explícitamente gestionada y tipada en una capa aparte que se 
-encargue de coordinar esas transformaciones visibles.
+plataformas móviles y a los ítems restantes en un mismo \texttt{World}. La inmutabilidad
+sugiere reemplazar el mundo entero en cada paso. La orquestación de la partida (vidas,
+puntaje entre niveles) también requiere estado fuera del paso local. Hay que mantener
+el paso puro sobre el mundo y delegar el resto a orquestación tipada.
 
 \subsubsection{Tiempo discreto y reloj continuo}
 \label{subsubsec:problema-tiempo}
 
-El hardware entrega intervalo de tiempo variable. La simulación debe ser determinista dado
-ese valor y la entrada del frame. La abstracción natural es una función de paso que,
-a partir del mundo actual, del tiempo asignado y de la entrada del jugador, devuelve
-el mundo siguiente. El problema es fijar esa interfaz sin mezclar en ella lectura del
-teclado ni mediciones del reloj: ambos son datos que llegan desde fuera como parámetros del
-paso.
+El hardware entrega \texttt{DeltaTime} variable. La simulación debe ser determinista dado
+ese valor y \texttt{Input}. La abstracción natural es una función de paso que devuelve el
+mundo siguiente, sin leer teclado ni reloj dentro de esa función: ambos llegan como
+parámetros desde fuera.
 
 \subsubsection{Entrada y medio externo}
 \label{subsubsec:problema-medio}
 
-El motor depende de efectos ajenos al núcleo de simulación: pulsaciones del jugador,
-carga de JSON con la definición de nivel, reloj y rendering. No son entidades del
-mundo, son fuentes de datos y destinos de salida en la frontera. Si esos efectos
-se intercalan dentro de la física o de las reglas de combate, desaparece la transparencia referencial
-del dominio y los tests sobre el paso de simulación requieren mockear
-hardware. El problema es delimitar una frontera estable entre
-transformación pura y \texttt{IO}.
+El motor depende de pulsaciones del jugador, carga de JSON, reloj y dibujado. No son
+entidades del mundo. Si esos efectos se intercalan dentro de la física o del combate,
+desaparece la transparencia referencial del dominio y los tests del paso de simulación
+requieren mockear hardware.
 
 \subsubsection{Comportamiento e interpretación}
 \label{subsubsec:problema-comportamiento}
 
-Los enemigos siguen patrones distintos (patrol, chase, disparo a distancia).
-Implementarlos con condicionales entrelazados en el paso de física mezcla dos ritmos: el de
-la cinemática y el de la decisión. Un frame de simulación agrupa todo lo que ocurre
-en un ciclo de juego (IA, física, combate, victoria). El free monad plantea otra vía: describir el
-comportamiento como programa en un DSL e interpretarlo junto con el avance del
-frame. El desafío es mantener esa separación sin duplicar estado ni romper la
+Los enemigos siguen patrones distintos (patrulla, persecución, disparo a distancia).
+Implementarlos con condicionales entrelazados en el paso de física mezcla cinemática y
+decisión. La mónada libre ofrece otra vía: describir el comportamiento como programa en un
+lenguaje de dominio específico e interpretarlo junto con el avance del frame, sin duplicar estado ni romper la
 coherencia temporal del mundo.

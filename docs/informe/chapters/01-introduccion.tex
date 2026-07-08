@@ -30,7 +30,7 @@ Elegimos un videojuego también por una razón práctica: el feedback visual hac
 tangible el comportamiento del programa. Cada frame se puede observar de inmediato,
 y un error en física, colisiones o comportamiento de un enemigo se manifiesta en pantalla
 sin depender de trazas ni volcados de estado. Eso acorta el ciclo de validación y mantiene el
-foco en la corrección del modelo por encima de que el código compile.
+foco en la corrección del modelo.
 
 \subsection{Enlaces y ejecución}
 \label{subsec:intro-enlaces}
@@ -72,12 +72,12 @@ mónadas e integración con el entorno externo.
     central del motor se expresa como una función pura de paso sobre el mundo.
 
   \item Modelar los conceptos del dominio del juego en tipos algebraicos y objetos de valor
-    dentro de \texttt{Domain/}: distinguir definición de nivel y mundo, nombrar
+    en el núcleo de dominio: distinguir definición de nivel y mundo, nombrar
     fases de partida, magnitudes físicas y ajuste de comportamiento (\texttt{BehaviourTuning}) como
     valores con invariantes, en lugar de repartir reglas en booleanos o cadenas sueltas.
 
   \item Modelar comportamientos de entidades (en particular enemigos) mediante un
-    DSL basado en free monad: el AST describe
+    lenguaje de comportamiento basado en mónada libre: el árbol de sintaxis describe
     acciones como desplazarse, esperar o atacar, y un intérprete puro en el dominio las ejecuta
     sobre el mundo. Esa separación permite combinar patrones de IA\footnote{En
     este informe, IA designa el comportamiento programado de los enemigos, no
@@ -87,7 +87,7 @@ mónadas e integración con el entorno externo.
 
   \item Orquestar el estado global del juego, la configuración de física y parámetros de
     partida, y los errores recuperables al cargar datos, con una pila monádica en
-    \texttt{UseCases/} (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
+    casos de uso (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
     tiempo real interpreta el paso de simulación, aplica la entrada del jugador y
     mantiene la partida entre niveles.
 
@@ -111,7 +111,7 @@ prueba manual en el juego) antes de avanzar al siguiente bloque.
 Los cambios entraron al repositorio mediante pull requests revisadas entre
 integrantes, complementadas por la validación manual en pantalla.
 
-Un pipeline de integración continua en GitHub ejecuta en cada cambio la compilación con
+Un pipeline de integración continua en GitHub ejecuta en cada merge la compilación con
 tests habilitados, la suite \texttt{tasty}, la validación del paquete Cabal, la
 documentación Haddock, HLint y Fourmolu. Esos chequeos automáticos detectan regresiones de
 compilación, roturas en tests y desvíos de estilo antes del merge.

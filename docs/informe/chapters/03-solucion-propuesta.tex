@@ -5,16 +5,15 @@
 \label{subsec:solucion-vision}
 
 Los problemas del capítulo anterior se abordan con una separación estricta de
-responsabilidades. La simulación de un frame vive en un núcleo puro que
-transforma un mundo en otro mundo. La orquestación de la partida (vidas, fase de
-juego, puntaje entre etapas) se expresa con una
-pila monádica sin \texttt{IO}. Los efectos del entorno (entrada, reloj,
-archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
+responsabilidades. La simulación de un frame vive en un núcleo puro que transforma un
+mundo en otro mundo. La orquestación de la partida (vidas, fase de juego, puntaje entre
+etapas) se expresa con una pila monádica sin \texttt{IO}. Los efectos del entorno (entrada,
+reloj, archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
 
 \subsection{Arquitectura por capas}
 \label{subsec:solucion-capas}
 
-Cuatro capas, dependencia unidireccional hacia \texttt{Domain/}
+Cuatro capas con dependencia unidireccional hacia \texttt{Domain}
 (figura~\ref{fig:capas-dependencias})~\cite{cockburn2005hexagonal}.
 
 \begin{figure}[htbp]
@@ -106,10 +105,10 @@ patrolHorizontal speed leg =
     >>> patrolHorizontal speed leg
 \end{lstlisting}
 
-\paragraph{Free monad frente a ADT recursivo.}
+\paragraph{Mónada libre frente a ADT recursivo.}
 Un ADT \texttt{data Behaviour = ... | Seq Behaviour Behaviour} con intérprete
 también separa descripción de ejecución. Elegimos \texttt{Free EntityAction} para
-reutilizar \texttt{Monad} (\lstinline|>>>|, \lstinline|fix|) y extender primitivas en el functor
+reutilizar \texttt{Monad} (\lstinline|>>>|, \lstinline|fix|) y extender primitivas en el funtor
 sin reescribir la forma recursiva.
 
 \begin{lstlisting}
@@ -130,7 +129,7 @@ newtype BehaviourProgram = BehaviourProgram
 
 \texttt{BootstrapRun} arma el catálogo de la partida antes del primer frame
 (JSON fijos, generación opcional por LLM, resolución de \texttt{behaviourHint} vía
-\texttt{LevelContentPort}, con \texttt{IO} solo en \texttt{Adapters/}).
+\texttt{LevelContentPort}, con \texttt{IO} solo en adaptadores).
 
 \begin{center}
   \captionof{table}{Origen del catálogo de la partida.}
@@ -140,17 +139,17 @@ newtype BehaviourProgram = BehaviourProgram
     \textbf{Modo} & \textbf{Activación} & \textbf{Contenido} \\
     \hline
     JSON fijos & Por defecto &
-    \texttt{levels/level\{1,2,3\}.json}, con \texttt{behaviourHint} opcional. \\
+    Tres JSON de referencia por etapa, con \texttt{behaviourHint} opcional. \\
     LLM &
     \envvar{WONDERBOY\_GENERATE\_LEVELS} &
-    Un JSON por etapa, con respaldo al archivo fijo del índice si falla. \\
+    Un JSON por etapa, con respaldo a la definición fija del índice si falla. \\
   \end{tabularx}
 \end{center}
 
 \subsection{Frontera con el medio}
 \label{subsec:solucion-frontera}
 
-\texttt{Domain/} no importa Gloss ni realiza \texttt{IO}. Un frame en el borde:
+El núcleo de dominio no importa Gloss ni realiza \texttt{IO}. Un frame en el borde:
 
 \begin{center}
   \begin{tabular}{@{}c@{}}
@@ -176,14 +175,14 @@ newtype BehaviourProgram = BehaviourProgram
     \textbf{Biblioteca} & \textbf{Rol} \\
     \hline
     Haskell (GHC)~\cite{ghc967} &
-    Tipos algebraicos y lazy evaluation con pliegues estrictos en el camino crítico
+    Tipos algebraicos y evaluación \textit{lazy} con pliegues estrictos en el camino crítico
     (sección~\ref{subsubsec:teoria-lazy}). \\
     Gloss~\cite{hackageSupportLibs} &
-    Bucle \texttt{playIO}, entrada y dibujo (\texttt{Frameworks/}, \texttt{Adapters/Gloss/}). \\
+    Bucle \texttt{playIO}, entrada y dibujo en la capa de integración y adaptador Gloss. \\
     \texttt{mtl}~\cite{mtl} &
     \texttt{GameM} = \texttt{ReaderT} + \texttt{StateT} + \texttt{ExceptT}. \\
     \texttt{free}~\cite{free} &
-    DSL de comportamiento (\texttt{Free EntityAction}). \\
+    Lenguaje de comportamiento (\texttt{Free EntityAction}). \\
     Aeson, \texttt{http-client}~\cite{hackageSupportLibs} &
     Niveles JSON y cliente HTTP para el adaptador LLM. \\
     tasty, tasty-hunit, tasty-quickcheck~\cite{hackageSupportLibs} &
