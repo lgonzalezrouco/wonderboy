@@ -4,14 +4,11 @@
 -- | 'resolveLevelBehaviours' con puerto stub puro (precedencia y dedup).
 module UseCases.ResolveBehavioursTest where
 
--- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity (..))
 import Data.Text (Text)
 
--- Grupo 2 — third-party
 import Test.Tasty.HUnit (Assertion, (@?=))
 
--- Grupo 3 — proyecto
 import Domain.Model.EnemyKind (EnemyKind (SnailKind))
 import Domain.Model.LevelDefinition (
   BehaviourArchetype (ChaseArchetype, GuardArchetype, PatrolArchetype),

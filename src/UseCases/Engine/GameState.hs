@@ -11,10 +11,8 @@ module UseCases.Engine.GameState (
 )
 where
 
--- Grupo 1 — stdlib / base
 import GHC.Generics (Generic)
 
--- Grupo 3 — proyecto
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (spawnPlayer)
 import Domain.Model.World (World (..))
@@ -22,16 +20,11 @@ import Domain.ValueObjects.Lives (Lives)
 import Domain.ValueObjects.Score (Score, score)
 import UseCases.Engine.GameConfig (GameConfig (..))
 
-{- | Estado mutable del juego: mundo de nivel + estado run-wide.
-
-Contiene el 'World' del nivel actual más vidas y fase de la partida.
--}
 data GameState = GameState
   { gsWorld :: World
   , gsLives :: Lives
   , gsPhase :: GamePhase
   , gsScore :: Score
-  -- ^ Puntuación del nivel actual; se reinicia al cargar un nivel.
   , gsLevelIndex :: Int
   -- ^ Posición 1-based del nivel actual dentro del run.
   }

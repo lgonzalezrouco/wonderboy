@@ -1,4 +1,4 @@
-{- | Semántica pura del DSL de comportamiento (M6): pasos de behaviour y su
+{- | Semántica pura del DSL de comportamiento: pasos de behaviour y su
 composición con la física en el dominio. La orquestación en 'GameM' vive en
 'UseCases.UpdateGameTest'.
 -}

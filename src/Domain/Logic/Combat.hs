@@ -1,15 +1,16 @@
-{- | Combate cuerpo a cuerpo y contacto enemigo (puro).
+{- | Combate cuerpo a cuerpo y contacto enemigo.
 
 Orquestación por frame en @UseCases.UpdateGame@: tras física, antes de
 out-of-bounds y muerte.
 -}
 module Domain.Logic.Combat (
   resolveCombat,
-  meleeHitbox,
 )
 where
 
 import Domain.Logic.BossArena (playerMayDamageEnemy)
+import Domain.Logic.EnemyDamage (applyPlayerDamageToEnemy, tickEnemyHurtFrames)
+import Domain.Logic.MeleeSwing (meleeHitboxWhenImpact)
 import Domain.Logic.PlayerLife (applyDamage)
 import Domain.Model.Enemy (Enemy (..), enemyAabb)
 import Domain.Model.Player (
@@ -20,27 +21,22 @@ import Domain.Model.Player (
   playerInvincibilityFrames,
  )
 import Domain.Model.World (World (..))
-import Domain.ValueObjects.Aabb (
-  Aabb (..),
-  aabbMaxX,
-  aabbMinX,
-  aabbOverlaps,
- )
+import Domain.ValueObjects.Aabb (aabbOverlaps)
 import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..), facingTowardHorizontal)
+import Domain.ValueObjects.Facing (facingTowardHorizontal)
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
-import Domain.ValueObjects.Health (isDepleted, reduceHealth)
+import Domain.ValueObjects.Health (isDepleted)
 import Domain.ValueObjects.Input (Input (..), inputHorizontalSign)
 
--- | Facing, ataque, frames de invencibilidad, melee y contacto en un solo paso puro.
 resolveCombat :: CombatParams -> Input -> World -> World
 resolveCombat cp input w =
-  let p0 = worldPlayer w
+  let w0 = w{worldEnemies = map tickEnemyHurtFrames (worldEnemies w)}
+      p0 = worldPlayer w0
       p1 = updateFacing input p0
       attackStarted = inputAttack input && not (hasFramesLeft (playerAttackFrames p1))
       p2 = startAttack cp input p1
-      w1 = w{worldPlayer = p2}
-      w2 = resolveMelee cp attackStarted w1
+      w1 = w0{worldPlayer = p2}
+      w2 = resolveMelee cp w1
       p3 = decrementAttack attackStarted (worldPlayer w2)
       w3 = w2{worldPlayer = p3}
       w4 = resolveContact cp w3
@@ -49,10 +45,9 @@ resolveCombat cp input w =
 
 {- | Orienta al jugador según la intención horizontal del frame.
 
-La dirección queda __fija mientras hay un ataque activo__ (@playerAttackFrames > 0@):
-como 'resolveCombat' llama a 'updateFacing' antes de iniciar el ataque, en el frame de
-inicio el contador aún es 0 y el facing se fija con el input de ese frame; durante el
-resto de la ventana no se reorienta, de modo que el swing no se "da vuelta" a mitad.
+La dirección queda __fija mientras hay un ataque activo__ para que el swing no se "dé
+vuelta" a mitad; en el frame de inicio el contador aún es 0, así que el facing se fija
+con el input de ese frame.
 -}
 updateFacing :: Input -> Player -> Player
 updateFacing inp p
@@ -83,45 +78,24 @@ tickInvincibility p
   | otherwise =
       p
 
-{- | Aplica el golpe de melee __solo en el frame en que arranca el swing__
-(@attackStarted@).
+{- | Aplica el golpe de melee __solo en el frame de impacto visual__ del swing.
 
-__Por qué @attackStarted@ y no @playerAttackFrames == cpAttackDuration@?__
-
-La condición de nivel parecía equivalente —"el contador está al máximo, luego es el
-primer frame"— pero falla cuando el swing se inicia por input: 'decrementAttack' no
-baja el contador en el frame de arranque (lo deja lleno a propósito), de modo que el
-frame __siguiente__ todavía lo ve en @cpAttackDuration@ y volvía a pegar. Resultado:
-dos golpes por swing y un Golem (salud 2) muriendo de un solo press. El borde de
-inicio es la señal correcta: exactamente un golpe por swing, sin depender del orden
-frente a 'decrementAttack'.
+El contador de ataque y 'Domain.Logic.MeleeSwing.isMeleeImpactFrame' fijan un único
+frame de daño por press, alineado con el arco de la espada en pantalla.
 -}
-resolveMelee :: CombatParams -> Bool -> World -> World
-resolveMelee cp attackStarted w
-  | not attackStarted = w
-  | otherwise =
-      let p = worldPlayer w
-          body = playerAabb p
-          hitbox = meleeHitbox cp body (playerFacing p)
+resolveMelee :: CombatParams -> World -> World
+resolveMelee cp w =
+  case meleeHitboxWhenImpact cp (worldPlayer w) of
+    Nothing -> w
+    Just hitbox ->
+      let body = playerAabb (worldPlayer w)
           hitsEnemy e = aabbOverlaps hitbox (enemyAabb e) || aabbOverlaps body (enemyAabb e)
           applyMeleeHit e
             | hitsEnemy e
             , playerMayDamageEnemy w e =
-                e{enemyHealth = reduceHealth (cpMeleeDamage cp) (enemyHealth e)}
+                applyPlayerDamageToEnemy cp (cpMeleeDamage cp) e
             | otherwise = e
        in w{worldEnemies = filter (not . isDepleted . enemyHealth) (map applyMeleeHit (worldEnemies w))}
-
-{- | Caja de alcance del melee, extendida desde la caja del jugador hacia su facing.
-
-Se construye por /update de record/ sobre @body@ para preservar los bordes verticales
-(@aabbMinY@/@aabbMaxY@) del jugador y expresar únicamente la diferencia horizontal.
--}
-meleeHitbox :: CombatParams -> Aabb -> Facing -> Aabb
-meleeHitbox cp body facing =
-  let reach = cpMeleeReach cp
-   in case facing of
-        FacingRight -> body{aabbMinX = aabbMaxX body, aabbMaxX = aabbMaxX body + reach}
-        FacingLeft -> body{aabbMinX = aabbMinX body - reach, aabbMaxX = aabbMinX body}
 
 resolveContact :: CombatParams -> World -> World
 resolveContact cp w

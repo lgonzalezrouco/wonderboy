@@ -20,7 +20,6 @@ newtype LevelCount = LevelCount Int
 levelCount :: Int -> LevelCount
 levelCount n = LevelCount (max 1 n)
 
--- | Valor entero del catálogo.
 levelCountPoints :: LevelCount -> Int
 levelCountPoints (LevelCount n) = n
 

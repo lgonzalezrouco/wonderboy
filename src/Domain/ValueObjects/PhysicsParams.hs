@@ -28,7 +28,6 @@ data PhysicsParams = PhysicsParams
   }
   deriving (Eq, Show, Generic)
 
--- | Construye 'PhysicsParams' desde componentes sueltos.
 physicsParams :: Float -> Float -> Float -> PhysicsParams
 physicsParams g move jump =
   PhysicsParams

@@ -1,7 +1,4 @@
-{- | Fase de la partida en curso (run-wide).
-
-M9 introduce 'Playing' y 'GameOver'; M17 añade 'LevelComplete' y 'Victory'.
--}
+-- | Fase de la partida en curso (run-wide).
 module Domain.Model.GamePhase (
   GamePhase (..),
   isSimulationFrozen,

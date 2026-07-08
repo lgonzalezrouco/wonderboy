@@ -10,11 +10,9 @@ module UseCases.BootstrapRun (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 
--- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (LevelDefinition)
 import UseCases.GenerateLevels (defaultProfiles, generateCatalog)
 import UseCases.Ports.LevelContentPort (LevelContentPort (..))

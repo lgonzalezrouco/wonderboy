@@ -13,10 +13,8 @@ module UseCases.Engine.GameConfig (
 )
 where
 
--- Grupo 1 — stdlib / base
 import GHC.Generics (Generic)
 
--- Grupo 3 — proyecto
 import Domain.Model.World (defaultMaxHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
 import Domain.ValueObjects.Damage (Damage, damage)
@@ -28,48 +26,29 @@ import Domain.ValueObjects.Lives (Lives, lives)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
 import Domain.ValueObjects.ThrowParams (ThrowParams (..), throwParams)
 
-{- | Configuración global del juego, inmutable durante una partida.
-
-Todos los parámetros que no cambian frame a frame viven aquí:
+{- | Todos los parámetros que no cambian frame a frame viven aquí:
 el 'ReaderT' los pone a disposición de cualquier acción en 'GameM' vía 'ask'\/'asks'.
 -}
 data GameConfig = GameConfig
   { gcGravity :: Float
-  -- ^ Aceleración gravitatoria en px\/s² (hacia abajo).
   , gcMoveSpeed :: Float
-  -- ^ Velocidad horizontal del jugador al recibir input (px\/s).
   , gcJumpSpeed :: Float
-  -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
   , gcStartingLives :: Lives
-  -- ^ Vidas al iniciar una partida nueva (run-wide; no por nivel).
   , gcMaxHealth :: Health
-  -- ^ Salud tras spawn o respawn.
   , gcDeathMargin :: Float
-  -- ^ Margen bajo la plataforma más baja para out-of-bounds (px).
   , gcAttackDuration :: Frames
-  -- ^ Frames de ventana activa de melee.
   , gcInvincibilityDuration :: Frames
-  -- ^ Frames de invencibilidad tras contacto enemigo o respawn.
   , gcContactDamage :: Damage
-  -- ^ Daño por frame de contacto enemigo.
   , gcMeleeReach :: Float
-  -- ^ Alcance horizontal del melee en px lógicos.
   , gcMeleeDamage :: Damage
-  -- ^ Daño infligido a un enemigo por un melee que conecta.
+  , gcEnemyHurtFlashDuration :: Frames
   , gcLevelCount :: LevelCount
-  -- ^ Niveles en el run actual; la victoria ocurre al completar el último.
   , gcThrowCooldown :: Frames
-  -- ^ Frames de espera tras despawn del proyectil del jugador.
   , gcThrowLifetime :: Frames
-  -- ^ Vida inicial de cada proyectil lanzado.
   , gcThrowHorizontalSpeed :: Float
-  -- ^ Velocidad horizontal de lanzamiento (px/s).
   , gcThrowLiftSpeed :: Float
-  -- ^ Impulso vertical inicial del arco (px/s).
   , gcProjectileWidth :: Float
-  -- ^ Ancho de la caja del proyectil.
   , gcProjectileHeight :: Float
-  -- ^ Alto de la caja del proyectil.
   }
   deriving (Eq, Show, Generic)
 
@@ -88,6 +67,7 @@ defaultConfig =
     , gcContactDamage = damage 1
     , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
+    , gcEnemyHurtFlashDuration = frames 24
     , gcLevelCount = levelCount 3
     , gcThrowCooldown = frames 30
     , gcThrowLifetime = frames 120
@@ -131,6 +111,7 @@ combatParamsFromConfig cfg =
     (gcContactDamage cfg)
     (gcMeleeReach cfg)
     (gcMeleeDamage cfg)
+    (gcEnemyHurtFlashDuration cfg)
 
 -- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Projectiles'.
 throwParamsFromConfig :: GameConfig -> ThrowParams

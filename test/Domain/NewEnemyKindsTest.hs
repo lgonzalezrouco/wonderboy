@@ -1,4 +1,4 @@
--- | Archer and Bat 2D chase (M20).
+-- | Archer and Bat 2D chase.
 module Domain.NewEnemyKindsTest where
 
 import Domain.Fixtures (

@@ -22,7 +22,6 @@ newtype Lives = Lives Int
 lives :: Int -> Lives
 lives n = Lives (max 0 n)
 
--- | Vidas como 'Int'.
 livesCount :: Lives -> Int
 livesCount (Lives n) = n
 

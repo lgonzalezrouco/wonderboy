@@ -3,17 +3,9 @@
 {- | Codec JSON para niveles: tipos DTO wire con 'FromJSON'\/'ToJSON' y
 conversión pura hacia\/desde los tipos de dominio.
 
-Mantiene la serialización fuera de 'Domain\/' (ver @docs\/adr\/0019-*.md@):
-el módulo 'Data.Aeson' no pertenece a 'Domain.*'.
-
-__Estructura__:
-  * Tipos DTO espejo de 'Domain.Model.LevelDefinition', 'Domain.Model.BossArena'
-    y 'Domain.ValueObjects.Position'.
-  * 'toDomain' / 'fromDomain' para cada tipo: conversión pura sin 'IO'.
-  * 'decodeLevelText' como punto de entrada para el pipeline de carga.
-
-No hay instancias huérfanas: los tipos DTO se definen aquí, las instancias
-también. Los tipos de dominio nunca ven 'Data.Aeson'.
+Mantiene la serialización fuera de 'Domain\/' (ver @docs\/adr\/0019-*.md@): el
+módulo 'Data.Aeson' no pertenece a 'Domain.*'. Los tipos DTO y sus instancias se
+definen aquí, sin instancias huérfanas; los tipos de dominio nunca ven 'Data.Aeson'.
 -}
 module UseCases.Serialization.LevelCodec (
   -- * Punto de entrada
@@ -40,12 +32,10 @@ module UseCases.Serialization.LevelCodec (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
--- Grupo 2 — terceros
 import Data.Aeson (
   FromJSON (..),
   ToJSON (..),
@@ -62,7 +52,6 @@ import Data.Aeson.Types (Pair)
 import Data.ByteString.Lazy qualified as BL
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
--- Grupo 3 — proyecto
 import Domain.Model.BossArena (BossArenaDef (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.LevelDefinition (
@@ -81,18 +70,12 @@ import Domain.Model.LevelDefinition (
  )
 import Domain.ValueObjects.Position (Position, posX, posY, position)
 
--- ---------------------------------------------------------------------------
--- Tipos DTO wire
--- ---------------------------------------------------------------------------
-
--- | Wire DTO para 'Position'.
 data PositionDTO = PositionDTO
   { dtoPosX :: Float
   , dtoPosY :: Float
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'RectDef'.
 data RectDTO = RectDTO
   { dtoRectPos :: PositionDTO
   , dtoRectWidth :: Float
@@ -100,11 +83,9 @@ data RectDTO = RectDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'PlatformDef'.
 newtype PlatformDefDTO = PlatformDefDTO {unPlatformDefDTO :: RectDTO}
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'MovingPlatformDef'.
 data MovingPlatformDefDTO = MovingPlatformDefDTO
   { dtoMpId :: Int
   , dtoMpPos :: PositionDTO
@@ -117,7 +98,6 @@ data MovingPlatformDefDTO = MovingPlatformDefDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'CrumblingPlatformDef'.
 data CrumblingPlatformDefDTO = CrumblingPlatformDefDTO
   { dtoCpId :: Int
   , dtoCpPos :: PositionDTO
@@ -126,7 +106,6 @@ data CrumblingPlatformDefDTO = CrumblingPlatformDefDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'EnemyDef'.
 data EnemyDefDTO = EnemyDefDTO
   { dtoEnemyId :: Int
   , dtoEnemyKindText :: Text
@@ -136,7 +115,6 @@ data EnemyDefDTO = EnemyDefDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'PickupDef'.
 data PickupDefDTO = PickupDefDTO
   { dtoPickupId :: Int
   , dtoPickupPos :: PositionDTO
@@ -144,7 +122,6 @@ data PickupDefDTO = PickupDefDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'FallingHazardDef'.
 data FallingHazardDefDTO = FallingHazardDefDTO
   { dtoFhId :: Int
   , dtoFhPos :: PositionDTO
@@ -155,14 +132,12 @@ data FallingHazardDefDTO = FallingHazardDefDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'BossArenaDef'.
 data BossArenaDefDTO = BossArenaDefDTO
   { dtoBossLeft :: Float
   , dtoBossRight :: Float
   }
   deriving (Eq, Show, Generic)
 
--- | Wire DTO para 'LevelDefinition'.
 data LevelDefinitionDTO = LevelDefinitionDTO
   { dtoMinScore :: Int
   , dtoSpawn :: PositionDTO
@@ -176,10 +151,6 @@ data LevelDefinitionDTO = LevelDefinitionDTO
   , dtoExit :: RectDTO
   }
   deriving (Eq, Show, Generic)
-
--- ---------------------------------------------------------------------------
--- Instancias FromJSON / ToJSON (solo en este módulo, sin orphans)
--- ---------------------------------------------------------------------------
 
 -- | Codifica un campo opcional: '[]' cuando es 'Nothing', un único 'Pair' si hay valor.
 optField :: (ToJSON v) => Key -> Maybe v -> [Pair]
@@ -344,15 +315,9 @@ instance ToJSON LevelDefinitionDTO where
       ]
         ++ optField "bossArena" (dtoBossArena lvl)
 
--- ---------------------------------------------------------------------------
--- Conversiones puras DTO ↔ Domain
--- ---------------------------------------------------------------------------
-
--- | Convierte 'PositionDTO' a 'Position'.
 positionFromDTO :: PositionDTO -> Position
 positionFromDTO dto = position (dtoPosX dto) (dtoPosY dto)
 
--- | Convierte 'Position' a 'PositionDTO'.
 positionToDTO :: Position -> PositionDTO
 positionToDTO p = PositionDTO{dtoPosX = posX p, dtoPosY = posY p}
 
@@ -518,7 +483,6 @@ levelDefinitionFromDTO dto = do
       , levelExit = rectFromDTO (dtoExit dto)
       }
 
--- | Convierte 'LevelDefinition' a 'LevelDefinitionDTO'.
 levelDefinitionToDTO :: LevelDefinition -> LevelDefinitionDTO
 levelDefinitionToDTO lvl =
   LevelDefinitionDTO
@@ -533,10 +497,6 @@ levelDefinitionToDTO lvl =
     , dtoBossArena = bossArenaToDTO <$> levelBossArena lvl
     , dtoExit = rectToDTO (levelExit lvl)
     }
-
--- ---------------------------------------------------------------------------
--- Punto de entrada para el pipeline de carga
--- ---------------------------------------------------------------------------
 
 {- | Decodifica texto JSON a 'LevelDefinition'.
 
@@ -559,10 +519,6 @@ Usado por el few-shot del adaptador IA y por round-trips de tests.
 encodeLevelDefinitionText :: LevelDefinition -> Text
 encodeLevelDefinitionText =
   decodeUtf8 . BL.toStrict . encode . levelDefinitionToDTO
-
--- ---------------------------------------------------------------------------
--- Helpers internos
--- ---------------------------------------------------------------------------
 
 enemyKindToText :: EnemyKind -> Text
 enemyKindToText kind = case kind of

@@ -1,4 +1,4 @@
--- | Cuenta regresiva, caída y colisión de plataformas que se desmoronan (puro).
+-- | Cuenta regresiva, caída y colisión de plataformas que se desmoronan.
 module Domain.Logic.CrumblingPlatforms (
   advanceCrumblingPlatforms,
   appendEnemySolidCrumbling,
@@ -26,7 +26,6 @@ import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.Position (posY, translate)
 
--- | Dispara cuenta regresiva, avanza fases y elimina plataformas bajo la línea de muerte.
 advanceCrumblingPlatforms ::
   LifeParams ->
   DeltaTime ->
@@ -73,12 +72,10 @@ moveDown dt cp =
   let dy = crumbleFallSpeed * seconds dt
    in cp{crumblingPlatformPos = translate 0 (-dy) (crumblingPlatformPos cp)}
 
--- | Añade plataformas que se desmoronan sólidas para el jugador a la lista base.
 appendPlayerSolidCrumbling :: [Platform] -> [CrumblingPlatform] -> [Platform]
 appendPlayerSolidCrumbling plats crumbling =
   plats ++ map crumblingPlatformAsPlatform (filter crumblingPlatformSolidForPlayer crumbling)
 
--- | Añade plataformas que se desmoronan sólidas para enemigos a la lista base.
 appendEnemySolidCrumbling :: [Platform] -> [CrumblingPlatform] -> [Platform]
 appendEnemySolidCrumbling plats crumbling =
   plats ++ map crumblingPlatformAsPlatform crumbling

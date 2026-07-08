@@ -60,9 +60,7 @@ data EnemyMotionStats
 -- | Parámetros fijos por clase (píxeles lógicos y px/s).
 data EnemyKindStats = EnemyKindStats
   { eksWidth :: Float
-  -- ^ Ancho de la caja de colisión.
   , eksHeight :: Float
-  -- ^ Alto de la caja de colisión.
   , eksMaxHealth :: Health
   -- ^ Salud inicial al spawnear.
   , eksMotion :: EnemyMotionStats
@@ -70,7 +68,6 @@ data EnemyKindStats = EnemyKindStats
   }
   deriving (Eq, Show, Generic)
 
--- | Stats del catálogo M13.
 enemyKindStats :: EnemyKind -> EnemyKindStats
 enemyKindStats kind = case kind of
   SnailKind ->

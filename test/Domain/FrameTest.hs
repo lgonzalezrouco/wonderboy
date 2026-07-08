@@ -8,6 +8,7 @@ import Domain.Fixtures (
   dtFrame,
   floorWorld,
   mkTestPickup,
+  stepsToMeleeImpact,
   testCombatParams,
   testLifeParams,
   testParams,
@@ -160,18 +161,30 @@ unit_frameBossPhaseUsesPreFrameHealth =
           { enemyHealth = health 14
           , enemyMaxHealth = health 20
           }
-      -- Arranca el swing por input: el melee daña en el frame de inicio ('attackStarted').
-      p = spawnPlayer defaultMaxHealth (position 170 8) -- mira a la derecha por defecto
+      -- El melee daña en el frame de impacto visual; avanzar hasta ahí.
+      p = spawnPlayer defaultMaxHealth (position 170 8)
       w =
         floorWorld
           { worldPlayer = p
           , worldEnemies = [boss]
           }
-      result =
+      afterAttack =
         advanceSimulationFrame
           testFrameParams
           (gcLevelCount defaultConfig)
           dtFrame
           (noInput{inputAttack = True})
           (playingFrame w)
-   in bossPhaseIndexIn (frWorld result) @?= 1
+      afterImpact =
+        iterate
+          ( advanceSimulationFrame
+              testFrameParams
+              (gcLevelCount defaultConfig)
+              dtFrame
+              noInput
+              . playingFrame
+              . frWorld
+          )
+          afterAttack
+          !! stepsToMeleeImpact testCombatParams
+   in bossPhaseIndexIn (frWorld afterImpact) @?= 1

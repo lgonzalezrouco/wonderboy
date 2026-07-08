@@ -42,11 +42,19 @@ import Adapters.Gloss.Sprites (
   playerSprite,
  )
 import Adapters.Gloss.Tiling (tilesToCover)
+import Domain.Logic.MeleeSwing (
+  attackBodyLunge,
+  attackCueHandInset,
+  attackCueHeight,
+  attackPhase,
+  attackSwingAngle,
+  meleeImpactPhase,
+ )
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
   crumblingPlatformAabb,
  )
-import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
+import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyHurtFrames, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
 import Domain.Model.FallingHazard (
   FallingHazard (..),
@@ -58,7 +66,7 @@ import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
 import Domain.Model.Pickup (Pickup, pickupAabb, pickupPos)
 import Domain.Model.Platform (Platform, platformAabb)
 import Domain.Model.Player (
-  Player,
+  Player (..),
   playerAabb,
   playerAttackFrames,
   playerFacing,
@@ -76,7 +84,7 @@ import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (frameCount, hasFramesLeft)
+import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (Position, posX, posY)
@@ -98,85 +106,63 @@ hudLabelScale = 0.2
 hudHintScale :: Float
 hudHintScale = 0.16
 
--- Geometría interna del panel (px de pantalla).
-
--- | Margen interno del panel para el contenido.
 hudContentInset :: Float
 hudContentInset = 14
 
--- | Desplazamiento de la primera fila bajo el borde superior del panel.
 hudRow1Offset :: Float
 hudRow1Offset = 30
 
--- | Separación vertical entre filas (LIVES, HEALTH, SCORE, ATTACK).
 hudRowGap :: Float
 hudRowGap = 36
 
--- | Separación vertical de la fila de hint respecto de la fila anterior.
 hudHintGap :: Float
 hudHintGap = 20
 
--- | Altura aproximada del texto del HUD a 'hudLabelScale' (ancla inferior izquierda).
 hudTextHeight :: Float
 hudTextHeight = 18
 
--- | Ancho fijo de la columna de rótulos; los valores empiezan después.
 hudLabelColumnWidth :: Float
 hudLabelColumnWidth = 112
 
--- | Centro vertical de iconos/pips respecto de la línea base del rótulo.
 hudValueCenterLift :: Float
 hudValueCenterLift = hudTextHeight / 2
 
--- | Paso horizontal entre iconos de vida consecutivos.
 hudLifeIconStride :: Float
 hudLifeIconStride = 20
 
--- | Lado del cuadrado de un icono de vida.
 hudLifeIconSize :: Float
 hudLifeIconSize = 14
 
--- | Paso horizontal entre pips de salud consecutivos.
 hudHealthPipStride :: Float
 hudHealthPipStride = 26
 
--- | Ancho de un pip de salud.
 hudHealthPipWidth :: Float
 hudHealthPipWidth = 22
 
--- | Alto de un pip de salud.
 hudHealthPipHeight :: Float
 hudHealthPipHeight = 10
 
--- | Desplazamiento horizontal del recuadro "ATTACK" respecto del contenido.
 hudAttackBoxOffsetX :: Float
 hudAttackBoxOffsetX = 8
 
--- | Ajuste vertical del recuadro "ATTACK".
 hudAttackBoxDrop :: Float
 hudAttackBoxDrop = 6
 
--- | Ancho del recuadro indicador de ataque.
 hudAttackBoxWidth :: Float
 hudAttackBoxWidth = 52
 
--- | Alto del recuadro indicador de ataque.
 hudAttackBoxHeight :: Float
 hudAttackBoxHeight = 14
 
--- | Escala del texto "GAME OVER" en el overlay.
 hudGameOverScale :: Float
 hudGameOverScale = 0.42
 
--- | Desplazamiento vertical del texto "GAME OVER".
 hudGameOverOffsetY :: Float
 hudGameOverOffsetY = 24
 
--- | Desplazamiento vertical del hint bajo "GAME OVER".
 hudGameOverHintOffsetY :: Float
 hudGameOverHintOffsetY = -18
 
--- | Barra de salud del jefe (centro superior).
 bossBarWidth :: Float
 bossBarWidth = 220
 
@@ -229,33 +215,11 @@ exitDoorGap = 12
 exitSignVisualHeight :: Float
 exitSignVisualHeight = 42
 
-attackCueHeight :: Float
-attackCueHeight = 42
-
-attackCueHandInset :: Float
-attackCueHandInset = 3
-
 attackCueLift :: Float
 attackCueLift = 18
 
 attackBodyLeanDegrees :: Float
 attackBodyLeanDegrees = 7
-
-attackBodyLunge :: Float
-attackBodyLunge = 4
-
--- Con la espada invertida en Y, -90 grados apunta hacia afuera; mas negativo sube la punta.
-attackStartDegrees :: Float
-attackStartDegrees = -135
-
-attackImpactDegrees :: Float
-attackImpactDegrees = -92
-
-attackFollowThroughDegrees :: Float
-attackFollowThroughDegrees = -65
-
-attackImpactPhase :: Float
-attackImpactPhase = 0.55
 
 attackSparkRadius :: Float
 attackSparkRadius = 3
@@ -267,11 +231,9 @@ attackSparkPhaseWidth = 0.16
 damageBodyColor :: Color
 damageBodyColor = makeColor 1.0 0.2 0.2 1.0
 
--- | Cada cuántos frames de render alterna el destello de daño (parpadeo).
 damageFlashStride :: Int
 damageFlashStride = 8
 
--- | Fase \"encendida\" del parpadeo de daño según el contador de render.
 damageFlashOn :: Int -> Bool
 damageFlashOn tick = even (tick `div` damageFlashStride)
 
@@ -365,9 +327,14 @@ renderEnemy :: SpriteCatalog -> Int -> Enemy -> Picture
 renderEnemy catalog renderTick e =
   case enemySprite catalog renderTick e of
     Nothing -> aabbToPicture (enemyColorForKind (enemyKind e)) box
-    Just sprite -> drawEntitySprite (enemyFacing e) box sprite
+    Just sprite ->
+      if hurtFlash
+        then drawEntitySpriteWith (enemyFacing e) box sprite (spriteHurtPicture sprite)
+        else drawEntitySprite (enemyFacing e) box sprite
  where
   box = enemyAabb e
+  hurtFlash =
+    hasFramesLeft (enemyHurtFrames e) && damageFlashOn renderTick
 
 renderPickup :: SpriteCatalog -> Pickup -> Picture
 renderPickup catalog pickup =
@@ -836,27 +803,7 @@ renderAttackSpark phase angle
                   , Rotate 90 (rectangleSolid arm 1.5)
                   ]
  where
-  impact = clamp01 (1 - abs (phase - attackImpactPhase) / attackSparkPhaseWidth)
-
-attackPhase :: CombatParams -> Player -> Maybe Float
-attackPhase combatParams p
-  | not (hasFramesLeft frames) = Nothing
-  | otherwise = Just (clamp01 (fromIntegral elapsed / fromIntegral phaseSpan))
- where
-  frames = playerAttackFrames p
-  total = max 1 (frameCount (cpAttackDuration combatParams))
-  elapsed = total - frameCount frames
-  phaseSpan = max 1 (total - 1)
-
-attackSwingAngle :: Float -> Float
-attackSwingAngle phase
-  | phase <= attackImpactPhase =
-      lerp attackStartDegrees attackImpactDegrees (smoothStep windupT)
-  | otherwise =
-      lerp attackImpactDegrees attackFollowThroughDegrees (easeInCubic recoveryT)
- where
-  windupT = clamp01 (phase / attackImpactPhase)
-  recoveryT = clamp01 ((phase - attackImpactPhase) / (1 - attackImpactPhase))
+  impact = clamp01 (1 - abs (phase - meleeImpactPhase) / attackSparkPhaseWidth)
 
 facingScale :: Facing -> Float
 facingScale facing =
@@ -876,15 +823,6 @@ aabbCenterX box = (aabbMinX box + aabbMaxX box) / 2
 clamp01 :: Float -> Float
 clamp01 = max 0 . min 1
 
-lerp :: Float -> Float -> Float -> Float
-lerp from to t = from + (to - from) * t
-
-smoothStep :: Float -> Float
-smoothStep t = t * t * (3 - 2 * t)
-
-easeInCubic :: Float -> Float
-easeInCubic t = t ^ (3 :: Int)
-
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =
   Translate x y $
@@ -897,7 +835,6 @@ hudHint x y label =
     Scale hudHintScale hudHintScale $
       Color hudMutedColor (text label)
 
--- | Convierte un 'Aabb' en un rectángulo sólido centrado en su caja.
 aabbToPicture :: Color -> Aabb -> Picture
 aabbToPicture color box =
   let w = aabbMaxX box - aabbMinX box
@@ -912,7 +849,6 @@ aabbCenteredPicture color visualHeight box =
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleSolid visualHeight visualHeight))
 
--- | Contorno de una caja de colisión (solo borde, sin rellenar el interior).
 aabbOutline :: Color -> Aabb -> Picture
 aabbOutline color box =
   let w = aabbMaxX box - aabbMinX box

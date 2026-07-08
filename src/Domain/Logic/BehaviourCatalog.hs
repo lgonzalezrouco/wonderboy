@@ -63,7 +63,7 @@ programForEnemyDef d =
 {- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
   frames por tramo. Son @frames + 1@ y no @frames@ porque 'setVelocity' consume un
   behaviour step propio (fija la velocidad) y luego 'waitFrames' la mantiene @frames@
-  frames más. Sobre suelo plano, cinemática M6. Requiere @speed > 0@ y @frames > 0@.
+  frames más. Requiere @speed > 0@ y @frames > 0@.
 -}
 patrolHorizontal :: Float -> Frames -> BehaviourProgram
 patrolHorizontal speed legFrames
@@ -155,7 +155,6 @@ programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRa
 programForMotion (ArcherMotion shootRange cooldown _ _ _ _) =
   archerProgram shootRange cooldown
 
--- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
 defaultProgramForKind = programForMotion . eksMotion . enemyKindStats
 
@@ -199,7 +198,6 @@ applyTuning tuning motion = case motion of
   spd = unMultiplier (tuningSpeed tuning)
   rch = unAmplifier (tuningReach tuning)
 
--- | Arquetipo materializado sobre una clase, con tuning de velocidad y alcance.
 programForArchetypeTuned ::
   EnemyKind -> BehaviourArchetype -> BehaviourTuning -> BehaviourProgram
 programForArchetypeTuned kind archetype tuning =

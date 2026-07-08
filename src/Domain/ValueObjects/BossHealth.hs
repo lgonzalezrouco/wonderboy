@@ -12,15 +12,11 @@ import GHC.Generics (Generic)
 
 import Domain.ValueObjects.Health (Health)
 
--- | Salud actual y máxima del jefe vivo en el nivel.
 data BossHealth = BossHealth
   { bossHealthCurrent :: Health
-  -- ^ Salud restante este frame.
   , bossHealthMax :: Health
-  -- ^ Salud máxima al spawnear (denominador de la barra).
   }
   deriving (Eq, Show, Generic)
 
--- | Construye el par mostrado en el HUD.
 bossHealth :: Health -> Health -> BossHealth
 bossHealth = BossHealth

@@ -37,7 +37,6 @@ applyJump pp input wasOnGround p =
     then p{playerVel = velocity (velX (playerVel p)) (ppJumpSpeed pp)}
     else p
 
--- | Aplica gravedad sobre la componente vertical: @vy' = vy - g * dt@.
 applyGravity :: PhysicsParams -> DeltaTime -> Player -> Player
 applyGravity pp dt p =
   p{playerVel = velocity (velX (playerVel p)) vy'}
@@ -45,7 +44,6 @@ applyGravity pp dt p =
   t = seconds dt
   vy' = velY (playerVel p) - ppGravity pp * t
 
--- | Gravedad para enemigos terrestres (misma ley que el jugador).
 applyEnemyGravity :: PhysicsParams -> DeltaTime -> Enemy -> Enemy
 applyEnemyGravity pp dt e =
   e{enemyVel = velocity (velX (enemyVel e)) vy'}
@@ -53,12 +51,10 @@ applyEnemyGravity pp dt e =
   t = seconds dt
   vy' = velY (enemyVel e) - ppGravity pp * t
 
--- | Integra posición del jugador: @pos += vel * dt@.
 integratePlayer :: DeltaTime -> Player -> Player
 integratePlayer dt p =
   p{playerPos = integratePos (playerPos p) (playerVel p) dt}
 
--- | Integra posición de todos los enemigos (cinemática; sin gravedad ni colisión M6).
 integrateEnemies :: DeltaTime -> [Enemy] -> [Enemy]
 integrateEnemies dt = map (integrateEnemy dt)
 

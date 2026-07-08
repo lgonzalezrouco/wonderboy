@@ -143,7 +143,6 @@ unit_substepPreventsTunnelingThroughThinPlatform = do
     "player foot rests on the platform top, not below it"
     (abs (posY (playerPos p1) - platTop) <= 1e-3)
 
--- | Un enemigo terrestre en el aire cae y apoya sobre la plataforma de abajo.
 unit_groundEnemyFallsOntoPlatform :: Assertion
 unit_groundEnemyFallsOntoPlatform = do
   let ledge = platform (position 0 0) 120 8

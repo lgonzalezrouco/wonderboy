@@ -50,7 +50,6 @@ resolveBossEnemy cp wBefore wAfter e
                 then applyBossPhase def newPhase e
                 else e
 
--- | Fase más alta cuyas condiciones de entrada se cumplen todas.
 highestSatisfiedPhase ::
   CombatParams ->
   BossDefinition ->

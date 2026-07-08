@@ -10,12 +10,10 @@ module UseCases.ResolveBehaviours (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Control.Monad (join)
 import Data.List (nub)
 import Data.Text qualified as T
 
--- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (
   EnemyDef (..),
   LevelDefinition (..),

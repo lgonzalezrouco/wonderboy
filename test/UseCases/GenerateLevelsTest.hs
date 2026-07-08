@@ -6,13 +6,10 @@
 -}
 module UseCases.GenerateLevelsTest where
 
--- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity (..))
 
--- Grupo 2 — third-party
 import Test.Tasty.HUnit (Assertion, (@?=))
 
--- Grupo 3 — proyecto
 import Domain.Model.LevelDefinition (
   LevelDefinition (..),
   RectDef (..),
@@ -66,7 +63,6 @@ bootstrap ('UseCases.RunLayout.layoutRoles').
 threeRoles :: [LevelRole]
 threeRoles = [IntroRole, ChallengeRole, BossRole]
 
--- | Un ejemplo (nivel fijo) por rol, en orden.
 threeExamples :: [LevelDefinition]
 threeExamples = map levelForIndex [0, 1, 2]
 

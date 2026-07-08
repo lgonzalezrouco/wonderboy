@@ -1,8 +1,10 @@
--- | Avance, daño y ciclo de peligros ambientales que caen (puro).
+-- | Avance, daño y ciclo de peligros ambientales que caen.
 module Domain.Logic.FallingHazards (
   resolveFallingHazards,
 )
 where
+
+import Data.List (foldl')
 
 import Domain.Logic.PlayerLife (applyDamage, deathLineY)
 import Domain.Model.FallingHazard (
@@ -24,7 +26,6 @@ import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.Position (posY, translate)
 
--- | Avanza peligros, aplica daño por contacto y elimina ciclos terminados.
 resolveFallingHazards ::
   LifeParams ->
   CombatParams ->
@@ -34,16 +35,14 @@ resolveFallingHazards ::
 resolveFallingHazards lp cp dt w =
   let despawnLine = deathLineY lp w - hazardDespawnDrop
       hazards = worldFallingHazards w
-      player' = foldl (damageFromFalling cp dt) (worldPlayer w) hazards
+      player' = foldl' (damageFromFalling cp dt) (worldPlayer w) hazards
       active =
         filter fallingHazardIsActive $
           map (advanceHazard dt despawnLine) hazards
    in w{worldFallingHazards = active, worldPlayer = player'}
 
-{- | Profundidad extra (px) que un peligro sigue cayendo por debajo de la línea de
-muerte antes de reiniciar su ciclo. Sin este margen el peligro se desvanecería justo
-bajo el piso, todavía dentro de la vista; con él cae más allá del borde inferior
-visible, de modo que parece caer "hasta abajo de todo" antes de reaparecer.
+{- | Profundidad extra (px) que un peligro cae bajo la línea de muerte antes de reiniciar,
+para que desaparezca fuera de la vista y no justo bajo el piso.
 -}
 hazardDespawnDrop :: Float
 hazardDespawnDrop = 200

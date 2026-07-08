@@ -1,4 +1,4 @@
--- | Bucle de juego Gloss: orquesta adaptadores y 'updateGame' (M8).
+-- | Bucle de juego Gloss: orquesta adaptadores y 'updateGame'.
 module Frameworks.Gloss.GameLoop (
   runGame,
 

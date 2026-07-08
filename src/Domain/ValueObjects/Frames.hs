@@ -24,7 +24,6 @@ newtype Frames = Frames Int
 frames :: Int -> Frames
 frames n = Frames (max 0 n)
 
--- | Frames como 'Int'.
 frameCount :: Frames -> Int
 frameCount (Frames n) = n
 
@@ -36,6 +35,5 @@ noFrames = Frames 0
 tickFrames :: Frames -> Frames
 tickFrames (Frames n) = Frames (max 0 (n - 1))
 
--- | 'True' mientras queden frames por contar.
 hasFramesLeft :: Frames -> Bool
 hasFramesLeft (Frames n) = n > 0

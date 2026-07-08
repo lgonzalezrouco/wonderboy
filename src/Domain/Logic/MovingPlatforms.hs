@@ -7,6 +7,8 @@ module Domain.Logic.MovingPlatforms (
 )
 where
 
+import Data.List (foldl')
+
 import Domain.Logic.Collision (playerRidingPlatformTop)
 import Domain.Model.MovingPlatform (
   MovingPlatform (..),
@@ -27,7 +29,6 @@ data MovingPlatformAdvance = MovingPlatformAdvance
   }
   deriving (Eq, Show)
 
--- | Avanza todas las plataformas moviles y registra el delta de posicion por una.
 advanceMovingPlatforms :: DeltaTime -> [MovingPlatform] -> [MovingPlatformAdvance]
 advanceMovingPlatforms dt =
   map (advanceOne dt)
@@ -76,7 +77,6 @@ moveAlongAxis cur target dist
       let dir = signum (target - cur)
        in (cur + dir * dist, False)
 
--- | Plataformas estaticas mas instantaneas de las moviles para colision del jugador.
 allCollisionPlatforms :: [Platform] -> [MovingPlatform] -> [Platform]
 allCollisionPlatforms static moving =
   static ++ map movingPlatformAsPlatform moving
@@ -87,7 +87,7 @@ sin volver a sumar el desplazamiento (evita doble carry en eje Y).
 -}
 applyPrePhysicsCarry :: Player -> [MovingPlatformAdvance] -> Player
 applyPrePhysicsCarry =
-  foldl applyOne
+  foldl' applyOne
  where
   applyOne player adv =
     let oldMp = movingPlatformBeforeAdvance adv

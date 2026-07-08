@@ -1,4 +1,4 @@
-{- | Flujo de nivel: victoria híbrida y transiciones de fase de juego (puro).
+{- | Flujo de nivel: victoria híbrida y transiciones de fase de juego.
 
 Comprueba superposición con la zona de salida, puntuación mínima y jefe
 derrotado antes de avanzar la partida.
@@ -32,22 +32,18 @@ import Domain.ValueObjects.LevelCount (LevelCount, isFinalLevel)
 import Domain.ValueObjects.Lives (Lives, livesCount)
 import Domain.ValueObjects.Score (Score)
 
--- | 'True' si la caja del jugador superpone la zona de salida.
 playerInExitZone :: World -> Bool
 playerInExitZone w =
   aabbOverlaps (playerAabb (worldPlayer w)) (exitZoneAabb (worldExit w))
 
--- | 'True' si la puntuación del nivel alcanza el umbral autorado.
 meetsMinScore :: Score -> World -> Bool
 meetsMinScore s w = s >= worldMinScore w
 
--- | Primer jefe vivo del mundo, si hay alguno.
 findLivingBoss :: World -> Maybe Enemy
 findLivingBoss w = find isLivingBoss (worldEnemies w)
  where
   isLivingBoss e = isBossKind (enemyKind e) && not (isDepleted (enemyHealth e))
 
--- | 'True' si queda algún jefe vivo en el mundo.
 hasLivingBoss :: World -> Bool
 hasLivingBoss = isJust . findLivingBoss
 
@@ -60,7 +56,6 @@ canCompleteLevel :: Score -> World -> Bool
 canCompleteLevel s w =
   playerInExitZone w && meetsMinScore s w && bossDefeated w
 
--- | Fase tras comprobar victoria híbrida en 'Playing'.
 resolvePlayingWin :: Int -> LevelCount -> Score -> World -> GamePhase
 resolvePlayingWin levelIndex totalLevels s w
   | not (canCompleteLevel s w) = Playing
@@ -80,7 +75,6 @@ resolveFramePhase livesBefore livesAfter phaseFromDeath phaseFromWin =
     _ | livesCount livesAfter < livesCount livesBefore -> Playing
     _ -> phaseFromWin
 
--- | Hint de puntuación insuficiente en la salida.
 showExitScoreHint :: Score -> World -> Bool
 showExitScoreHint s w =
   playerInExitZone w && not (meetsMinScore s w)

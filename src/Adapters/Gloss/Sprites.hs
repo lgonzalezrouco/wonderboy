@@ -29,7 +29,6 @@ import Paths_wonderboy_hs (getDataFileName)
 -- | Bitmap cargado junto con su tamaño original en píxeles.
 data Sprite = Sprite
   { spritePicture :: Picture
-  -- ^ Bitmap en su color original.
   , spriteHurtPicture :: Picture
   -- ^ Variante teñida de rojo para el estado de daño. En sprites sin tinte
   --   coincide con 'spritePicture' (se comparte el mismo 'Picture', sin costo extra).
@@ -100,11 +99,11 @@ loadSpriteCatalog =
     <*> loadSprite "assets/sprites/enemies/snail-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-idle.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-fly.bmp"
-    <*> loadSprite "assets/sprites/enemies/golem-idle.bmp"
-    <*> loadSprite "assets/sprites/enemies/golem-walk.bmp"
+    <*> loadHurtableSprite "assets/sprites/enemies/golem-idle.bmp"
+    <*> loadHurtableSprite "assets/sprites/enemies/golem-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/archer-idle.bmp"
-    <*> loadSprite "assets/sprites/bosses/boss-golem.bmp"
-    <*> loadSprite "assets/sprites/bosses/boss-bat.bmp"
+    <*> loadHurtableSprite "assets/sprites/bosses/boss-golem.bmp"
+    <*> loadHurtableSprite "assets/sprites/bosses/boss-bat.bmp"
     <*> loadSprite "assets/sprites/projectiles/projectile-rock.bmp"
     <*> loadSprite "assets/sprites/tiles/grass-center.bmp"
     <*> loadSprite "assets/sprites/hazards/weight.bmp"
@@ -123,11 +122,9 @@ loadWalkSprites =
       (\i -> loadHurtableSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp"))
       [1 .. 11 :: Int]
 
--- | Carga un sprite sin variante de daño: la versión teñida reusa el bitmap normal.
 loadSprite :: FilePath -> IO (Maybe Sprite)
 loadSprite = loadSpriteWith Nothing
 
--- | Carga un sprite del jugador con su variante de daño teñida de rojo.
 loadHurtableSprite :: FilePath -> IO (Maybe Sprite)
 loadHurtableSprite = loadSpriteWith (Just tintRedBMP)
 
@@ -196,12 +193,8 @@ spriteLoadFailure relPath err =
       pure Nothing
 
 {- | Sprite del jugador según estado visible y contador de render.
-
-El estado de daño NO elige un sprite propio: durante la invencibilidad el jugador
-sigue animándose con su sprite de movimiento normal (idle/caminar/salto, que cicla
-con 'renderFrame'). El efecto de "recibió daño" lo aporta sólo el tinte rojo con
-parpadeo en 'Adapters.Gloss.Rendering.renderPlayer'; así la animación no se congela
-en un único frame mientras dura la invencibilidad.
+El estado de daño NO elige sprite propio: la animación sigue normal y el tinte de
+daño lo aplica 'Adapters.Gloss.Rendering.renderPlayer' (así no se congela un frame).
 -}
 playerSprite :: SpriteCatalog -> Int -> Player -> Maybe Sprite
 playerSprite catalog renderFrame player

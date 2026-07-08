@@ -1,4 +1,4 @@
--- | Transición pura de un frame: orquesta behaviour, física y colisiones.
+-- | Transición de un frame: orquesta behaviour, física y colisiones.
 module Domain.Logic.Step (
   advanceFrame,
   step,
@@ -38,14 +38,10 @@ import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Velocity (velY)
 
-{- | Transición completa de un frame: behaviour step y luego física, o identidad si el frame está congelado.
-
-La política de "frame congelado" la define 'Domain.ValueObjects.DeltaTime.isFrozen' y
-la aplica 'UseCases.UpdateGame.updateGame' a nivel de frame (behaviour + física + combate +
-peligros). Aquí 'isFrozen' actúa como /identidad defensiva/ para llamadas aisladas: con el
-frame congelado no avanza ninguna fase (ni behaviour ni física). Si avanza, primero el DSL
-fija la velocidad de los enemigos ('runBehaviourStep') y después 'step' integra física y
-colisiones.
+{- | Transición completa de un frame: primero el DSL fija la velocidad de los enemigos
+('runBehaviourStep') y después 'step' integra física y colisiones. La política de frame
+congelado la aplica 'UseCases.UpdateGame.updateGame'; aquí 'isFrozen' es una identidad
+defensiva para llamadas aisladas.
 -}
 advanceFrame :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
 advanceFrame params life dt input w
@@ -53,15 +49,10 @@ advanceFrame params life dt input w
   | otherwise = step params life dt input (runBehaviourStep w)
 
 {- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
+Con el frame congelado es la identidad (guarda defensiva para llamadas aisladas de 'step').
 
-Con el frame congelado devuelve el mundo sin cambios: es la identidad temporal /propia/ de
-'step' como función pura (verificada en 'Domain.StepTest'). La política a nivel de
-frame la define 'Domain.ValueObjects.DeltaTime.isFrozen'; esta guarda protege a 'step'
-cuando se la llama aislada.
-
-Los enemigos terrestres integran cinemática y resuelven colisión AABB; los
-voladores (@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de
-este paso.
+Los enemigos terrestres integran cinemática y resuelven colisión AABB; los voladores
+(@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de este paso.
 -}
 step :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
 step _ _ dt _ w | isFrozen dt = w
@@ -111,12 +102,8 @@ integrateAndCollideEnemy params dt plats e
 
 {- | Aplica integración + colisión @n@ veces de forma /estricta/.
 
-POR QUÉ recursión explícita con @seq@ y no @iterate f p !! n@ o @foldl@ sobre
-@[1..n]@: ambas alternativas construyen una lista intermedia y dejan @p@ como una
-cadena de thunks anidados (@f (f (f … p))@) que sólo se fuerza al final. Con @n@
-grande (sólidos finos / velocidad alta) eso aloca de más y arriesga acumular
-thunks. @seq@ fuerza cada @Player@ a WHNF antes de la siguiente iteración, así el
-estado se reduce paso a paso sin lista ni cadena de thunks.
+Recursión explícita con @seq@ (no @iterate@/@foldl@) para forzar cada @Player@ a WHNF por
+iteración: con @n@ grande, las alternativas perezosas acumularían una cadena de thunks.
 -}
 runSubsteps :: Int -> DeltaTime -> [Platform] -> Float -> Player -> Player
 runSubsteps n dtSub plats vyBefore p

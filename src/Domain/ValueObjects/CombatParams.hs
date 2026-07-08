@@ -17,25 +17,30 @@ import Domain.ValueObjects.Frames (Frames)
 -- | Constantes de melee, contacto e invencibilidad para un frame.
 data CombatParams = CombatParams
   { cpAttackDuration :: Frames
-  -- ^ Frames que el alcance de melee permanece activo.
   , cpInvincibilityDuration :: Frames
-  -- ^ Frames de invencibilidad tras contacto enemigo o respawn.
   , cpContactDamage :: Damage
-  -- ^ Salud restada por un frame de contacto enemigo.
   , cpMeleeReach :: Float
-  -- ^ Extensión horizontal del alcance de melee (px lógicos).
+  -- ^ Alcance horizontal base del melee (px lógicos); la hitbox de impacto
+  --   puede extenderse más según el arco (ver 'Domain.Logic.MeleeSwing').
   , cpMeleeDamage :: Damage
-  -- ^ Salud restada a un enemigo por un melee que conecta.
+  , cpEnemyHurtFlashDuration :: Frames
   }
   deriving (Eq, Show, Generic)
 
--- | Construye 'CombatParams' desde componentes sueltos.
-combatParams :: Frames -> Frames -> Damage -> Float -> Damage -> CombatParams
-combatParams attack invincibility contact reach meleeDamage =
+combatParams ::
+  Frames ->
+  Frames ->
+  Damage ->
+  Float ->
+  Damage ->
+  Frames ->
+  CombatParams
+combatParams attack invincibility contact reach meleeDamage hurtFlash =
   CombatParams
     { cpAttackDuration = attack
     , cpInvincibilityDuration = invincibility
     , cpContactDamage = contact
     , cpMeleeReach = reach
     , cpMeleeDamage = meleeDamage
+    , cpEnemyHurtFlashDuration = hurtFlash
     }

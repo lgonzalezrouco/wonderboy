@@ -9,7 +9,7 @@ module Domain.Logic.Collision (
 )
 where
 
-import Data.List (sortBy)
+import Data.List (foldl', sortBy)
 import Data.Ord (comparing)
 
 import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyPos)
@@ -67,7 +67,7 @@ doneResolvingEnemy e e' n plats =
 
 resolveEnemyOnce :: Float -> [Platform] -> Enemy -> Enemy
 resolveEnemyOnce vyBefore plats e =
-  foldl (resolveEnemyAgainst vyBefore) e plats
+  foldl' (resolveEnemyAgainst vyBefore) e plats
 
 enemyOverlapsAnyPlatform :: [Platform] -> Enemy -> Bool
 enemyOverlapsAnyPlatform plats e =
@@ -161,9 +161,8 @@ doneResolving p p' n plats =
 
 resolveOnce :: Float -> [Platform] -> Player -> Player
 resolveOnce vyBefore plats p =
-  foldl (resolveAgainst vyBefore) (p{playerOnGround = False}) plats
+  foldl' (resolveAgainst vyBefore) (p{playerOnGround = False}) plats
 
--- | 'True' si el jugador solapa alguna plataforma de la lista.
 playerOverlapsAnyPlatform :: [Platform] -> Player -> Bool
 playerOverlapsAnyPlatform plats p =
   let box = playerAabb p
@@ -177,21 +176,10 @@ resolveAgainst _vyBefore p plat =
         then resolveOverlap (velY (playerVel p)) p box solid
         else p
 
-{- | Resuelve un solapamiento jugador–sólido por el __eje de menor penetración__.
-
-POR QUÉ menor penetración y no "Y primero, X después": resolver siempre el eje
-vertical confunde un choque /lateral/ con un aterrizaje o un golpe de techo.
-Saltando contra una pared (@vyBefore > 0@) eso entra por 'bumpCeiling' y clava al
-jugador hacia abajo @cabeza − base@ px, atravesando el piso (el "teletransporte");
-corriendo contra el costado de una plataforma (@vyBefore <= 0@) entra por
-'landOnTop' y lo sube encima (el "auto-salto"). Comparando ambas penetraciones,
-una colisión lateral (penetración horizontal chica) se empuja en X y una de
-suelo/techo (penetración vertical chica) se empuja en Y.
-
-El sesgo @overlapX + epsilon < overlapY@ desempata a favor de Y (suelo/techo): en
-una plataforma, ante penetraciones casi iguales conviene tratar el contacto como
-apoyo y no como pared. Cuando el eje elegido es Y pero la regla 'vyBefore' no mueve
-nada (ni apoya ni topa), se recurre a X para no dejar al jugador incrustado.
+{- | Resuelve un solapamiento jugador–sólido por el __eje de menor penetración__: una
+colisión lateral se empuja en X y una de suelo/techo en Y, para no confundir un choque
+de pared con un aterrizaje o un golpe de techo. El sesgo @overlapX + epsilon < overlapY@
+desempata a favor de Y (apoyo); si la regla 'vyBefore' no mueve nada, se recurre a X.
 -}
 resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
 resolveOverlap vyBefore p box solid
@@ -240,12 +228,10 @@ touchingCeiling :: Aabb -> Aabb -> Bool
 touchingCeiling box solid =
   nearZero (aabbMaxY box - aabbMinY solid)
 
--- | 'True' si los pies del jugador apoyan el borde superior de la plataforma.
 playerRestingOnPlatformTop :: Player -> Platform -> Bool
 playerRestingOnPlatformTop p plat =
   restingOnTop (playerAabb p) (platformAabb plat)
 
--- | 'True' si el jugador está montado sobre la plataforma (pies sobre el tramo superior).
 playerRidingPlatformTop :: Player -> Platform -> Bool
 playerRidingPlatformTop p plat =
   let solid = platformAabb plat

@@ -38,8 +38,7 @@ worldFromDefinition = either (Left . levelBuildToGameError) Right . buildWorld
 
 {- | Carga un nivel desde texto JSON: decode seguido del build puro.
 
-Conserva el comportamiento previo a la extracción de 'worldFromDefinition'; los
-flujos que necesiten resolver comportamiento componen los pasos por separado.
+Los flujos que necesitan resolver comportamiento componen los pasos por separado.
 -}
 loadLevelFromText :: Text -> Either GameError World
 loadLevelFromText txt = decodeLevelDefinition txt >>= worldFromDefinition

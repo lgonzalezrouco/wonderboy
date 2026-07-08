@@ -63,9 +63,7 @@ data BossDefinition = BossDefinition
   { bossMaxHealth :: Health
   -- ^ Salud inicial al spawnear.
   , bossWidth :: Float
-  -- ^ Ancho de la caja de colisión.
   , bossHeight :: Float
-  -- ^ Alto de la caja de colisión.
   , bossPhases :: [BossPhaseDef]
   -- ^ Fases ordenadas; al menos una.
   }

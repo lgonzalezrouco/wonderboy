@@ -1,4 +1,4 @@
-{- | Vida del jugador: daño, out-of-bounds, muerte y respawn (puro).
+{- | Vida del jugador: daño, out-of-bounds, muerte y respawn.
 
 La orquestación por frame vive en @UseCases.UpdateGame@; este módulo
 expone transformaciones totales sobre 'World', vidas y 'GamePhase'.
@@ -32,7 +32,6 @@ import Domain.ValueObjects.LifeParams (LifeParams (..))
 import Domain.ValueObjects.Lives (Lives, livesCount, loseLife, noLives)
 import Domain.ValueObjects.Position (Position, posY)
 
--- | Aplica @amount@ de daño a la salud del jugador (satura en 0).
 applyDamage :: Damage -> Player -> Player
 applyDamage amount p =
   p{playerHealth = reduceHealth amount (playerHealth p)}
@@ -52,18 +51,15 @@ anchoredCrumblingPlatforms w =
   filter crumblingPlatformIsAnchored (worldCrumblingPlatforms w)
 
 {- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
-
-También usada como umbral de despawn de peligros que caen (M21).
+También sirve de umbral de despawn para peligros que caen.
 -}
 deathLineY :: LifeParams -> World -> Float
 deathLineY lp w = lowestPlatformBottomY w - lpDeathMargin lp
 
--- | 'True' si los pies del jugador están por debajo de la línea de muerte.
 isPlayerOutOfBounds :: LifeParams -> World -> Bool
 isPlayerOutOfBounds lp w =
   posY (playerPos (worldPlayer w)) < deathLineY lp w
 
--- | Respawn del jugador en el punto de spawn del nivel (solo el jugador).
 respawnPlayerAt :: LifeParams -> Position -> World -> World
 respawnPlayerAt lp spawn w =
   let p = spawnPlayer (lpMaxHealth lp) spawn
@@ -74,7 +70,6 @@ respawnPlayerAt lp spawn w =
         , worldBossArenaEngaged = False
         }
 
--- | Resuelve muerte cuando la salud ya es 0.
 resolveDeath :: LifeParams -> Lives -> World -> (World, Lives, GamePhase)
 resolveDeath lp lives w
   | livesCount lives > 1 =

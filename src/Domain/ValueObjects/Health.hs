@@ -27,7 +27,6 @@ newtype Health = Health Int
 health :: Int -> Health
 health n = Health (max 0 n)
 
--- | Puntos de vida como 'Int'.
 healthPoints :: Health -> Int
 healthPoints (Health n) = n
 

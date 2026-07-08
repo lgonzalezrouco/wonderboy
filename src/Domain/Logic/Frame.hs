@@ -1,4 +1,4 @@
-{- | Transición pura de un frame de simulación completo.
+{- | Transición de un frame de simulación completo.
 
 Orquesta behaviour, física, combate, proyectiles, peligros, fases de jefe,
 pickups, victoria híbrida y muerte en un único lugar. La política de frame

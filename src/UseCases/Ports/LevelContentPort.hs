@@ -17,11 +17,9 @@ module UseCases.Ports.LevelContentPort (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity (..))
 import Data.Text (Text)
 
--- Grupo 2 — proyecto
 import Domain.Model.EnemyKind (EnemyKind)
 import Domain.Model.LevelDefinition (LevelDefinition, ResolvedBehaviour)
 import Domain.Model.LevelRole (LevelRole (..))

@@ -24,7 +24,6 @@ module Adapters.Anthropic.Client (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Control.Exception (SomeException, try)
 import Data.List (find)
 import Data.Text (Text)
@@ -35,7 +34,6 @@ import Data.ByteString.Lazy qualified as BL
 import Data.Set qualified as Set
 import Data.Text qualified as T
 
--- Grupo 2 — terceros
 import Data.Aeson (
   FromJSON (..),
   Value,
@@ -60,10 +58,6 @@ import Network.HTTP.Client (
  )
 import Network.HTTP.Types.Status (statusCode)
 
--- ---------------------------------------------------------------------------
--- Tipos públicos
--- ---------------------------------------------------------------------------
-
 -- | Conexión reusable: manager TLS, API key y base URL.
 data AnthropicClient = AnthropicClient
   { acManager :: Manager
@@ -85,10 +79,6 @@ data FeatureCfg = FeatureCfg
   -- ^ Habilita logs de debug en @stderr@.
   }
 
--- ---------------------------------------------------------------------------
--- Tipos de respuesta API (privados al módulo)
--- ---------------------------------------------------------------------------
-
 newtype AnthropicApiResponse = AnthropicApiResponse {arContent :: [AnthropicBlock]}
 
 -- | @text@ es opcional: bloques @thinking@\/@tool_use@ no rompen el decode.
@@ -106,10 +96,6 @@ instance FromJSON AnthropicBlock where
   parseJSON =
     withObject "AnthropicBlock" $ \o ->
       AnthropicBlock <$> o .: "type" <*> o .:? "text"
-
--- ---------------------------------------------------------------------------
--- API pública
--- ---------------------------------------------------------------------------
 
 {- | Hace una llamada POST a la API de Anthropic y devuelve el primer texto.
 
@@ -152,10 +138,6 @@ callAnthropic client cfg body = do
           warn ("status inesperado: " <> show (statusCode (responseStatus resp)))
  where
   warn msg = hPutStrLn stderr ("[anthropic-client] " <> msg) >> pure Nothing
-
--- ---------------------------------------------------------------------------
--- Helpers exportados
--- ---------------------------------------------------------------------------
 
 -- | Primer bloque de tipo @text@ en la respuesta de la API.
 firstText :: AnthropicApiResponse -> Maybe Text

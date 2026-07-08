@@ -24,6 +24,8 @@ module Domain.Fixtures (
   enemyFrom,
   runBehaviourN,
   worldWithEnemyAt,
+  swingToImpact,
+  stepsToMeleeImpact,
 )
 where
 
@@ -33,6 +35,8 @@ import Data.Text (Text)
 
 import Domain.Logic.BehaviourCatalog (defaultProgramForKind)
 import Domain.Logic.BuildWorld (buildWorld)
+import Domain.Logic.Combat (resolveCombat)
+import Domain.Logic.MeleeSwing (meleeImpactFrameCount)
 import Domain.Logic.RunBehaviour (runBehaviourStep)
 import Domain.Logic.Step (step)
 import Domain.Model.Enemy (Enemy (..), spawnEnemy)
@@ -53,10 +57,10 @@ import Domain.Model.Projectile (
   ProjectileOwner (EnemyProjectile, PlayerProjectile),
  )
 import Domain.Model.World (World (..), defaultMaxHealth, initialWorld)
-import Domain.ValueObjects.CombatParams (CombatParams)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
-import Domain.ValueObjects.Frames (Frames)
-import Domain.ValueObjects.Input (noInput)
+import Domain.ValueObjects.Frames (Frames, frameCount)
+import Domain.ValueObjects.Input (Input (..), noInput)
 import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Position (Position, position)
@@ -114,7 +118,6 @@ testEnemyProjectile pid pos vel lifetime =
     , projectileHeight = 8
     }
 
--- | One frame at 60 Hz.
 dtFrame :: DeltaTime
 dtFrame = deltaTime 0.016
 
@@ -123,7 +126,6 @@ demoJsonFixture :: Text
 demoJsonFixture =
   "{\"minScore\":150,\"spawn\":{\"x\":-100,\"y\":80},\"platforms\":[{\"pos\":{\"x\":-200,\"y\":0},\"width\":400,\"height\":8},{\"pos\":{\"x\":130,\"y\":24},\"width\":32,\"height\":8},{\"pos\":{\"x\":200,\"y\":48},\"width\":64,\"height\":8}],\"movingPlatforms\":[{\"id\":1,\"pos\":{\"x\":30,\"y\":72},\"width\":48,\"height\":8,\"endA\":{\"x\":30,\"y\":72},\"endB\":{\"x\":90,\"y\":72},\"speed\":35,\"startTowardB\":true}],\"enemies\":[{\"id\":1,\"kind\":\"snail\",\"pos\":{\"x\":40,\"y\":8},\"behaviourHint\":\"patrol back and forth along the ground\"},{\"id\":2,\"kind\":\"bat\",\"pos\":{\"x\":80,\"y\":56},\"behaviourHint\":\"chase the player when they get close, then return to spawn\"},{\"id\":3,\"kind\":\"bossGolem\",\"pos\":{\"x\":220,\"y\":56}}],\"pickups\":[{\"id\":1,\"pos\":{\"x\":-120,\"y\":8},\"value\":100},{\"id\":2,\"pos\":{\"x\":10,\"y\":8},\"value\":50},{\"id\":3,\"pos\":{\"x\":60,\"y\":80},\"value\":200},{\"id\":4,\"pos\":{\"x\":232,\"y\":56},\"value\":75}],\"exit\":{\"pos\":{\"x\":280,\"y\":0},\"width\":32,\"height\":64}}"
 
--- | Decodes the demo level definition from 'demoJsonFixture'.
 decodeDemoLevel :: Either String LevelDefinition
 decodeDemoLevel = decodeLevelText demoJsonFixture
 
@@ -249,7 +251,6 @@ risingPlayer :: Position -> Player
 risingPlayer pos =
   (spawnPlayer defaultMaxHealth pos){playerVel = velocity 0 500, playerOnGround = False}
 
--- | Runs @n@ behaviour steps on the world.
 runBehaviourN :: Int -> World -> World
 runBehaviourN n w = iterate runBehaviourStep w !! n
 
@@ -266,3 +267,14 @@ worldWithEnemyAt kind enemyPos playerPos =
     { worldPlayer = spawnPlayer defaultMaxHealth playerPos
     , worldEnemies = [spawnEnemy 1 kind enemyPos (defaultProgramForKind kind)]
     }
+
+-- | Pasos de 'noInput' tras iniciar el swing hasta el frame de impacto (inclusive).
+stepsToMeleeImpact :: CombatParams -> Int
+stepsToMeleeImpact cp =
+  frameCount (cpAttackDuration cp) - meleeImpactFrameCount cp + 1
+
+-- | Inicia un swing por input y avanza hasta el frame de impacto visual.
+swingToImpact :: CombatParams -> World -> World
+swingToImpact cp w =
+  let w1 = resolveCombat cp (noInput{inputAttack = True}) w
+   in iterate (resolveCombat cp noInput) w1 !! stepsToMeleeImpact cp

@@ -27,7 +27,6 @@ import Domain.Model.Player (Player (..), playerWidth)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Position (posX, position, translate)
 
--- | Grosor de pared invisible (px).
 wallThickness :: Float
 wallThickness = 8.0
 
@@ -39,7 +38,6 @@ arenaWallHeight = 4000.0
 arenaFloorY :: Float
 arenaFloorY = -2000.0
 
--- | Paredes verticales en los bordes interiores @left@ / @right@.
 bossArenaWallPlatforms :: BossArena -> [Platform]
 bossArenaWallPlatforms arena =
   [ verticalWall (bossArenaLeft arena - wallThickness)
@@ -49,14 +47,12 @@ bossArenaWallPlatforms arena =
   verticalWall x =
     platform (position x arenaFloorY) wallThickness arenaWallHeight
 
--- | Límites horizontales de los pies del jugador dentro de la arena.
 arenaFootXLimits :: BossArena -> (Float, Float)
 arenaFootXLimits arena =
   ( bossArenaLeft arena + playerWidth / 2
   , bossArenaRight arena - playerWidth / 2
   )
 
--- | 'True' cuando los pies del jugador están dentro de los bordes jugables.
 playerInsideBossArena :: BossArena -> Player -> Bool
 playerInsideBossArena arena p =
   let footX = posX (playerPos p)
@@ -68,7 +64,6 @@ playerWithinBossArena :: World -> Bool
 playerWithinBossArena w =
   maybe True (`playerInsideBossArena` worldPlayer w) (worldBossArena w)
 
--- | Paredes activas: jefe vivo y (comprometido o pies dentro en este frame).
 bossArenaWallsActive :: World -> Bool
 bossArenaWallsActive w =
   case worldBossArena w of
@@ -78,7 +73,6 @@ bossArenaWallsActive w =
             || playerInsideBossArena arena (worldPlayer w)
     _ -> False
 
--- | 'True' mientras el jefe vive y el jugador ya se comprometió con la arena.
 bossArenaSealed :: World -> Bool
 bossArenaSealed w =
   worldBossArenaEngaged w && hasLivingBoss w
@@ -115,7 +109,6 @@ clampPlayerInBossArena w p =
                 else p{playerPos = translate (clamped - footX) 0 (playerPos p)}
     _ -> p
 
--- | Añade paredes de arena a la lista de colisión del jugador si aplica.
 appendBossArenaWallsForPlayer :: World -> [Platform] -> [Platform]
 appendBossArenaWallsForPlayer w plats =
   case worldBossArena w of

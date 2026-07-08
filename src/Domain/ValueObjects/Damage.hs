@@ -20,6 +20,5 @@ newtype Damage = Damage Int
 damage :: Int -> Damage
 damage n = Damage (max 0 n)
 
--- | Puntos de daño como 'Int'.
 damagePoints :: Damage -> Int
 damagePoints (Damage n) = n

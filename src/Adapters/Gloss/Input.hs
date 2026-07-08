@@ -29,7 +29,6 @@ data KeyState = KeyState
   }
   deriving (Eq, Show)
 
--- | Ninguna tecla de juego sostenida.
 noKeys :: KeyState
 noKeys =
   KeyState

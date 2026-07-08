@@ -1,7 +1,4 @@
-{- | Proyectiles de jugador y enemigo (entidades de corta duración).
-
-Reutilizable por el arco del jugador (M19) y disparos enemigos (M20).
--}
+-- | Proyectiles de jugador y enemigo (entidades de corta duración).
 module Domain.Model.Projectile (
   ProjectileMotion (..),
   ProjectileOwner (..),
@@ -22,7 +19,7 @@ import Domain.ValueObjects.Velocity (Velocity, velocity)
 
 -- | Perfil de movimiento del proyectil.
 data ProjectileMotion
-  = -- | Gravedad + despawn al tocar plataforma (arco del jugador en M19).
+  = -- | Gravedad + despawn al tocar plataforma (arco del jugador).
     Ballistic
   | -- | Velocidad constante (proyectiles enemigos).
     Linear

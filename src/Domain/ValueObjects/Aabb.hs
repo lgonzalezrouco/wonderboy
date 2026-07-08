@@ -31,10 +31,7 @@ data Aabb = Aabb
   }
   deriving (Eq, Show)
 
-{- | Caja con esquina inferior izquierda en @pos@ y tamaño @width@ × @height@.
-
-@height@ crece hacia arriba: @aabbMaxY = posY pos + height@.
--}
+-- | Caja con esquina inferior izquierda en @pos@ y tamaño @width@ × @height@.
 aabbFromBottomLeft :: Position -> Float -> Float -> Aabb
 aabbFromBottomLeft pos width height =
   Aabb

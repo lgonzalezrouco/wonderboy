@@ -30,19 +30,15 @@ y los enemigos. 'pickupValue' son los puntos otorgados al recogerlo.
 -}
 data Pickup = Pickup
   { pickupId :: Int
-  -- ^ Identificador único del pickup en el nivel.
   , pickupPos :: Position
-  -- ^ Posición actual (pies, centro inferior).
   , pickupValue :: Score
   -- ^ Puntos al recoger; debe ser ≥ 0 (validado por 'mkPickup').
   }
   deriving (Eq, Show, Generic)
 
--- | Ancho de la caja de colisión del pickup en píxeles lógicos.
 pickupWidth :: Float
 pickupWidth = 16.0
 
--- | Alto de la caja de colisión del pickup en píxeles lógicos.
 pickupHeight :: Float
 pickupHeight = 16.0
 

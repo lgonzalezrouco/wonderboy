@@ -1,7 +1,7 @@
-{- | Intérprete puro del DSL de comportamiento de enemigos.
+{- | Intérprete del DSL de comportamiento de enemigos.
 
 Un behaviour step por frame cuando @dt > 0@ en el ciclo de update; luego
-@Domain.Logic.Step.step@ integra cinemática. M13: el intérprete lee 'World' para
+@Domain.Logic.Step.step@ integra cinemática. El intérprete lee 'World' para
 sensado y ramas deterministas.
 -}
 module Domain.Logic.RunBehaviour (
@@ -40,13 +40,11 @@ import Domain.ValueObjects.Frames (frameCount, hasFramesLeft, tickFrames)
 import Domain.ValueObjects.Position (Position, posX, posY, position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
--- | Avanza un behaviour step en todos los enemigos del mundo (puro).
 runBehaviourStep :: World -> World
 runBehaviourStep w =
   let (w', enemies') = mapAccumL stepEnemyBehaviour w (worldEnemies w)
    in w'{worldEnemies = enemies'}
 
--- | Un behaviour step para un enemigo.
 stepEnemyBehaviour :: World -> Enemy -> (World, Enemy)
 stepEnemyBehaviour w e =
   let (prog', w', e') = stepProgram w (enemyProgram e) e

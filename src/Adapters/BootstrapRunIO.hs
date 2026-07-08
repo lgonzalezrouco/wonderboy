@@ -14,7 +14,6 @@ module Adapters.BootstrapRunIO (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Char (isSpace, toLower)
 import Data.List (dropWhileEnd)
 import System.Environment (lookupEnv)
@@ -23,10 +22,8 @@ import System.IO (hPutStrLn, stderr)
 
 import Data.Text qualified as T
 
--- Grupo 2 — terceros
 import Network.HTTP.Client.TLS (newTlsManager)
 
--- Grupo 3 — proyecto
 import Adapters.Anthropic.Client (
   AnthropicClient (..),
   FeatureCfg (..),
@@ -44,10 +41,6 @@ import UseCases.GameMonad (GameError (..))
 import UseCases.LoadLevel (decodeLevelDefinition)
 import UseCases.Ports.LevelContentPort (NoContent (..))
 
--- ---------------------------------------------------------------------------
--- Defaults de configuración
--- ---------------------------------------------------------------------------
-
 defaultModel :: T.Text
 defaultModel = "claude-haiku-4-5"
 
@@ -58,10 +51,6 @@ generatorTimeoutMicros = 30 * 1000 * 1000
 -- | 10 s por consulta de resolución (respuesta corta, @max_tokens@ 64).
 resolverTimeoutMicros :: Int
 resolverTimeoutMicros = 10 * 1000 * 1000
-
--- ---------------------------------------------------------------------------
--- Entrada pública
--- ---------------------------------------------------------------------------
 
 {- | Pre-carga el catálogo del run: generación IA + resolución de arquetipos, o
 degradación pura a archivos fijos + defaults del kind si no hay API key.
@@ -104,10 +93,6 @@ bootstrapCatalogIO paths = do
               }
           env = AnthropicEnv client genCfg resCfg
       runAnthropicContent env (bootstrapCatalog generateEnabled themeText fileFallbacks)
-
--- ---------------------------------------------------------------------------
--- Helpers
--- ---------------------------------------------------------------------------
 
 {- | Interpreta una variable de entorno como booleano.
 

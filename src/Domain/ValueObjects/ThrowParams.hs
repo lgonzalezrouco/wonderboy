@@ -18,21 +18,16 @@ data ThrowParams = ThrowParams
   { tpCooldown :: Frames
   -- ^ Frames de espera tras despawn del proyectil del jugador.
   , tpLifetime :: Frames
-  -- ^ Vida inicial de cada proyectil.
   , tpHorizontalSpeed :: Float
   -- ^ Velocidad horizontal de lanzamiento (px/s).
   , tpLiftSpeed :: Float
   -- ^ Impulso vertical inicial (px/s, hacia arriba).
   , tpWidth :: Float
-  -- ^ Ancho de la caja del proyectil.
   , tpHeight :: Float
-  -- ^ Alto de la caja del proyectil.
   , tpDamage :: Damage
-  -- ^ Daño a enemigos al conectar (M19: igual que melee).
   }
   deriving (Eq, Show, Generic)
 
--- | Construye 'ThrowParams' desde componentes sueltos.
 throwParams ::
   Frames ->
   Frames ->

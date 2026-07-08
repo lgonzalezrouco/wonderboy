@@ -1,7 +1,7 @@
 {- | Plataforma estática del nivel (sólido con colisión AABB).
 
 Las plataformas son geometría del mundo: no tienen velocidad ni identidad
-como las entidades. Se agregan a 'Domain.Model.World' en Milestone 3.
+como las entidades.
 -}
 module Domain.Model.Platform (
   -- * Tipo
@@ -29,7 +29,6 @@ data Platform = Platform
   }
   deriving (Eq, Show)
 
--- | Construye una plataforma en @pos@ con ancho y alto dados.
 platform :: Position -> Float -> Float -> Platform
 platform pos width height =
   Platform

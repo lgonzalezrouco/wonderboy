@@ -36,40 +36,24 @@ import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
-{- | Estado de un enemigo en un frame dado.
-
-__Por qué `enemyId :: Int`?__
-
-Dos value objects con los mismos valores son indistinguibles: dos 'Position' iguales
-son el mismo punto. Pero dos enemigos en la misma posición son enemigos distintos —
-tienen identidad separada. El 'enemyId' es esa identidad.
-
-Los intérpretes de comportamiento usan este id para colisiones futuras. También
-facilita ignorar la colisión de una entidad consigo misma.
--}
+-- | Estado de un enemigo en un frame dado.
 data Enemy = Enemy
   { enemyId :: Int
-  -- ^ Identificador único del enemigo en el nivel. Asignado en la carga del nivel.
   , enemyKind :: EnemyKind
-  -- ^ Clase de enemigo (stats y caja de colisión).
   , enemyPos :: Position
-  -- ^ Posición actual del enemigo en el espacio del juego (píxeles lógicos).
   , enemyVel :: Velocity
-  -- ^ Velocidad actual (px/s). La fija el intérprete del DSL antes de integrar.
   , enemyHealth :: Health
-  -- ^ Salud actual; al llegar a 0 el enemigo es derrotado.
   , enemyMaxHealth :: Health
-  -- ^ Salud máxima de esta instancia (umbrales de jefe y barra HUD).
   , enemySpawnPos :: Position
   -- ^ Spawn anchor para FSM de retorno.
   , enemyFacing :: Facing
-  -- ^ Orientación horizontal (render y persecución).
   , enemyProgram :: BehaviourProgram
-  -- ^ Programa de comportamiento (descripción, no ejecución).
   , enemyBossPhase :: Maybe BossPhaseIndex
   -- ^ Fase actual del jefe; 'Nothing' para enemigos regulares.
   , enemyShootCooldownFrames :: Frames
   -- ^ Frames restantes antes de poder disparar de nuevo (Archer).
+  , enemyHurtFrames :: Frames
+  -- ^ Destello visual tras daño del jugador que no derrota al enemigo.
   }
   deriving (Show, Generic)
 
@@ -91,11 +75,9 @@ instance Eq Enemy where
 enemyStats :: Enemy -> EnemyKindStats
 enemyStats = enemyKindStats . enemyKind
 
--- | Ancho de la caja de colisión según la clase del enemigo.
 enemyWidth :: Enemy -> Float
 enemyWidth = eksWidth . enemyStats
 
--- | Alto de la caja de colisión según la clase del enemigo.
 enemyHeight :: Enemy -> Float
 enemyHeight = eksHeight . enemyStats
 
@@ -124,8 +106,8 @@ spawnEnemy eid kind pos prog =
         , enemyProgram = prog
         , enemyBossPhase = bossPhase
         , enemyShootCooldownFrames = frames 0
+        , enemyHurtFrames = frames 0
         }
 
--- | Crea un enemigo Snail para tests con programa explícito.
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy
 mkEnemy eid = spawnEnemy eid SnailKind

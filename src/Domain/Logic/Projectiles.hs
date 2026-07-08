@@ -1,13 +1,14 @@
--- | Lanzamiento, física y colisiones de proyectiles (puro).
+-- | Lanzamiento, física y colisiones de proyectiles.
 module Domain.Logic.Projectiles (
   resolveProjectiles,
 )
 where
 
-import Data.List (find)
+import Data.List (find, foldl')
 
 import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.CrumblingPlatforms (appendPlayerSolidCrumbling)
+import Domain.Logic.EnemyDamage (applyPlayerDamageToEnemy)
 import Domain.Logic.MovingPlatforms (allCollisionPlatforms)
 import Domain.Logic.PlayerLife (applyDamage)
 import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyHealth, enemyId, enemyShootCooldownFrames)
@@ -38,14 +39,13 @@ import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
-import Domain.ValueObjects.Health (isDepleted, reduceHealth)
+import Domain.ValueObjects.Health (isDepleted)
 import Domain.ValueObjects.Input (Input (..))
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
 import Domain.ValueObjects.Position (Position, position, translate)
 import Domain.ValueObjects.ThrowParams (ThrowParams (..))
 import Domain.ValueObjects.Velocity (velX, velY, velocity)
 
--- | Spawn, avance, impactos y cooldown de proyectiles en un frame.
 resolveProjectiles ::
   ThrowParams ->
   CombatParams ->
@@ -162,7 +162,7 @@ resolveHits ::
   (World, [Projectile], Bool)
 resolveHits tp cp w =
   let (player', enemies', flying, removed) =
-        foldl step (worldPlayer w, worldEnemies w, [], False) (worldProjectiles w)
+        foldl' step (worldPlayer w, worldEnemies w, [], False) (worldProjectiles w)
       enemies'' = filter (not . isDepleted . enemyHealth) enemies'
    in (w{worldPlayer = player', worldEnemies = enemies''}, flying, removed)
  where
@@ -175,12 +175,11 @@ resolveHits tp cp w =
             if hitsPlayer box player
               then (damagePlayer cp player, enemies, flying, removed)
               else (player, enemies, proj : flying, removed)
-          -- Los proyectiles del jugador solo dañan enemigos.
           PlayerProjectile ->
             case find (aabbOverlaps box . enemyAabb) enemies of
               Just e
                 | playerMayDamageEnemy w e ->
-                    let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
+                    let e' = applyPlayerDamageToEnemy cp (tpDamage tp) e
                         enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
                      in (player, enemies', flying, True)
                 | otherwise ->

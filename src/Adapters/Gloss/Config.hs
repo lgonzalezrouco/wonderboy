@@ -1,4 +1,4 @@
--- | Constantes de ventana, cámara y colores para el adaptador Gloss (M8).
+-- | Constantes de ventana, cámara y colores para el adaptador Gloss.
 module Adapters.Gloss.Config (
   windowWidth,
   windowHeight,
@@ -31,11 +31,9 @@ import Graphics.Gloss.Data.Color (Color, makeColor)
 
 import Domain.Model.EnemyKind (EnemyKind (..))
 
--- | Ancho de la ventana en píxeles.
 windowWidth :: Int
 windowWidth = 1024
 
--- | Alto de la ventana en píxeles.
 windowHeight :: Int
 windowHeight = 768
 
@@ -43,23 +41,18 @@ windowHeight = 768
 renderZoom :: Float
 renderZoom = 1.5
 
--- | Color de fondo de la ventana.
 backgroundColor :: Color
 backgroundColor = makeColor 0.15 0.15 0.2 1.0
 
--- | Posición Y fija de la cámara (píxeles lógicos).
 cameraY :: Float
 cameraY = 120
 
--- | Tope superior del delta time en segundos.
 maxDeltaSeconds :: Float
 maxDeltaSeconds = 0.05
 
--- | Color del rectángulo del jugador.
 playerColor :: Color
 playerColor = makeColor 0.2 0.5 1.0 1.0
 
--- | Color por clase de enemigo (placeholders hasta M17 sprites).
 enemyColorForKind :: EnemyKind -> Color
 enemyColorForKind kind = case kind of
   SnailKind -> makeColor 0.85 0.75 0.2 1.0
@@ -69,66 +62,50 @@ enemyColorForKind kind = case kind of
   BossGolemKind -> makeColor 0.75 0.15 0.25 1.0
   BossBatKind -> makeColor 0.55 0.1 0.45 1.0
 
--- | Color del rectángulo de pickups (coleccionables).
 pickupColor :: Color
 pickupColor = makeColor 1.0 0.85 0.15 1.0
 
--- | Color del rectángulo de plataformas.
 platformColor :: Color
 platformColor = makeColor 0.3 0.7 0.3 1.0
 
--- | Color del rectángulo de plataformas móviles.
 movingPlatformColor :: Color
 movingPlatformColor = makeColor 0.45 0.85 0.55 1.0
 
--- | Fondo semitransparente del panel del HUD (adaptador; no es dominio).
 hudPanelBg :: Color
 hudPanelBg = makeColor 0.05 0.06 0.1 0.72
 
--- | Color del texto principal del HUD.
 hudTextColor :: Color
 hudTextColor = makeColor 0.94 0.96 1.0 1.0
 
--- | Color del texto secundario/atenuado (hints).
 hudMutedColor :: Color
 hudMutedColor = makeColor 0.62 0.68 0.78 1.0
 
--- | Color de un icono de vida lleno.
 hudLifeColor :: Color
 hudLifeColor = makeColor 1.0 0.82 0.2 1.0
 
--- | Color de un pip de salud lleno.
 hudHealthColor :: Color
 hudHealthColor = makeColor 0.35 0.9 0.5 1.0
 
--- | Color de un icono/pip vacío (vida o salud agotada).
 hudHealthEmptyColor :: Color
 hudHealthEmptyColor = makeColor 0.22 0.25 0.32 1.0
 
--- | Color del relleno de la barra de salud del jefe.
 hudBossColor :: Color
 hudBossColor = makeColor 0.9 0.25 0.35 1.0
 
--- | Color del fondo de la barra de salud del jefe.
 hudBossEmptyColor :: Color
 hudBossEmptyColor = makeColor 0.28 0.12 0.16 1.0
 
--- | Color del indicador de ataque activo.
 hudAttackColor :: Color
 hudAttackColor = makeColor 1.0 0.5 0.15 1.0
 
--- | Color del velo que oscurece la pantalla en el overlay de Game Over.
 hudOverlayDim :: Color
 hudOverlayDim = makeColor 0.02 0.03 0.06 0.55
 
--- | Color del placeholder del proyectil lanzado (M19).
 projectileColor :: Color
 projectileColor = makeColor 0.95 0.85 0.2 1.0
 
--- | Color del placeholder de peligros que caen (M21).
 fallingHazardColor :: Color
 fallingHazardColor = makeColor 0.95 0.35 0.15 1.0
 
--- | Color del placeholder de plataformas que se desmoronan (M22).
 crumblingPlatformColor :: Color
 crumblingPlatformColor = makeColor 0.75 0.55 0.25 1.0

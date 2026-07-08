@@ -44,16 +44,13 @@ module UseCases.GameMonad (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Functor.Identity (Identity, runIdentity)
 import GHC.Generics (Generic)
 
--- Grupo 2 — terceros (mtl)
 import Control.Monad.Except (ExceptT, MonadError, runExceptT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.State (MonadState, StateT, runStateT)
 
--- Grupo 3 — proyecto (re-exportaciones)
 import UseCases.Engine.GameConfig (
   GameConfig (..),
   combatParamsFromConfig,
@@ -76,10 +73,6 @@ import UseCases.Engine.GameView (
   gameViewFromState,
  )
 
--- ---------------------------------------------------------------------------
--- Errores
--- ---------------------------------------------------------------------------
-
 {- | Errores recuperables del motor.
 
 Newtype sobre 'String'; un tipo suma con variantes concretas puede agregarse
@@ -87,10 +80,6 @@ cuando aparezcan errores distinguibles que el motor trate de forma diferente.
 -}
 newtype GameError = GameError String
   deriving (Eq, Show, Generic)
-
--- ---------------------------------------------------------------------------
--- La mónada GameM
--- ---------------------------------------------------------------------------
 
 {- | Mónada del motor: @ReaderT GameConfig (StateT GameState (ExceptT GameError Identity))@.
 
@@ -115,10 +104,6 @@ newtype GameM a = GameM
     , MonadState GameState
     , MonadError GameError
     )
-
--- ---------------------------------------------------------------------------
--- Intérprete / runner
--- ---------------------------------------------------------------------------
 
 {- | Ejecuta una acción en 'GameM' y devuelve el resultado o un error.
 

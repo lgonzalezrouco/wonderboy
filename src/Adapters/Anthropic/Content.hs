@@ -24,7 +24,6 @@ module Adapters.Anthropic.Content (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import System.IO (hPutStrLn, stderr)
@@ -32,7 +31,6 @@ import System.IO (hPutStrLn, stderr)
 import Data.ByteString.Lazy qualified as BL
 import Data.Text qualified as T
 
--- Grupo 2 — terceros
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
@@ -47,7 +45,6 @@ import Data.Aeson (
   (.=),
  )
 
--- Grupo 3 — proyecto
 import Adapters.Anthropic.Client (
   AnthropicClient (..),
   FeatureCfg (..),
@@ -76,10 +73,6 @@ import UseCases.Serialization.LevelCodec (
   encodeLevelDefinitionText,
  )
 
--- ---------------------------------------------------------------------------
--- Entorno y monad
--- ---------------------------------------------------------------------------
-
 {- | Entorno compartido entre el generador y el resolver.
 
 Un único 'AnthropicClient' (manager + key + URL) y configuraciones separadas
@@ -99,13 +92,8 @@ newtype AnthropicContent a = AnthropicContent
   {unAnthropicContent :: ReaderT AnthropicEnv IO a}
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader AnthropicEnv)
 
--- | Ejecuta el adapter con el entorno dado.
 runAnthropicContent :: AnthropicEnv -> AnthropicContent a -> IO a
 runAnthropicContent env m = runReaderT (unAnthropicContent m) env
-
--- ---------------------------------------------------------------------------
--- Instancia LevelContentPort
--- ---------------------------------------------------------------------------
 
 instance LevelContentPort AnthropicContent where
   generateLevel profile = do
@@ -122,10 +110,6 @@ instance LevelContentPort AnthropicContent where
   generateLevels profiles = do
     env <- ask
     liftIO (mapConcurrently (generateOne env) profiles)
-
--- ---------------------------------------------------------------------------
--- Generación de niveles
--- ---------------------------------------------------------------------------
 
 {- | Intentos de generación por slot.
 
@@ -328,10 +312,6 @@ exampleSection (Just example) =
       <> example
   ]
 
--- ---------------------------------------------------------------------------
--- Resolución de arquetipos
--- ---------------------------------------------------------------------------
-
 resolveOne :: AnthropicEnv -> EnemyKind -> Text -> IO (Maybe ResolvedBehaviour)
 resolveOne env kind hint = do
   let cfg = aeResolverCfg env
@@ -439,7 +419,6 @@ instance FromJSON ResolverReply where
         <*> o .:? "reach"
         <*> o .:? "toughness"
 
--- | Mapeo puro de 'ResolverReply' a 'ResolvedBehaviour'.
 resolvedFromReply :: ResolverReply -> Maybe ResolvedBehaviour
 resolvedFromReply r =
   case parseBehaviourArchetype (T.toLower (T.strip (rrArchetype r))) of

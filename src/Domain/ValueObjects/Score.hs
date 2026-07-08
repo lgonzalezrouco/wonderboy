@@ -17,7 +17,6 @@ import GHC.Generics (Generic)
 newtype Score = Score Int
   deriving (Eq, Ord, Show, Generic)
 
--- | Acumular puntos.
 instance Semigroup Score where
   Score a <> Score b = Score (a + b)
 
@@ -28,6 +27,5 @@ instance Monoid Score where
 score :: Int -> Score
 score n = Score (max 0 n)
 
--- | Puntos como 'Int'.
 scorePoints :: Score -> Int
 scorePoints (Score n) = n

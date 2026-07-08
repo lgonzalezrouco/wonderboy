@@ -3,10 +3,6 @@
 'GameView' es el DTO de salida del puerto primario: la aplicación define qué
 ofrece al frontend; el adaptador de Gloss lo consume sin importar 'GameMonad'
 ni 'GameState' directamente.
-
-Los campos 'gvMeleeHitbox' y 'gvBossArenaWalls' se pre-calculan aquí
-(en UseCases, donde es legítimo importar 'Domain.Logic.*') para que el adaptador
-de renderizado no necesite importar lógica de dominio.
 -}
 module UseCases.Engine.GameView (
   GameView (..),
@@ -15,22 +11,18 @@ module UseCases.Engine.GameView (
 )
 where
 
--- Grupo 1 — stdlib / base
 import Control.Monad (guard)
 
--- Grupo 3 — proyecto
 import Domain.Logic.BossArena (bossArenaSealed, bossArenaWallPlatforms, bossArenaWallsActive, playerWithinBossArena)
-import Domain.Logic.Combat (meleeHitbox)
 import Domain.Logic.LevelFlow (findLivingBoss, showBossExitHint, showExitScoreHint)
+import Domain.Logic.MeleeSwing (meleeHitboxWhenImpact)
 import Domain.Model.Enemy (enemyHealth, enemyMaxHealth)
 import Domain.Model.GamePhase (GamePhase)
 import Domain.Model.Platform (Platform)
-import Domain.Model.Player (playerAabb, playerAttackFrames, playerFacing)
 import Domain.Model.World (World (..), worldBossArena)
 import Domain.ValueObjects.Aabb (Aabb)
 import Domain.ValueObjects.BossHealth (BossHealth, bossHealth)
 import Domain.ValueObjects.CombatParams (CombatParams)
-import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Lives (Lives)
 import Domain.ValueObjects.Score (Score)
@@ -97,10 +89,7 @@ gameViewFromState cfg gs =
               else Nothing
         , gvBossExitHint = showBossExitHint s w
         , gvBossArenaSealed = bossArenaSealed w
-        , gvMeleeHitbox =
-            if hasFramesLeft (playerAttackFrames p)
-              then Just (meleeHitbox combatParams (playerAabb p) (playerFacing p))
-              else Nothing
+        , gvMeleeHitbox = meleeHitboxWhenImpact combatParams p
         , gvBossArenaWalls =
             maybe
               []

@@ -4,7 +4,7 @@
 Es la "fotografía" de la simulación: todo lo que el motor necesita para
 calcular el siguiente frame.
 
-La integración cinemática y colisiones viven en @Domain.Logic.Step@ (M3).
+La integración cinemática y colisiones viven en @Domain.Logic.Step@.
 -}
 module Domain.Model.World (
   -- * Tipo
