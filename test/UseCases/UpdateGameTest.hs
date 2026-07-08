@@ -1,6 +1,3 @@
-{- | Orquestación de 'updateGame' en la costura de 'UseCases': orden de fases,
-política de frame congelado (@dt = 0@) y bucle multi-frame ('runFrames').
--}
 module UseCases.UpdateGameTest where
 
 import Domain.Fixtures (demoWorld, dtFrame, mkTestPickup, worldWithPickups)
@@ -175,6 +172,6 @@ unit_updateGameLevelCompleteWhenHybridWin =
         Left err -> assertFailure (show err)
         Right ((), gs') -> gsPhase gs' @?= LevelComplete
 
--- | Corre @n@ frames sobre el harness compartido, abortando si hubiera un error.
+-- Parcial: aborta con error si algún frame devuelve Left.
 runTicks :: Int -> GameState -> GameState
 runTicks n = either (error . show) id . runFrames defaultConfig n dtFrame noInput

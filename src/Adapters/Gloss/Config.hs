@@ -1,4 +1,3 @@
--- | Constantes de ventana, cámara y colores para el adaptador Gloss.
 module Adapters.Gloss.Config (
   windowWidth,
   windowHeight,
@@ -37,7 +36,7 @@ windowWidth = 1024
 windowHeight :: Int
 windowHeight = 768
 
--- | Factor de zoom del mundo y fondo (solo adaptador; la física no cambia).
+-- Zoom solo de render (mundo + fondo). La simulación/física no se ve afectada.
 renderZoom :: Float
 renderZoom = 1.5
 

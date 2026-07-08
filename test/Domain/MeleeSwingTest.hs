@@ -1,4 +1,3 @@
--- | Melee swing geometry and impact frame tests.
 module Domain.MeleeSwingTest where
 
 import Domain.Fixtures (floorWorld, swingToImpact, testCombatParams)

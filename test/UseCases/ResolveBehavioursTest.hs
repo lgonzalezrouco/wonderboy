@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | 'resolveLevelBehaviours' con puerto stub puro (precedencia y dedup).
 module UseCases.ResolveBehavioursTest where
 
 import Data.Functor.Identity (Identity (..))

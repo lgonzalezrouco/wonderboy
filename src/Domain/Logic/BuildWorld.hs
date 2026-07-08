@@ -1,10 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Construcción de 'World' desde 'LevelDefinition'.
-
-Valida ids duplicados y delega en smart constructors de plataformas,
-pickups y enemigos.
--}
 module Domain.Logic.BuildWorld (
   buildWorld,
   buildEnemy,

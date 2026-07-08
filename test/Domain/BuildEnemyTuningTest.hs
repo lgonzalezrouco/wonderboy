@@ -1,4 +1,3 @@
--- | 'buildEnemy' aplica toughness× a la salud.
 module Domain.BuildEnemyTuningTest where
 
 import Test.Tasty.HUnit (Assertion, (@?=))

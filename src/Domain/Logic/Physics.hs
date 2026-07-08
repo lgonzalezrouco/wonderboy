@@ -1,7 +1,3 @@
-{- | Física cinemática del jugador y enemigos (sin colisiones).
-
-Colisiones con plataformas en @Domain.Logic.Collision@.
--}
 module Domain.Logic.Physics (
   applyHorizontalInput,
   applyGravity,
@@ -21,16 +17,10 @@ import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
 import Domain.ValueObjects.Position (Position, translate)
 import Domain.ValueObjects.Velocity (Velocity, velX, velY, velocity)
 
--- | Traduce input horizontal en @vx@ (sin salto; ver 'applyJump').
 applyHorizontalInput :: PhysicsParams -> Input -> Player -> Player
 applyHorizontalInput pp input p =
   p{playerVel = velocity (inputHorizontalSign input * ppMoveSpeed pp) (velY (playerVel p))}
 
-{- | Impulso de salto tras gravedad, si hubo press de salto y el jugador estaba en el suelo al inicio del frame.
-
-'inputJump' debe ser 'True' solo en el frame del press (ver 'Domain.ValueObjects.Input').
-@wasOnGround@ es @playerOnGround@ antes de cualquier actualización del frame.
--}
 applyJump :: PhysicsParams -> Input -> Bool -> Player -> Player
 applyJump pp input wasOnGround p =
   if inputJump input && wasOnGround

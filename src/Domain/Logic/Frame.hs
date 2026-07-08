@@ -1,22 +1,3 @@
-{- | Transición de un frame de simulación completo.
-
-Orquesta behaviour, física, combate, proyectiles, peligros, fases de jefe,
-pickups, victoria híbrida y muerte en un único lugar. La política de frame
-congelado y fases terminales ('GameOver', 'LevelComplete', 'Victory') la aplica
-el llamador ('UseCases.UpdateGame.updateGame').
-
-== Pipeline (orden fijo) ==
-
-1. 'Domain.Logic.Step.advanceFrame' — behaviour + física
-2. 'Domain.Logic.Combat.resolveCombat'
-3. 'Domain.Logic.Projectiles.resolveProjectiles'
-4. 'Domain.Logic.FallingHazards.resolveFallingHazards'
-5. 'Domain.Logic.BossPhase.resolveBossPhases' — usa snapshot @wBefore@
-6. 'Domain.Logic.Pickups.resolvePickups'
-7. 'Domain.Logic.LevelFlow.resolvePlayingWin' — puntuación tras pickups
-8. 'Domain.Logic.PlayerLife.resolveHazardsAndDeath' — sobre mundo post-pickup
-9. 'Domain.Logic.LevelFlow.resolveFramePhase' — muerte anula victoria en el mismo frame
--}
 module Domain.Logic.Frame (
   FrameParams (..),
   PlayingFrame (..),
@@ -46,7 +27,6 @@ import Domain.ValueObjects.Score (Score)
 import Domain.ValueObjects.ThrowParams (ThrowParams)
 import GHC.Generics (Generic)
 
--- | Parámetros físicos y de reglas proyectados desde configuración (sin 'GameConfig').
 data FrameParams = FrameParams
   { fpPhysics :: PhysicsParams
   , fpLife :: LifeParams
@@ -55,7 +35,6 @@ data FrameParams = FrameParams
   }
   deriving (Eq, Show, Generic)
 
--- | Estado de run necesario para un frame en 'Playing'.
 data PlayingFrame = PlayingFrame
   { pfWorld :: World
   , pfLives :: Lives
@@ -64,7 +43,6 @@ data PlayingFrame = PlayingFrame
   }
   deriving (Eq, Show, Generic)
 
--- | Resultado de un frame de simulación en 'Playing'.
 data FrameResult = FrameResult
   { frWorld :: World
   , frLives :: Lives
@@ -73,11 +51,6 @@ data FrameResult = FrameResult
   }
   deriving (Eq, Show, Generic)
 
-{- | Avanza un frame de simulación completo.
-
-Precondición: el llamador solo invoca en 'Playing' con @not (isFrozen dt)@.
-No revalida frame congelado ni fase terminal.
--}
 advanceSimulationFrame ::
   FrameParams ->
   LevelCount ->

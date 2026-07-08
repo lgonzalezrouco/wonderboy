@@ -1,8 +1,3 @@
-{- | Peligro ambiental que cae verticalmente (instancia de nivel).
-
-Daña al jugador por solapamiento de caja de colisión; puede repetir
-tras un retardo opcional en la posición de spawn.
--}
 module Domain.Model.FallingHazard (
   FallingHazardPhase (..),
   FallingHazard (..),
@@ -18,30 +13,27 @@ import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Position (Position)
 
--- | Fase de simulación de un peligro que cae.
 data FallingHazardPhase
-  = -- | Cayendo a velocidad constante.
-    HazardFalling
-  | -- | Esperando en spawn antes del siguiente ciclo.
-    HazardWaiting Frames
-  | -- | Ciclo único terminado (se elimina del mundo).
-    HazardDone
+  = HazardFalling
+  | HazardWaiting Frames -- en pausa en el origen, Frames hasta la próxima caída
+  | HazardDone -- terminado, eliminado del mundo
   deriving (Eq, Show, Generic)
 
--- | Estado de un peligro que cae en un frame.
 data FallingHazard = FallingHazard
   { fallingHazardId :: Int
   , fallingHazardSpawnPos :: Position
+  -- ^ Origen fijo al que vuelve cuando hace loop.
   , fallingHazardPos :: Position
   , fallingHazardWidth :: Float
   , fallingHazardHeight :: Float
   , fallingHazardFallSpeed :: Float
+  -- ^ Velocidad de caída en px/s.
   , fallingHazardLoopDelay :: Maybe Frames
+  -- ^ Frames a esperar antes de volver a caer. Nothing significa que cae una sola vez.
   , fallingHazardPhase :: FallingHazardPhase
   }
   deriving (Eq, Show, Generic)
 
--- | Caja de colisión (centro inferior en 'fallingHazardPos').
 fallingHazardAabb :: FallingHazard -> Aabb
 fallingHazardAabb h =
   aabbFromBottomCenter
@@ -49,11 +41,9 @@ fallingHazardAabb h =
     (fallingHazardWidth h)
     (fallingHazardHeight h)
 
--- | 'True' mientras el peligro sigue en el mundo (cayendo o en espera).
 fallingHazardIsActive :: FallingHazard -> Bool
 fallingHazardIsActive h = fallingHazardPhase h /= HazardDone
 
--- | Crea un peligro activo en la posición de pies de spawn.
 spawnFallingHazard ::
   Int ->
   Position ->

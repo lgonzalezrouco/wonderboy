@@ -119,12 +119,10 @@ unit_wallBlockNoPenetration = do
     "player does not pass wall inner face"
     (posX (playerPos p1) <= maxFootX + 1e-3)
 
-{- | A downward velocity large enough to clear a thin platform in one coarse step
-  (@|vy| * dt ≈ 64 px ≫ 8 px@) must still land on it: the sub-stepping prevents tunneling.
--}
 unit_substepPreventsTunnelingThroughThinPlatform :: Assertion
 unit_substepPreventsTunnelingThroughThinPlatform = do
-  let thinPlatform = platform (position (-100) 0) 200 8 -- borde superior en y = 8
+  let thinPlatform = platform (position (-100) 0) 200 8
+      -- velY lo bastante grande como para pasarse de la plataforma de 8px en un frame (haría tunneling sin substepping)
       faller =
         (spawnPlayer defaultMaxHealth (position 0 12))
           { playerVel = velocity 0 (-4000)
@@ -159,21 +157,9 @@ unit_groundEnemyFallsOntoPlatform = do
       assertBool "golem lands on platform top" (abs (posY (enemyPos e) - platTop) <= 1e-2)
     [] -> assertBool "expected golem to remain in world" False
 
-{- | Saltar pegado a una pared alta no debe "teletransportar" al jugador.
-
-QUÉ reproduce: el jugador, apoyado en el suelo y pegado a la cara de una pared
-alta, salta (@inputJump@) mientras empuja contra ella (@inputRight@).
-
-POR QUÉ: con la resolución que prioriza el eje Y, una colisión /lateral/ durante
-el ascenso (@vyBefore > 0@) entra por la rama de "techo" (@bumpCeiling@) y clava al
-jugador hacia abajo @cabeza − base_pared@ px, atravesando el piso (en estos
-fixtures, a @y ≈ -48@). Resolviendo por el eje de menor penetración, la
-penetración horizontal (~px del paso) es mucho menor que la vertical, así que se
-bloquea de costado y el jugador sigue por encima del piso.
--}
 unit_jumpAgainstTallWallDoesNotTeleport :: Assertion
 unit_jumpAgainstTallWallDoesNotTeleport = do
-  let wall = platform (position 50 0) 8 200 -- pared alta: cara izquierda en x = 50
+  let wall = platform (position 50 0) 8 200
       grounded =
         (spawnPlayer defaultMaxHealth (position 33 8)){playerOnGround = True}
       w0 =
@@ -191,20 +177,9 @@ unit_jumpAgainstTallWallDoesNotTeleport = do
     "player stays outside the wall (no horizontal penetration)"
     (aabbMaxX (playerAabb p1) <= aabbMinX (platformAabb wall) + 1e-3)
 
-{- | Chocar de costado contra un bloque no debe "auto-subir" al jugador encima.
-
-QUÉ reproduce: el jugador, apoyado en el suelo, corre (@inputRight@) contra la cara
-de un bloque cuya cima queda por encima de sus pies.
-
-POR QUÉ: con la resolución que prioriza el eje Y, una colisión /lateral/ con
-@vyBefore ≤ 0@ y @pushUp ≤ pushDown@ entra por la rama de "aterrizar arriba"
-(@landOnTop@) y sube al jugador de golpe a la cima del bloque (auto-salto).
-Resolviendo por el eje de menor penetración, la penetración horizontal manda y el
-jugador queda bloqueado de costado, a ras del suelo.
--}
 unit_runIntoBlockSideDoesNotAutoClimb :: Assertion
 unit_runIntoBlockSideDoesNotAutoClimb = do
-  let block = platform (position 50 8) 32 40 -- bloque sobre el suelo: cima en y = 48
+  let block = platform (position 50 8) 32 40
       grounded =
         (spawnPlayer defaultMaxHealth (position 33 8)){playerOnGround = True}
       w0 =
@@ -222,7 +197,6 @@ unit_runIntoBlockSideDoesNotAutoClimb = do
     "player is blocked at the block's left face"
     (aabbMaxX (playerAabb p1) <= aabbMinX (platformAabb block) + 1e-3)
 
--- | Cima del suelo de 'floorWorld' (su primera plataforma); 0 si no hubiera.
 floorWorldTop :: Float
 floorWorldTop = case worldPlatforms floorWorld of
   fp : _ -> aabbMaxY (platformAabb fp)

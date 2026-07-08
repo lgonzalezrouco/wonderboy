@@ -1,4 +1,3 @@
--- | Avance, daño y ciclo de peligros ambientales que caen.
 module Domain.Logic.FallingHazards (
   resolveFallingHazards,
 )
@@ -41,9 +40,7 @@ resolveFallingHazards lp cp dt w =
           map (advanceHazard dt despawnLine) hazards
    in w{worldFallingHazards = active, worldPlayer = player'}
 
-{- | Profundidad extra (px) que un peligro cae bajo la línea de muerte antes de reiniciar,
-para que desaparezca fuera de la vista y no justo bajo el piso.
--}
+-- Cuánto (px) por debajo de la línea de muerte sigue cayendo un hazard antes de despawnear.
 hazardDespawnDrop :: Float
 hazardDespawnDrop = 200
 

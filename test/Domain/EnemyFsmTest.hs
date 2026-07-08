@@ -1,4 +1,3 @@
--- | FSM reactivo y clases de enemigo: sensado y presets con fixtures fijos.
 module Domain.EnemyFsmTest where
 
 import Domain.Fixtures (

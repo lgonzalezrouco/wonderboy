@@ -1,9 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Tests de 'mergeGeneratedWithFallbacks', 'selectCatalogSources' y
-'bootstrapCatalog' con puerto mockeado (puro vía 'Identity').
--}
 module UseCases.BootstrapRunTest where
 
 import Data.Functor.Identity (Identity (..))

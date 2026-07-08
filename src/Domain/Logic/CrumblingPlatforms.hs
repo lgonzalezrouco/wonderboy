@@ -1,4 +1,3 @@
--- | Cuenta regresiva, caída y colisión de plataformas que se desmoronan.
 module Domain.Logic.CrumblingPlatforms (
   advanceCrumblingPlatforms,
   appendEnemySolidCrumbling,
@@ -72,6 +71,8 @@ moveDown dt cp =
   let dy = crumbleFallSpeed * seconds dt
    in cp{crumblingPlatformPos = translate 0 (-dy) (crumblingPlatformPos cp)}
 
+-- El jugador atraviesa las plataformas una vez que empiezan a caer. Los enemigos siguen
+-- colisionando con todas (ver appendEnemySolidCrumbling).
 appendPlayerSolidCrumbling :: [Platform] -> [CrumblingPlatform] -> [Platform]
 appendPlayerSolidCrumbling plats crumbling =
   plats ++ map crumblingPlatformAsPlatform (filter crumblingPlatformSolidForPlayer crumbling)

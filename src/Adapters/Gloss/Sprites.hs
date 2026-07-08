@@ -1,4 +1,3 @@
--- | Carga y selección de sprites para el adaptador Gloss.
 module Adapters.Gloss.Sprites (
   Sprite (..),
   SpriteCatalog (..),
@@ -26,17 +25,15 @@ import Domain.Model.Player (Player (..))
 import Domain.ValueObjects.Velocity (velX, velY)
 import Paths_wonderboy_hs (getDataFileName)
 
--- | Bitmap cargado junto con su tamaño original en píxeles.
 data Sprite = Sprite
   { spritePicture :: Picture
   , spriteHurtPicture :: Picture
-  -- ^ Variante teñida de rojo para el estado de daño. En sprites sin tinte
-  --   coincide con 'spritePicture' (se comparte el mismo 'Picture', sin costo extra).
+  -- ^ Variante con tint rojo para el destello de daño. Reutiliza 'spritePicture' en los sprites sin tint (sin un segundo bitmap).
   , spriteWidth :: Float
   , spriteHeight :: Float
   }
 
--- | Catálogo de sprites opcionales. Ausencias caen al render de color.
+-- | Sprites opcionales. Una entrada ausente ('Nothing') cae al renderizado con color plano.
 data SpriteCatalog = SpriteCatalog
   { scBackgroundGrasslands :: Maybe Sprite
   , scBackgroundCastle :: Maybe Sprite
@@ -75,7 +72,7 @@ data SpriteCatalog = SpriteCatalog
   , scHudAttackSword :: Maybe Sprite
   }
 
--- | Carga todos los sprites conocidos. Los errores dejan entradas vacías.
+-- | Carga todos los sprites conocidos. Una falla de carga o parseo deja esa entrada en 'Nothing' en vez de abortar.
 loadSpriteCatalog :: IO SpriteCatalog
 loadSpriteCatalog =
   SpriteCatalog
@@ -128,9 +125,8 @@ loadSprite = loadSpriteWith Nothing
 loadHurtableSprite :: FilePath -> IO (Maybe Sprite)
 loadHurtableSprite = loadSpriteWith (Just tintRedBMP)
 
-{- | Lee un BMP y deriva ancho/alto con 'bitmapSize' (sin dimensiones hardcodeadas).
-La transformación opcional produce la variante de daño a partir del mismo BMP; si es
-'Nothing', esa variante reusa el 'Picture' normal y no se construye un segundo bitmap.
+{- | Lee un BMP y deriva su tamaño del propio bitmap (sin dimensiones hardcodeadas).
+Cuando se le pasa un tint, construye la variante de daño a partir del mismo BMP.
 -}
 loadSpriteWith :: Maybe (BMP -> BMP) -> FilePath -> IO (Maybe Sprite)
 loadSpriteWith tintHurt relPath = do
@@ -156,19 +152,15 @@ loadSpriteWith tintHurt relPath = do
                   }
             )
 
--- | Intensidad de la mezcla hacia rojo puro (0 = sin cambio, 1 = rojo plano).
+-- | Mezcla hacia rojo puro para el tint de daño: 0 = sin cambios, 1 = rojo plano.
 tintStrength :: Float
 tintStrength = 0.6
 
-{- | Tiñe de rojo un BMP preservando dimensiones y canal alfa: solo cambia los
-canales de color, así la silueta y la transparencia del sprite quedan intactas.
--}
 tintRedBMP :: BMP -> BMP
 tintRedBMP bmp =
   let (width, height) = bmpDimensions bmp
    in packRGBA32ToBMP32 width height (tintRedRGBA (unpackBMPToRGBA32 bmp))
 
--- | Mezcla cada píxel RGBA hacia rojo puro, dejando intacto el alfa.
 tintRedRGBA :: ByteString -> ByteString
 tintRedRGBA = BS.pack . tintPixels . BS.unpack
  where
@@ -176,7 +168,6 @@ tintRedRGBA = BS.pack . tintPixels . BS.unpack
     tintChannel 255 r : tintChannel 0 g : tintChannel 0 b : a : tintPixels rest
   tintPixels remainder = remainder
 
--- | Acerca un canal de color hacia 'target' según 'tintStrength'.
 tintChannel :: Word8 -> Word8 -> Word8
 tintChannel target component =
   round
@@ -192,9 +183,9 @@ spriteLoadFailure relPath err =
       hPutStrLn stderr ("Warning: failed to load sprite " <> relPath <> ": " <> show err)
       pure Nothing
 
-{- | Sprite del jugador según estado visible y contador de render.
-El estado de daño NO elige sprite propio: la animación sigue normal y el tinte de
-daño lo aplica 'Adapters.Gloss.Rendering.renderPlayer' (así no se congela un frame).
+{- | Elige el sprite del jugador según el estado visible y el contador de render. El
+estado de daño deliberadamente no elige un sprite propio: la animación de caminar/idle sigue corriendo
+y 'Adapters.Gloss.Rendering.renderPlayer' aplica el tint rojo, así que ningún frame se congela.
 -}
 playerSprite :: SpriteCatalog -> Int -> Player -> Maybe Sprite
 playerSprite catalog renderFrame player
@@ -207,7 +198,6 @@ playerSprite catalog renderFrame player
       then cyclingSprite renderFrame (scPlayerWalk catalog) <|> scPlayerIdle catalog
       else scPlayerIdle catalog
 
--- | Sprite de enemigo por clase y movimiento visible.
 enemySprite :: SpriteCatalog -> Int -> Enemy -> Maybe Sprite
 enemySprite catalog renderFrame enemy =
   case enemyKind enemy of

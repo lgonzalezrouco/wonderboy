@@ -1,8 +1,3 @@
-{- | Catálogo de jefes: stats y guiones de fases por clase.
-
-Los niveles seleccionan la clase en JSON (@\"bossGolem\"@, @\"bossBat\"@); el
-comportamiento multi-fase vive aquí, no en datos de nivel.
--}
 module Domain.Logic.BossCatalog (
   bossDefinitionForKind,
 )
@@ -41,14 +36,9 @@ healthPhase ratioLit prog =
     , phaseProgram = prog
     }
 
-{- | Convierte un literal de catálogo a 'HealthRatio'. Un literal fuera de (0, 1] cae a
-'maxHealthRatio' (100 %), que dispararía la fase apenas el jefe aparece; por eso
-'Domain.BossCatalogTest' verifica en CI que todo umbral de fase sea válido.
--}
 ratioFromCatalog :: Float -> HealthRatio
 ratioFromCatalog r = fromMaybe maxHealthRatio (healthRatio r)
 
--- | Golem King — tres fases por umbral de salud.
 golemKingDefinition :: BossDefinition
 golemKingDefinition =
   let s = bossGolemStats
@@ -63,7 +53,6 @@ golemKingDefinition =
             ]
         }
 
--- | Bat Lord — dos fases.
 batLordDefinition :: BossDefinition
 batLordDefinition =
   let s = bossBatStats

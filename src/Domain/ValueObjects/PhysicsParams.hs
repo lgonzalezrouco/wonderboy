@@ -1,30 +1,18 @@
-{- | Parámetros de física inyectados en el dominio puro cada frame.
-
-Evita que @Domain.Logic@ importe @UseCases.GameMonad@: @UpdateGame@ construye
-este value object desde 'GameConfig' y lo pasa a 'Domain.Logic.Step.step'.
--}
 module Domain.ValueObjects.PhysicsParams (
-  -- * Tipo
   PhysicsParams (..),
-
-  -- * Construcción
   physicsParams,
 )
 where
 
 import GHC.Generics (Generic)
 
-{- | Constantes de simulación para un frame (gravedad, movimiento, salto).
-
-Todos los valores están en unidades del juego: px/s, px/s².
--}
 data PhysicsParams = PhysicsParams
   { ppGravity :: Float
-  -- ^ Aceleración gravitatoria (px/s²), aplicada restando de vy cada frame.
+  -- ^ px/s^2, se resta de vy en cada frame
   , ppMoveSpeed :: Float
-  -- ^ Velocidad horizontal máxima con input (px/s).
+  -- ^ px/s, tope horizontal mientras se mantiene el input
   , ppJumpSpeed :: Float
-  -- ^ Velocidad vertical inicial al saltar desde el suelo (px/s, hacia arriba).
+  -- ^ px/s hacia arriba, impulso inicial del salto
   }
   deriving (Eq, Show, Generic)
 

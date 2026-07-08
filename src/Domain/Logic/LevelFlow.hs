@@ -1,8 +1,3 @@
-{- | Flujo de nivel: victoria híbrida y transiciones de fase de juego.
-
-Comprueba superposición con la zona de salida, puntuación mínima y jefe
-derrotado antes de avanzar la partida.
--}
 module Domain.Logic.LevelFlow (
   playerInExitZone,
   meetsMinScore,
@@ -47,11 +42,9 @@ findLivingBoss w = find isLivingBoss (worldEnemies w)
 hasLivingBoss :: World -> Bool
 hasLivingBoss = isJust . findLivingBoss
 
--- | 'True' cuando no hay jefe vivo (nivel sin jefe o jefe derrotado).
 bossDefeated :: World -> Bool
 bossDefeated = not . hasLivingBoss
 
--- | Condición de victoria híbrida para el nivel actual.
 canCompleteLevel :: Score -> World -> Bool
 canCompleteLevel s w =
   playerInExitZone w && meetsMinScore s w && bossDefeated w
@@ -62,7 +55,7 @@ resolvePlayingWin levelIndex totalLevels s w
   | isFinalLevel levelIndex totalLevels = Victory
   | otherwise = LevelComplete
 
--- | Prioridad de fase tras victoria híbrida y peligros en el mismo frame.
+-- Prioridad en el mismo frame: la muerte o una vida perdida le gana a una victoria, así no podés pasar un nivel muriendo en la salida.
 resolveFramePhase ::
   Lives ->
   Lives ->
@@ -79,7 +72,6 @@ showExitScoreHint :: Score -> World -> Bool
 showExitScoreHint s w =
   playerInExitZone w && not (meetsMinScore s w)
 
--- | Hint de jefe vivo en la salida (solo cuando la puntuación ya alcanza el mínimo).
 showBossExitHint :: Score -> World -> Bool
 showBossExitHint s w =
   playerInExitZone w && meetsMinScore s w && hasLivingBoss w

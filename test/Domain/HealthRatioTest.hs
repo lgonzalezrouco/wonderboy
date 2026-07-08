@@ -1,4 +1,3 @@
--- | Umbrales de salud para fases de jefe.
 module Domain.HealthRatioTest where
 
 import Domain.ValueObjects.Health (health)

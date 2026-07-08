@@ -1,4 +1,3 @@
--- | Lectura de archivos de nivel desde disco (IO).
 module Adapters.LevelFile (
   readLevelFile,
 )
@@ -11,11 +10,9 @@ import System.IO.Error (ioeGetErrorString)
 
 import Data.ByteString qualified as BS
 
-{- | Lee un archivo de nivel como 'Text' UTF-8.
-
-Tanto el fallo de lectura ('IOException') como bytes UTF-8 inválidos se reportan
-como 'Left'; 'decodeUtf8'' es total (a diferencia de @decodeUtf8@, que lanzaría una
-excepción pura fuera del canal 'Either').
+{- | Lee un archivo de nivel como 'Text' UTF-8. Tanto una falla de lectura ('IOException')
+como UTF-8 inválido vuelven como 'Left'. 'decodeUtf8'' es total, a diferencia de 'decodeUtf8',
+que lanzaría una excepción pura fuera del canal 'Either'.
 -}
 readLevelFile :: FilePath -> IO (Either String Text)
 readLevelFile path = do

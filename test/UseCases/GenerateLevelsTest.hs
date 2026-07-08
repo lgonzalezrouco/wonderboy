@@ -1,9 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Tests de 'defaultProfiles' y 'generateCatalog' con 'LevelContentPort' mockeado
-(puro vía 'Identity').
--}
 module UseCases.GenerateLevelsTest where
 
 import Data.Functor.Identity (Identity (..))
@@ -57,9 +54,6 @@ baseLevel =
 levelForIndex :: Int -> LevelDefinition
 levelForIndex idx = baseLevel{levelMinScore = idx}
 
-{- | Roles del run estándar, inyectados a 'defaultProfiles' como lo hace el
-bootstrap ('UseCases.RunLayout.layoutRoles').
--}
 threeRoles :: [LevelRole]
 threeRoles = [IntroRole, ChallengeRole, BossRole]
 
@@ -87,10 +81,6 @@ unit_defaultProfilesAttachesExamples =
         , Just (levelForIndex 2)
         ]
 
-{- | Roles y ejemplos se recorren en lockstep: con menos ejemplos que roles salen
-menos perfiles, sin perfiles fantasma con 'profileExample' vacío. No ocurre en
-producción (cada slot trae su archivo), pero fija la totalidad de 'zipWith3'.
--}
 unit_defaultProfilesPairsInLockstep :: Assertion
 unit_defaultProfilesPairsInLockstep =
   length (defaultProfiles Nothing threeRoles [levelForIndex 0]) @?= 1

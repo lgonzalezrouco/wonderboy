@@ -1,10 +1,3 @@
-{- | Confinamiento del jugador en la arena de jefe (paredes invisibles).
-
-Mientras haya un jefe vivo y el jugador se haya comprometido con la arena
-('worldBossArenaEngaged'), las paredes verticales permanecen activas aunque un
-salto deje los pies fuera de los bordes interiores. La entrada desde fuera sigue
-libre hasta el primer cruce.
--}
 module Domain.Logic.BossArena (
   advanceBossArenaEngagement,
   appendBossArenaWallsForPlayer,
@@ -27,14 +20,15 @@ import Domain.Model.Player (Player (..), playerWidth)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Position (posX, position, translate)
 
+-- Grosor en px de las paredes invisibles que sellan la arena del boss.
 wallThickness :: Float
 wallThickness = 8.0
 
--- | Altura generosa para cubrir todo el plano jugable vertical.
+-- Deliberadamente enorme para que las paredes abarquen toda la columna jugable, de arriba a abajo.
 arenaWallHeight :: Float
 arenaWallHeight = 4000.0
 
--- | Ancla Y baja para la pared (crece hacia arriba).
+-- Ancla inferior en Y para las paredes. Se extienden hacia arriba desde acá.
 arenaFloorY :: Float
 arenaFloorY = -2000.0
 
@@ -59,7 +53,6 @@ playerInsideBossArena arena p =
       (minFootX, maxFootX) = arenaFootXLimits arena
    in footX >= minFootX && footX <= maxFootX
 
--- | Sin arena definida no hay restricción; con arena, exige pies dentro.
 playerWithinBossArena :: World -> Bool
 playerWithinBossArena w =
   maybe True (`playerInsideBossArena` worldPlayer w) (worldBossArena w)
@@ -77,13 +70,13 @@ bossArenaSealed :: World -> Bool
 bossArenaSealed w =
   worldBossArenaEngaged w && hasLivingBoss w
 
--- | Daño del jugador a un enemigo: el jefe solo recibe golpes dentro de la arena.
+-- Un boss solo recibe daño mientras el jugador está dentro de su arena. Los demás enemigos siempre pueden.
 playerMayDamageEnemy :: World -> Enemy -> Bool
 playerMayDamageEnemy w e
   | isBossKind (enemyKind e) = playerWithinBossArena w
   | otherwise = True
 
--- | Marca compromiso al entrar; limpia al derrotar al jefe.
+-- El jugador se compromete a la pelea una vez adentro con un boss vivo. Se libera cuando el boss muere.
 advanceBossArenaEngagement :: World -> World
 advanceBossArenaEngagement w =
   case worldBossArena w of
@@ -95,7 +88,7 @@ advanceBossArenaEngagement w =
               && (worldBossArenaEngaged w || playerInsideBossArena arena (worldPlayer w))
         }
 
--- | Recorta la posición horizontal si el compromiso sigue activo (red de seguridad).
+-- Respaldo de la colisión con las paredes: clampea al jugador adentro mientras la arena está sellada.
 clampPlayerInBossArena :: World -> Player -> Player
 clampPlayerInBossArena w p =
   case worldBossArena w of

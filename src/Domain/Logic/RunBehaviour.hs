@@ -1,9 +1,3 @@
-{- | Intérprete del DSL de comportamiento de enemigos.
-
-Un behaviour step por frame cuando @dt > 0@ en el ciclo de update; luego
-@Domain.Logic.Step.step@ integra cinemática. El intérprete lee 'World' para
-sensado y ramas deterministas.
--}
 module Domain.Logic.RunBehaviour (
   runBehaviourStep,
   stepEnemyBehaviour,
@@ -40,6 +34,8 @@ import Domain.ValueObjects.Frames (frameCount, hasFramesLeft, tickFrames)
 import Domain.ValueObjects.Position (Position, posX, posY, position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
+-- Hila el mundo por los enemigos de izquierda a derecha (mapAccumL) para que los
+-- disparos de cada enemigo y el id de proyectil incrementado los vea el siguiente, así los ids quedan únicos.
 runBehaviourStep :: World -> World
 runBehaviourStep w =
   let (w', enemies') = mapAccumL stepEnemyBehaviour w (worldEnemies w)
@@ -50,6 +46,8 @@ stepEnemyBehaviour w e =
   let (prog', w', e') = stepProgram w (enemyProgram e) e
    in (w', e'{enemyProgram = prog'})
 
+-- Los condicionales se resuelven en el lugar y recursan. Cualquier otro nodo cede vía `next`,
+-- así ocurre exactamente un efecto por enemigo por frame (un loop de puros condicionales giraría en vacío).
 stepProgram ::
   World ->
   BehaviourProgram ->
@@ -104,13 +102,6 @@ stepProgram w (BehaviourProgram prog) e =
       let (w', e') = executeShoot w e
        in (BehaviourProgram next, w', e')
 
-{- | Un behaviour step de decisión: elige rama sin tocar la velocidad.
-
-La velocidad la fijan las instrucciones de la rama (@MoveTowardPlayer@,
-@SetVelocity@, @FacePlayer@, etc.). Ponerla en cero aquí hacía parpadear el
-murciélago en chase: el bucle @moveTowardPlayer >>> wait >>> loop@ re-entra en
-el sensor cada pocos frames.
--}
 stepBranch ::
   Bool ->
   BehaviourProgram ->
@@ -181,10 +172,6 @@ shootSpawnPos e width height =
         FacingRight -> position (aabbMaxX body + offset) centerY
         FacingLeft -> position (aabbMinX body - offset) centerY
 
-{- | Distancia horizontal entre pies del jugador y del enemigo.
-
-Re-exportado para geometría compartida (p. ej. fases de jefe).
--}
 playerHorizontalDistance :: World -> Enemy -> Float
 playerHorizontalDistance w e = abs (playerHorizontalDelta w e)
 

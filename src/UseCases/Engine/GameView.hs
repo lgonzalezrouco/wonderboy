@@ -1,9 +1,3 @@
-{- | Snapshot de solo lectura para el adaptador de renderizado.
-
-'GameView' es el DTO de salida del puerto primario: la aplicación define qué
-ofrece al frontend; el adaptador de Gloss lo consume sin importar 'GameMonad'
-ni 'GameState' directamente.
--}
 module UseCases.Engine.GameView (
   GameView (..),
   gameViewFromState,
@@ -29,44 +23,29 @@ import Domain.ValueObjects.Score (Score)
 import UseCases.Engine.GameConfig (GameConfig (..), combatParamsFromConfig)
 import UseCases.Engine.GameState (GameState (..))
 
--- | Snapshot para HUD y capa de mundo en un frame.
 data GameView = GameView
   { gvWorld :: World
   , gvLives :: Lives
   , gvPhase :: GamePhase
   , gvMaxHealth :: Health
-  -- ^ Salud máxima (run-wide, derivada de config): cuántos pips dibuja el HUD.
   , gvStartingLives :: Lives
-  -- ^ Vidas iniciales (run-wide, derivada de config): cuántos iconos dibuja el HUD.
   , gvScore :: Score
-  -- ^ Puntuación del nivel actual (run-state, proyectada desde 'GameState').
   , gvBossHealth :: Maybe BossHealth
-  -- ^ Salud del jefe vivo cuando el jugador está en la arena.
+  -- ^ Presente solo mientras el jugador está dentro de la arena y un boss sigue vivo.
   , gvCombatParams :: CombatParams
-  -- ^ Parámetros de combate para postura y animación de cue de ataque en el adaptador.
   , gvLevelIndex :: Int
-  -- ^ Nivel actual del run (1–3).
+  -- ^ Índice (base 1) del nivel actual dentro del run.
   , gvExitScoreHint :: Maybe (Score, Score)
-  -- ^ Puntuación actual y mínima cuando el jugador está en la salida sin alcanzar el umbral.
+  -- ^ Just (puntaje actual, mínimo requerido) mientras el jugador está en la salida por debajo del umbral.
   , gvBossExitHint :: Bool
-  -- ^ Hint de jefe vivo en la salida con puntuación suficiente.
   , gvBossArenaSealed :: Bool
-  -- ^ Arena de jefe activa: jugador confinado hasta derrotar al jefe.
   , gvMeleeHitbox :: Maybe Aabb
-  -- ^ Hitbox de melee pre-calculada (solo mientras el ataque está activo).
-  --   El adaptador de debug la dibuja sin necesitar 'Domain.Logic.Combat'.
+  -- ^ Presente solo durante la ventana activa de swing/impacto de un ataque.
   , gvBossArenaWalls :: [Platform]
-  -- ^ Paredes visibles de la arena de jefe (cajas idénticas a la colisión).
-  --   Vacío si el jugador no está dentro o el jefe ya fue derrotado.
+  -- ^ Vacío salvo que el jugador esté encerrado en la arena del boss con el boss aún vivo.
   }
   deriving (Eq, Show)
 
-{- | Proyección para el adaptador de renderizado.
-
-Recibe 'GameConfig' para que el HUD derive sus máximos (salud, vidas iniciales) de
-la configuración. Pre-calcula 'gvMeleeHitbox' y 'gvBossArenaWalls' para que el
-adaptador de renderizado no importe lógica de dominio.
--}
 gameViewFromState :: GameConfig -> GameState -> GameView
 gameViewFromState cfg gs =
   let w = gsWorld gs
@@ -97,7 +76,6 @@ gameViewFromState cfg gs =
               (worldBossArena w)
         }
 
--- | Proyecta salud del jefe vivo para el HUD (como máximo un jefe por nivel).
 bossHealthFromWorld :: World -> Maybe BossHealth
 bossHealthFromWorld w = do
   guard (playerWithinBossArena w)

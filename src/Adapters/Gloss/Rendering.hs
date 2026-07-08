@@ -1,4 +1,3 @@
--- | Adaptador de renderizado: 'GameView' → primitivas Gloss con cámara y HUD.
 module Adapters.Gloss.Rendering (
   renderFrame,
 )
@@ -91,6 +90,8 @@ import Domain.ValueObjects.Position (Position, posX, posY)
 import Domain.ValueObjects.Score (scorePoints)
 import UseCases.Engine.GameView (GameView (..))
 
+-- El layout del HUD está en píxeles de pantalla: el panel se dibuja fuera de renderZoom,
+-- así que son coordenadas de ventana, no unidades de mundo.
 hudMargin :: Float
 hudMargin = 14
 
@@ -100,6 +101,7 @@ hudPanelWidth = 280
 hudPanelHeight :: Float
 hudPanelHeight = 220
 
+-- Multiplicadores de escala del 'text' de Gloss, no píxeles (los demás valores hud*Scale también).
 hudLabelScale :: Float
 hudLabelScale = 0.2
 
@@ -124,6 +126,7 @@ hudTextHeight = 18
 hudLabelColumnWidth :: Float
 hudLabelColumnWidth = 112
 
+-- Sube el valor de una fila media línea de texto para que quede centrado respecto de su label.
 hudValueCenterLift :: Float
 hudValueCenterLift = hudTextHeight / 2
 
@@ -193,7 +196,7 @@ platformVisualHeight = 35
 floorVisualDepth :: Float
 floorVisualDepth = 190
 
--- | Margen para decidir si una pared toca el borde derecho del mapa (px lógicos).
+-- | Holgura (en px lógicos) para considerar que una pared está al ras del borde derecho del mapa.
 wallEdgeEpsilon :: Float
 wallEdgeEpsilon = 1
 
@@ -227,7 +230,7 @@ attackSparkRadius = 3
 attackSparkPhaseWidth :: Float
 attackSparkPhaseWidth = 0.16
 
--- | Color del cuerpo durante el destello de daño (solo fallback si falta el sprite).
+-- | Tint del destello de daño. Solo un fallback para cuando falta un sprite.
 damageBodyColor :: Color
 damageBodyColor = makeColor 1.0 0.2 0.2 1.0
 
@@ -240,7 +243,6 @@ damageFlashOn tick = even (tick `div` damageFlashStride)
 hitboxFootRadius :: Float
 hitboxFootRadius = 3.0
 
--- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
 renderFrame :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
 renderFrame catalog renderTick showHitboxes gv =
   pictures
@@ -257,7 +259,7 @@ renderFrame catalog renderTick showHitboxes gv =
     , renderVictoryOverlay gv
     ]
 
--- | Índice del nivel final/jefe; usa el fondo del castillo a partir de aquí.
+-- | Desde este índice de nivel en adelante, dibuja el fondo del castillo (el nivel final/del jefe).
 bossLevelIndex :: Int
 bossLevelIndex = 3
 
@@ -277,14 +279,13 @@ backgroundWidth = fromIntegral windowWidth
 backgroundHeight :: Float
 backgroundHeight = fromIntegral windowHeight
 
--- | Capa del mundo con transformación de cámara.
 renderWorldLayer :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
 renderWorldLayer catalog renderTick showHitboxes gv =
   let w = gvWorld gv
       combatParams = gvCombatParams gv
       cameraX = cameraXForWorld w
-      -- Borde derecho del mapa: la única pared que se dibuja es la del final
-      -- (la que toca este borde); las demás quedan invisibles.
+      -- Borde derecho del mapa: solo se dibuja la pared que queda al ras de él (la pared final).
+      -- Las demás son solo barreras de colisión invisibles.
       rightEdge = snd <$> worldHorizontalSpan w
    in Translate (-cameraX) (-cameraY) $
         pictures
@@ -314,13 +315,11 @@ renderPlayer catalog renderTick combatParams p =
       Nothing -> aabbToPicture bodyColor box
       Just sprite ->
         drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
-  -- Mientras dura la invencibilidad por daño parpadea la silueta teñida de rojo,
-  -- alternando con el sprite normal para el clásico destello de "recibió daño".
+  -- Parpadea el cuerpo con tint rojo durante la invencibilidad post-golpe (el clásico destello de daño).
   hurtFlash =
     hasFramesLeft (playerInvincibilityFrames p) && damageFlashOn renderTick
   bodyPicture sprite =
     if hurtFlash then spriteHurtPicture sprite else spritePicture sprite
-  -- Fallback sin sprite: el rectángulo del cuerpo también se tiñe al recibir daño.
   bodyColor = if hurtFlash then damageBodyColor else playerColor
 
 renderEnemy :: SpriteCatalog -> Int -> Enemy -> Picture
@@ -373,12 +372,10 @@ renderPlatform catalog rightEdge platform =
   case platformKind box of
     FloorPlatform -> renderGroundPlatform catalog box
     WallPlatform
-      -- La pared del final (la que toca el borde derecho del mapa) sí se dibuja,
-      -- como una columna de tierra enganchada al piso (ver 'renderFinalWall').
+      -- La pared final (al ras del borde derecho del mapa) se dibuja como una columna de tierra.
       | isFinalWall -> renderFinalWall catalog box
-      -- El resto de las paredes son barreras de colisión invisibles: solo frenan
-      -- al jugador en los bordes. La cámara ya queda clampeada a esos bordes
-      -- (ver 'Adapters.Gloss.Camera'), así que no hace falta dibujarlas.
+      -- Las demás paredes son barreras de colisión invisibles. La cámara ya está clampeada
+      -- a los bordes del mapa (ver Adapters.Gloss.Camera), así que no hay nada que dibujar.
       | otherwise -> Blank
     LedgePlatform ->
       case platformSprites catalog box of
@@ -387,7 +384,7 @@ renderPlatform catalog rightEdge platform =
         _ -> aabbToPicture platformColor box
  where
   box = platformAabb platform
-  -- Es la pared del final si su lado derecho coincide con el borde del mapa.
+  -- Es la pared final si y solo si su lado derecho llega al borde derecho del mapa.
   isFinalWall = maybe False (\edge -> aabbMaxX box >= edge - wallEdgeEpsilon) rightEdge
 
 data PlatformKind
@@ -428,9 +425,8 @@ renderGroundFill catalog box =
         (aabbMaxY box - floorVisualDepth)
         (aabbMaxY box - platformVisualHeight)
 
-{- | Pared del final del mapa: columna de tierra hasta el tope (sin franja de
-pasto) que además baja por debajo de su base para engancharse con la capa de
-tierra del piso adyacente y no dejar una costura en la esquina.
+{- | La pared final del mapa: una columna de tierra de altura completa (sin franja de pasto) que además
+se extiende por debajo de su base para unirse con la capa de tierra del piso adyacente sin costura.
 -}
 renderFinalWall :: SpriteCatalog -> Aabb -> Picture
 renderFinalWall catalog box =
@@ -463,9 +459,6 @@ renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
 
-{- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
-  Recibe las plataformas ya pre-calculadas por 'UseCases.Engine.GameView.gameViewFromState'.
--}
 renderBossArenaWalls :: [Platform] -> Picture
 renderBossArenaWalls =
   pictures . map (aabbToPicture bossArenaWallColor . platformAabb)
@@ -504,9 +497,6 @@ renderExitDoor catalog box =
       drawSpriteBottomCenter box midSprite
     _ -> Blank
 
-{- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
-  'mMeleeHitbox' es la hitbox de melee pre-calculada por 'UseCases.Engine.GameView'.
--}
 renderHitboxOverlay :: Maybe Aabb -> World -> Picture
 renderHitboxOverlay mMeleeHitbox w =
   let p = worldPlayer w
@@ -551,7 +541,6 @@ renderHitboxOverlay mMeleeHitbox w =
                ]
         )
 
--- | Panel superior izquierdo: vidas, salud, ataque y hint de controles.
 renderHud :: SpriteCatalog -> GameView -> Bool -> Picture
 renderHud catalog gv showHitboxes =
   let halfW = fromIntegral windowWidth / 2
@@ -589,7 +578,6 @@ renderHud catalog gv showHitboxes =
             else Blank
         ]
 
--- | Barra superior centrada con la salud del jefe.
 renderBossBar :: GameView -> Picture
 renderBossBar gv =
   case gvBossHealth gv of
@@ -857,7 +845,6 @@ aabbOutline color box =
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleWire w h))
 
--- | Punto en el ancla de pies (centro inferior) de una entidad.
 renderFootAnchor :: Position -> Color -> Picture
 renderFootAnchor pos color =
   Translate (posX pos) (posY pos) (Color color (circleSolid hitboxFootRadius))
@@ -866,9 +853,6 @@ drawEntitySprite :: Facing -> Aabb -> Sprite -> Picture
 drawEntitySprite facing box sprite =
   drawEntitySpriteWith facing box sprite (spritePicture sprite)
 
-{- | Como 'drawEntitySprite' pero con el 'Picture' a dibujar dado explícitamente,
-para poder elegir entre el bitmap normal y la variante de daño teñida.
--}
 drawEntitySpriteWith :: Facing -> Aabb -> Sprite -> Picture -> Picture
 drawEntitySpriteWith facing box sprite picture =
   let availableW = max 1 (aabbMaxX box - aabbMinX box - entitySpritePadding)

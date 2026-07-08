@@ -1,7 +1,3 @@
-{- | Salud del jefe para la barra HUD: actual y máxima de la instancia.
-
-Proyecta el par que el adaptador necesita sin exponer tuplas sueltas en 'GameView'.
--}
 module Domain.ValueObjects.BossHealth (
   BossHealth (..),
   bossHealth,

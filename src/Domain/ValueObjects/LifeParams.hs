@@ -1,8 +1,3 @@
-{- | Parámetros de vida y muerte inyectados en el dominio puro cada frame.
-
-Evita que @Domain.Logic.PlayerLife@ importe @UseCases.GameMonad@:
-'UpdateGame' construye este value object desde 'GameConfig'.
--}
 module Domain.ValueObjects.LifeParams (
   LifeParams (..),
   lifeParams,
@@ -14,11 +9,10 @@ import GHC.Generics (Generic)
 import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Health (Health)
 
--- | Constantes de vida para un frame (salud máxima, margen de caída).
 data LifeParams = LifeParams
   { lpMaxHealth :: Health
   , lpDeathMargin :: Float
-  -- ^ Píxeles bajo la plataforma más baja antes de out-of-bounds.
+  -- ^ px por debajo de la plataforma más baja antes de que el jugador caiga fuera de los límites
   , lpRespawnInvincibilityFrames :: Frames
   }
   deriving (Eq, Show, Generic)

@@ -1,7 +1,3 @@
-{- | Catálogo de clases de enemigo (stats y tamaño de la caja de colisión).
-
-El arquetipo de comportamiento por defecto vive en @Domain.Logic.BehaviourCatalog@.
--}
 module Domain.Model.EnemyKind (
   EnemyKind (..),
   EnemyMotionStats (..),
@@ -23,7 +19,6 @@ import Domain.Model.BossKindStats (
 import Domain.ValueObjects.Frames (Frames, frames)
 import Domain.ValueObjects.Health (Health, health)
 
--- | Clase de enemigo con stats compartidos por tipo.
 data EnemyKind
   = SnailKind
   | BatKind
@@ -33,38 +28,25 @@ data EnemyKind
   | BossBatKind
   deriving (Eq, Show, Generic)
 
--- | Verdadero para clases de jefe (comportamiento vía catálogo de jefes).
 isBossKind :: EnemyKind -> Bool
 isBossKind kind = kind `elem` [BossGolemKind, BossBatKind]
 
--- | Verdadero para enemigos que ignoran colisión con plataformas (vuelan).
 isFlyingKind :: EnemyKind -> Bool
 isFlyingKind kind = kind `elem` [BatKind, BossBatKind]
 
-{- | Parámetros de movimiento según el arquetipo natural de la clase.
-
-Una clase patrulla /o/ reacciona: el tipo suma hace inrepresentable mezclar
-parámetros de ambos (antes coexistían en un record plano con la mitad en cero).
--}
 data EnemyMotionStats
-  = -- | Patrulla horizontal: velocidad (px/s) y frames de espera por tramo (Snail).
-    PatrolMotion Float Frames
-  | -- | FSM reactivo: chaseSpeed, returnSpeed, chaseRange, spawnRadius (Golem).
-    ReactiveMotion Float Float Float Float
-  | -- | FSM reactivo aéreo: persigue en horizontal; en spawn patrulla en X (Bat).
-    FlyingReactiveMotion Float Float Float Float Float Frames
-  | -- | Disparo a distancia: rango, cooldown, velocidad y tamaño del proyectil (Archer).
-    ArcherMotion Float Frames Float Frames Float Float
+  = PatrolMotion Float Frames -- velocidad px/s, frames de espera por tramo (Snail)
+  | ReactiveMotion Float Float Float Float -- chaseSpeed, returnSpeed, chaseRange, spawnRadius (Golem)
+  | FlyingReactiveMotion Float Float Float Float Float Frames -- chaseSpeed, returnSpeed, chaseRange, spawnRadius, patrolSpeed, tramo de patrulla (Bat)
+  | ArcherMotion Float Frames Float Frames Float Float -- shootRange, cooldown, velocidad, lifetime, ancho, alto del proyectil (Archer)
   deriving (Eq, Show, Generic)
 
--- | Parámetros fijos por clase (píxeles lógicos y px/s).
 data EnemyKindStats = EnemyKindStats
   { eksWidth :: Float
+  -- ^ Tamaño de la caja de colisión en px lógicos (va con eksHeight).
   , eksHeight :: Float
   , eksMaxHealth :: Health
-  -- ^ Salud inicial al spawnear.
   , eksMotion :: EnemyMotionStats
-  -- ^ Parámetros del arquetipo de movimiento de la clase.
   }
   deriving (Eq, Show, Generic)
 

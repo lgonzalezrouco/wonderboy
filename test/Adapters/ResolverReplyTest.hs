@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Mapeo puro 'ResolverReply' → 'ResolvedBehaviour' y 'extractJsonObject'.
 module Adapters.ResolverReplyTest where
 
 import Data.Maybe (isNothing)

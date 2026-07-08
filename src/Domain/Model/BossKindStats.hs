@@ -1,7 +1,3 @@
-{- | Stats compartidos de clases de jefe (única fuente para catálogo y 'enemyKindStats').
-
-Evita duplicar anchura, altura y salud máxima entre @BossCatalog@ y @EnemyKind@.
--}
 module Domain.Model.BossKindStats (
   BossGolemStats (..),
   BossBatStats (..),
@@ -12,14 +8,12 @@ where
 
 import Domain.ValueObjects.Health (Health, health)
 
--- | Stats del Golem King.
 data BossGolemStats = BossGolemStats
   { bgsWidth :: Float
   , bgsHeight :: Float
   , bgsMaxHealth :: Health
   }
 
--- | Stats del Bat Lord.
 data BossBatStats = BossBatStats
   { bbsWidth :: Float
   , bbsHeight :: Float

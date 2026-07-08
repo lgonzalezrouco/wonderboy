@@ -1,16 +1,6 @@
-{- | Plataforma estática del nivel (sólido con colisión AABB).
-
-Las plataformas son geometría del mundo: no tienen velocidad ni identidad
-como las entidades.
--}
 module Domain.Model.Platform (
-  -- * Tipo
   Platform (..),
-
-  -- * Construcción
   platform,
-
-  -- * Geometría
   platformAabb,
 )
 where
@@ -18,12 +8,9 @@ where
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomLeft)
 import Domain.ValueObjects.Position (Position)
 
-{- | Segmento sólido del nivel: caja con esquina inferior izquierda y tamaño.
-
-@platformPos@ es la esquina inferior izquierda; @platformHeight@ crece hacia arriba.
--}
 data Platform = Platform
   { platformPos :: Position
+  -- ^ Esquina inferior izquierda de la caja sólida.
   , platformWidth :: Float
   , platformHeight :: Float
   }
@@ -37,7 +24,6 @@ platform pos width height =
     , platformHeight = height
     }
 
--- | Caja de colisión de la plataforma (bottom-left anchor).
 platformAabb :: Platform -> Aabb
 platformAabb p =
   aabbFromBottomLeft

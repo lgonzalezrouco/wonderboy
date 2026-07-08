@@ -1,8 +1,3 @@
-{- | Recolección de pickups por superposición con el jugador.
-
-Orquestación por frame en @UseCases.UpdateGame@: tras combate, antes de
-out-of-bounds y muerte.
--}
 module Domain.Logic.Pickups (
   resolvePickups,
 )

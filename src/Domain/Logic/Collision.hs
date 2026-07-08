@@ -1,4 +1,3 @@
--- | Resolución AABB jugador–plataforma por el eje de menor penetración.
 module Domain.Logic.Collision (
   resolvePlayerPlatforms,
   resolveEnemyPlatforms,
@@ -31,24 +30,10 @@ import Domain.ValueObjects.Velocity (velX, velY, velocity)
 maxResolvePasses :: Int
 maxResolvePasses = 8
 
-{- | Resuelve colisiones contra todas las plataformas; actualiza @playerOnGround@.
-
-@vyBefore@ es la componente vertical tras input y gravedad, antes de integrar
-posición; se usa para la regla 7a (solo aterrizar si @vyBefore <= 0@).
-
-Plataformas se ordenan por borde superior descendente (suelos más altos primero)
-y se repite hasta no quedar solapamiento o agotar pasadas (orden estable).
--}
 resolvePlayerPlatforms :: [Platform] -> Float -> Player -> Player
 resolvePlayerPlatforms plats vyBefore =
   resolvePasses maxResolvePasses vyBefore (sortPlatforms plats)
 
-{- | Resuelve colisión enemigo–plataforma para clases terrestres.
-
-Los enemigos voladores ('isFlyingKind') no colisionan: mantienen su ruta aérea.
-@vyBefore@ es la componente vertical tras gravedad y antes de integrar posición
-(igual que el jugador).
--}
 resolveEnemyPlatforms :: [Platform] -> Float -> Enemy -> Enemy
 resolveEnemyPlatforms plats vyBefore e
   | isFlyingKind (enemyKind e) = e
@@ -82,7 +67,6 @@ resolveEnemyAgainst vyBefore e plat =
         then resolveEnemyOverlap vyBefore e box solid
         else e
 
--- | Versión enemigo de 'resolveOverlap': mismo eje de menor penetración.
 resolveEnemyOverlap :: Float -> Enemy -> Aabb -> Aabb -> Enemy
 resolveEnemyOverlap vyBefore e box solid
   | overlapX + epsilon < overlapY = resolveEnemyAxisX e box solid
@@ -149,12 +133,10 @@ resolvePasses :: Int -> Float -> [Platform] -> Player -> Player
 resolvePasses 0 _ _ p = p
 resolvePasses n vyBefore plats p =
   let p' = resolveOnce vyBefore plats p
-   in -- Cortar en cuanto la pasada alcanza un punto fijo (@p' == p@): con
-      -- 'aabbOverlaps' inclusivo, un jugador apoyado exacto sobre el borde
-      -- sigue "solapando", así que sin esta guarda recursaríamos hasta
-      -- @maxResolvePasses@ cada frame en reposo sin mover nada.
-      if doneResolving p p' n plats then p' else resolvePasses (n - 1) vyBefore plats p'
+   in if doneResolving p p' n plats then p' else resolvePasses (n - 1) vyBefore plats p'
 
+-- Se detiene en un punto fijo (p' == p): aabbOverlaps es inclusivo, así que un cuerpo apoyado
+-- justo sobre un borde igual "solapa". Sin esto quemaríamos todas las pasadas en cada frame quieto.
 doneResolving :: Player -> Player -> Int -> [Platform] -> Bool
 doneResolving p p' n plats =
   p' == p || n <= 1 || not (playerOverlapsAnyPlatform plats p')
@@ -176,11 +158,8 @@ resolveAgainst _vyBefore p plat =
         then resolveOverlap (velY (playerVel p)) p box solid
         else p
 
-{- | Resuelve un solapamiento jugador–sólido por el __eje de menor penetración__: una
-colisión lateral se empuja en X y una de suelo/techo en Y, para no confundir un choque
-de pared con un aterrizaje o un golpe de techo. El sesgo @overlapX + epsilon < overlapY@
-desempata a favor de Y (apoyo); si la regla 'vyBefore' no mueve nada, se recurre a X.
--}
+-- Empuja por el eje de menor penetración: el solape más chico es el que el cuerpo
+-- acaba de cruzar, así que corregir ese es lo que de verdad los separa.
 resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
 resolveOverlap vyBefore p box solid
   | overlapX + epsilon < overlapY = resolveAxisX p box solid

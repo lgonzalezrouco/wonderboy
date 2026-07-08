@@ -1,4 +1,3 @@
--- | Avance ping-pong y desplazamiento (carry) de plataformas moviles.
 module Domain.Logic.MovingPlatforms (
   MovingPlatformAdvance (..),
   advanceMovingPlatforms,
@@ -21,7 +20,6 @@ import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Position (Position, posX, posY, position, translate)
 import Domain.ValueObjects.Tolerance (epsilon)
 
--- | Resultado de avanzar una plataforma movil un frame.
 data MovingPlatformAdvance = MovingPlatformAdvance
   { mpaPlatform :: MovingPlatform
   , mpaDeltaX :: Float
@@ -81,10 +79,8 @@ allCollisionPlatforms :: [Platform] -> [MovingPlatform] -> [Platform]
 allCollisionPlatforms static moving =
   static ++ map movingPlatformAsPlatform moving
 
-{- | Aplica el delta /antes/ de integrar fisica: el jugador se apoya sobre la
-posicion previa de la plataforma; la colision posterior usa la posicion nueva
-sin volver a sumar el desplazamiento (evita doble carry en eje Y).
--}
+-- Arrastra a los pasajeros: un jugador parado sobre una plataforma se desplaza el mismo delta antes
+-- de correr la física, así la plataforma no se le escurre por debajo.
 applyPrePhysicsCarry :: Player -> [MovingPlatformAdvance] -> Player
 applyPrePhysicsCarry =
   foldl' applyOne
@@ -96,6 +92,8 @@ applyPrePhysicsCarry =
           then nudgePlayer (mpaDeltaX adv) (mpaDeltaY adv) player
           else player
 
+-- Rebobina a la posición previa al movimiento de la plataforma para que "¿el jugador iba encima?" se pruebe
+-- contra donde estaba antes de moverse, no después.
 movingPlatformBeforeAdvance :: MovingPlatformAdvance -> MovingPlatform
 movingPlatformBeforeAdvance adv =
   let mp = mpaPlatform adv

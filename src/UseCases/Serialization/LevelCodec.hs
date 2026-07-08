@@ -1,18 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Codec JSON para niveles: tipos DTO wire con 'FromJSON'\/'ToJSON' y
-conversión pura hacia\/desde los tipos de dominio.
-
-Mantiene la serialización fuera de 'Domain\/' (ver @docs\/adr\/0019-*.md@): el
-módulo 'Data.Aeson' no pertenece a 'Domain.*'. Los tipos DTO y sus instancias se
-definen aquí, sin instancias huérfanas; los tipos de dominio nunca ven 'Data.Aeson'.
--}
 module UseCases.Serialization.LevelCodec (
-  -- * Punto de entrada
   decodeLevelText,
   encodeLevelDefinitionText,
-
-  -- * Tipos DTO (necesarios para tests de round-trip y para el adaptador IA)
   LevelDefinitionDTO (..),
   RectDTO (..),
   PlatformDefDTO (..),
@@ -23,8 +13,6 @@ module UseCases.Serialization.LevelCodec (
   FallingHazardDefDTO (..),
   BossArenaDefDTO (..),
   PositionDTO (..),
-
-  -- * Conversiones puras
   levelDefinitionFromDTO,
   levelDefinitionToDTO,
   positionFromDTO,
@@ -152,7 +140,6 @@ data LevelDefinitionDTO = LevelDefinitionDTO
   }
   deriving (Eq, Show, Generic)
 
--- | Codifica un campo opcional: '[]' cuando es 'Nothing', un único 'Pair' si hay valor.
 optField :: (ToJSON v) => Key -> Maybe v -> [Pair]
 optField k = maybe [] (\v -> [k .= v])
 
@@ -463,9 +450,6 @@ bossArenaToDTO ba =
     , dtoBossRight = bossArenaDefRight ba
     }
 
-{- | Convierte 'LevelDefinitionDTO' a 'LevelDefinition'.
-  Retorna 'Left' si algún campo de texto no se puede parsear (kind, preset).
--}
 levelDefinitionFromDTO :: LevelDefinitionDTO -> Either LevelBuildError LevelDefinition
 levelDefinitionFromDTO dto = do
   enemies <- traverse enemyFromDTO (dtoEnemies dto)
@@ -498,11 +482,6 @@ levelDefinitionToDTO lvl =
     , dtoExit = rectToDTO (levelExit lvl)
     }
 
-{- | Decodifica texto JSON a 'LevelDefinition'.
-
-Parsea el JSON como 'LevelDefinitionDTO' (instancias definidas aquí) y luego
-convierte a dominio. El 'LevelBuildError' del DTO se ajusta al tipo del dominio.
--}
 decodeLevelText :: Text -> Either String LevelDefinition
 decodeLevelText txt =
   case eitherDecodeStrict (encodeUtf8 txt) of
@@ -512,10 +491,6 @@ decodeLevelText txt =
         Left (LevelBuildError msg) -> Left ("level codec error: " ++ unpack msg)
         Right def -> Right def
 
-{- | Serializa 'LevelDefinition' a 'Text' JSON.
-
-Usado por el few-shot del adaptador IA y por round-trips de tests.
--}
 encodeLevelDefinitionText :: LevelDefinition -> Text
 encodeLevelDefinitionText =
   decodeUtf8 . BL.toStrict . encode . levelDefinitionToDTO

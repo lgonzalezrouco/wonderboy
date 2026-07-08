@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Boss arena lock: confinement and hybrid win while boss lives.
 module Domain.BossArenaTest where
 
 import Data.Text (Text)

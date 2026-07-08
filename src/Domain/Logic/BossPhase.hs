@@ -1,8 +1,3 @@
-{- | Resolución pura de transiciones de fase de jefe.
-
-Se invoca tras @Domain.Logic.Combat.resolveCombat@ con un snapshot pre-combate
-para detectar @TookDamageThisFrame@.
--}
 module Domain.Logic.BossPhase (
   resolveBossPhases,
 )
@@ -29,7 +24,6 @@ import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Health (Health, healthPoints)
 import Domain.ValueObjects.HealthRatio (healthAtOrBelowRatio)
 
--- | Avanza fases de jefe en @wAfter@ comparando salud con @wBefore@.
 resolveBossPhases :: CombatParams -> World -> World -> World
 resolveBossPhases cp wBefore wAfter =
   wAfter{worldEnemies = map (resolveBossEnemy cp wBefore wAfter) (worldEnemies wAfter)}
@@ -45,6 +39,7 @@ resolveBossEnemy cp wBefore wAfter e
                 enemyHealth <$> find ((== enemyId e) . enemyId) (worldEnemies wBefore)
               currentPhase = fromMaybe (bossPhaseIndex 0) (enemyBossPhase e)
               targetPhase = highestSatisfiedPhase cp def wAfter e healthBefore
+              -- Las fases solo avanzan (max): un boss nunca vuelve a una fase anterior.
               newPhase = max currentPhase targetPhase
            in if newPhase /= currentPhase
                 then applyBossPhase def newPhase e

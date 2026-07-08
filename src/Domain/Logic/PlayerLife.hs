@@ -1,8 +1,3 @@
-{- | Vida del jugador: daño, out-of-bounds, muerte y respawn.
-
-La orquestación por frame vive en @UseCases.UpdateGame@; este módulo
-expone transformaciones totales sobre 'World', vidas y 'GamePhase'.
--}
 module Domain.Logic.PlayerLife (
   applyDamage,
   deathLineY,
@@ -36,7 +31,6 @@ applyDamage :: Damage -> Player -> Player
 applyDamage amount p =
   p{playerHealth = reduceHealth amount (playerHealth p)}
 
--- | Coordenada Y del borde inferior de la plataforma más baja (0 si no hay plataformas).
 lowestPlatformBottomY :: World -> Float
 lowestPlatformBottomY w =
   let ys =
@@ -45,14 +39,11 @@ lowestPlatformBottomY w =
           ++ map (posY . crumblingPlatformPos) (anchoredCrumblingPlatforms w)
    in if null ys then 0 else minimum ys
 
--- | Instancias cuya posición anclada aún cuenta para la línea de muerte.
+-- Solo las plataformas todavía ancladas cuentan para la línea de muerte. Una que cae la arrastraría hacia abajo.
 anchoredCrumblingPlatforms :: World -> [CrumblingPlatform]
 anchoredCrumblingPlatforms w =
   filter crumblingPlatformIsAnchored (worldCrumblingPlatforms w)
 
-{- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
-También sirve de umbral de despawn para peligros que caen.
--}
 deathLineY :: LifeParams -> World -> Float
 deathLineY lp w = lowestPlatformBottomY w - lpDeathMargin lp
 
@@ -79,7 +70,6 @@ resolveDeath lp lives w
       )
   | otherwise = (w, noLives, GameOver)
 
--- | Out-of-bounds y muerte tras un paso de física (solo en 'Playing').
 resolveHazardsAndDeath ::
   LifeParams ->
   Lives ->

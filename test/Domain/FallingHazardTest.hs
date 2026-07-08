@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Pure falling hazard simulation tests.
 module Domain.FallingHazardTest where
 
 import Data.Text (Text)
@@ -44,7 +43,6 @@ stepHazards = resolveFallingHazards testLifeParams testCombatParams dtFrame
 worldWithHazard :: FallingHazard -> World -> World
 worldWithHazard h w = w{worldFallingHazards = [h]}
 
--- | Steps until a hazard at y=100 crosses the floorWorld despawn line (y < -264).
 stepsToDespawn :: Int
 stepsToDespawn = 190
 
@@ -101,7 +99,7 @@ unit_loopFallsAgainAfterDelay =
 unit_hazardDamagesOnDespawnFrame :: Assertion
 unit_hazardDamagesOnDespawnFrame =
   let
-    -- Foot y just above floorWorld despawn line (-264); one frame crosses below it.
+    -- Pie y justo por encima de la línea de despawn de floorWorld (-264). Un frame lo cruza para abajo.
     footY = -262.09
     hazard =
       spawnFallingHazard 1 (position 0 footY) 32 32 120 Nothing

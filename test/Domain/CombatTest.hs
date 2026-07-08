@@ -1,4 +1,3 @@
--- | Pure melee combat and enemy contact tests.
 module Domain.CombatTest where
 
 import Domain.Fixtures (swingToImpact, testCombatParams)
@@ -65,7 +64,6 @@ unit_meleeRemovesEnemy =
 
 unit_meleeRemovesOverlappingEnemyBehind :: Assertion
 unit_meleeRemovesOverlappingEnemyBehind =
-  -- Jugador mirando a la derecha; enemigo a la izquierda solapando el cuerpo (no el alcance).
   let p = spawnPlayer (health 3) (position 50 8)
       w =
         floorWorld
@@ -87,7 +85,6 @@ unit_meleeAttackEdgeWhileOverlapping =
       w' = swingToImpact testCombatParams w
    in worldEnemies w' @?= []
 
--- | Regresión: un swing iniciado por __input real__ conecta UNA sola vez en el impacto.
 unit_meleeInputSwingHitsOnce :: Assertion
 unit_meleeInputSwingHitsOnce =
   let golem = spawnEnemy 1 GolemKind (position 40 8) (patrolHorizontal 10 (frames 10))
@@ -128,7 +125,6 @@ unit_sideContactDamages =
         playerHealth (worldPlayer w') @?= health 2
         playerInvincibilityFrames (worldPlayer w') @?= frames 59
 
--- | Sin pisotón seguro: tocar al enemigo desde arriba también daña.
 unit_topContactDamages :: Assertion
 unit_topContactDamages =
   let p = spawnPlayer (health 3) (position 0 32)
@@ -142,7 +138,6 @@ unit_topContactDamages =
         playerHealth (worldPlayer w') @?= health 2
         playerInvincibilityFrames (worldPlayer w') @?= frames 59
 
--- | La dirección del swing queda fija al iniciar: tocar Izquierda a mitad no la cambia.
 unit_attackDirectionLatched :: Assertion
 unit_attackDirectionLatched =
   let p =
@@ -194,7 +189,6 @@ unit_meleeWindowCountsDownAndRearms =
   let golem = spawnEnemy 1 GolemKind (position 40 8) (patrolHorizontal 10 (frames 10))
       attacker = spawnPlayer (health 3) (position 0 8)
       w0 = floorWorld{worldPlayer = attacker, worldEnemies = [golem]}
-      -- Arranca el swing por input; luego la ventana corre sin más presses.
       wStarted = resolveCombat testCombatParams (noInput{inputAttack = True}) w0
       wAfterWindow =
         iterate (resolveCombat testCombatParams noInput) wStarted

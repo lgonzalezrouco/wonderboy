@@ -1,8 +1,3 @@
-{- | Geometría del swing de melee: fase, frame de impacto y collision box.
-
-Compartida entre @Domain.Logic.Combat@ y el adaptador de renderizado para que
-alcance visual y pruebas de solape usen la misma descripción.
--}
 module Domain.Logic.MeleeSwing (
   meleeImpactPhase,
   attackPhase,
@@ -23,19 +18,23 @@ import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frameCount, hasFramesLeft)
 
--- | Fase normalizada (0–1) del arco en la que la espada conecta visualmente.
+-- Punto del swing (0–1) donde la hoja realmente conecta.
 meleeImpactPhase :: Float
 meleeImpactPhase = 0.55
 
+-- Píxeles que el cuerpo se lanza hacia adelante en el frame de impacto.
 attackBodyLunge :: Float
 attackBodyLunge = 4
 
+-- Alcance melee base en px. El hitbox real se extiende más allá de esto a lo largo del arco del swing.
 attackCueHandInset :: Float
 attackCueHandInset = 3
 
+-- Largo de la hoja en px, compartido por la señal visual y el cálculo del alcance.
 attackCueHeight :: Float
 attackCueHeight = 42
 
+-- Ángulos clave del arco del swing en grados: anticipación, impacto y remate.
 attackStartDegrees :: Float
 attackStartDegrees = -135
 
@@ -55,7 +54,6 @@ attackPhase combatParams p
   elapsed = total - frameCount frames
   phaseSpan = max 1 (total - 1)
 
--- | Ángulo de la espada (grados Gloss) para una fase dada.
 attackSwingAngle :: Float -> Float
 attackSwingAngle phase
   | phase <= meleeImpactPhase =
@@ -66,7 +64,6 @@ attackSwingAngle phase
   windupT = clamp01 (phase / meleeImpactPhase)
   recoveryT = clamp01 ((phase - meleeImpactPhase) / (1 - meleeImpactPhase))
 
--- | Valor del contador de ataque en el que ocurre el impacto (un frame por swing).
 meleeImpactFrameCount :: CombatParams -> Int
 meleeImpactFrameCount cp =
   let total = frameCount (cpAttackDuration cp)
@@ -74,6 +71,7 @@ meleeImpactFrameCount cp =
       elapsedAtImpact = round (meleeImpactPhase * fromIntegral phaseSpan)
    in max 1 (total - elapsedAtImpact)
 
+-- True en el único frame de impacto de un swing, así el daño melee pega una vez y no en cada frame.
 isMeleeImpactFrame :: CombatParams -> Player -> Bool
 isMeleeImpactFrame cp p =
   hasFramesLeft (playerAttackFrames p)
@@ -86,7 +84,6 @@ meleeHitboxWhenImpact cp p
   | otherwise =
       Nothing
 
--- | Caja de alcance en el impacto: cuerpo con lunge + extensión horizontal del arco.
 meleeHitboxAtImpact :: CombatParams -> Aabb -> Facing -> Aabb
 meleeHitboxAtImpact _cp body facing =
   let phase = meleeImpactPhase

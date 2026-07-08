@@ -1,4 +1,3 @@
--- | Composition tests for 'Domain.Logic.Frame.advanceSimulationFrame'.
 module Domain.FrameTest where
 
 import Data.List (find)
@@ -161,7 +160,6 @@ unit_frameBossPhaseUsesPreFrameHealth =
           { enemyHealth = health 14
           , enemyMaxHealth = health 20
           }
-      -- El melee daña en el frame de impacto visual; avanzar hasta ahí.
       p = spawnPlayer defaultMaxHealth (position 170 8)
       w =
         floorWorld

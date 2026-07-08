@@ -1,7 +1,3 @@
-{- | Estado mutable del run: mundo de nivel + vidas + fase.
-
-Ver @docs\/adr\/0012-gamestate-run-snapshot.md@ para el razonamiento de diseño.
--}
 module UseCases.Engine.GameState (
   GameState (..),
   initialGameState,
@@ -26,15 +22,13 @@ data GameState = GameState
   , gsPhase :: GamePhase
   , gsScore :: Score
   , gsLevelIndex :: Int
-  -- ^ Posición 1-based del nivel actual dentro del run.
+  -- ^ Posición (base 1) del nivel actual dentro del run.
   }
   deriving (Eq, Show, Generic)
 
--- | Estado inicial de una partida nueva a partir de un mundo de nivel.
 initialGameState :: GameConfig -> World -> GameState
 initialGameState cfg = startLevel cfg (gcStartingLives cfg) 1
 
--- | Carga un nivel en el run conservando vidas y reiniciando puntuación y salud.
 startLevel :: GameConfig -> Lives -> Int -> World -> GameState
 startLevel cfg runLives levelIndex w =
   GameState
@@ -45,11 +39,9 @@ startLevel cfg runLives levelIndex w =
     , gsLevelIndex = levelIndex
     }
 
--- | Avanza al siguiente nivel tras confirmar 'LevelComplete'.
 advanceAfterLevelComplete :: GameConfig -> GameState -> World -> GameState
 advanceAfterLevelComplete cfg gs =
   startLevel cfg (gsLives gs) (gsLevelIndex gs + 1)
 
--- | Reinicia el run desde el nivel 1 con vidas iniciales.
 restartRun :: GameConfig -> World -> GameState
 restartRun cfg = startLevel cfg (gcStartingLives cfg) 1

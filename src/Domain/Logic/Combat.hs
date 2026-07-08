@@ -1,8 +1,3 @@
-{- | Combate cuerpo a cuerpo y contacto enemigo.
-
-Orquestación por frame en @UseCases.UpdateGame@: tras física, antes de
-out-of-bounds y muerte.
--}
 module Domain.Logic.Combat (
   resolveCombat,
 )
@@ -43,12 +38,6 @@ resolveCombat cp input w =
       p4 = tickInvincibility (worldPlayer w4)
    in w4{worldPlayer = p4}
 
-{- | Orienta al jugador según la intención horizontal del frame.
-
-La dirección queda __fija mientras hay un ataque activo__ para que el swing no se "dé
-vuelta" a mitad; en el frame de inicio el contador aún es 0, así que el facing se fija
-con el input de ese frame.
--}
 updateFacing :: Input -> Player -> Player
 updateFacing inp p
   | hasFramesLeft (playerAttackFrames p) = p
@@ -78,11 +67,6 @@ tickInvincibility p
   | otherwise =
       p
 
-{- | Aplica el golpe de melee __solo en el frame de impacto visual__ del swing.
-
-El contador de ataque y 'Domain.Logic.MeleeSwing.isMeleeImpactFrame' fijan un único
-frame de daño por press, alineado con el arco de la espada en pantalla.
--}
 resolveMelee :: CombatParams -> World -> World
 resolveMelee cp w =
   case meleeHitboxWhenImpact cp (worldPlayer w) of
@@ -111,7 +95,7 @@ resolveContact cp w
        in w{worldPlayer = p'}
   | otherwise = w
 
--- | Cualquier solape jugador–enemigo daña (sin excepción de pisotón).
+-- Cualquier solape jugador–enemigo lastima al jugador. No hay excepción de pisotón por caerle encima.
 isDamagingContact :: Player -> Enemy -> Bool
 isDamagingContact p e =
   aabbOverlaps (playerAabb p) (enemyAabb e)

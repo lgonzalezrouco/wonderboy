@@ -1,8 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Integration check that the three shipped levels decode and build, with
-per-level invariants (boss presence, minScore). Reads the real data-files.
--}
 module UseCases.LevelContentTest where
 
 import Data.Text.IO qualified as TIO

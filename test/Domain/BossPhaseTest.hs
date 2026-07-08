@@ -1,4 +1,3 @@
--- | Transiciones de fase de jefe por umbral de salud.
 module Domain.BossPhaseTest where
 
 import Data.List (find)

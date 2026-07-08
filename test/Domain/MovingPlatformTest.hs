@@ -1,4 +1,3 @@
--- | Pure moving platform motion, carry, and landing tests.
 module Domain.MovingPlatformTest where
 
 import Domain.Fixtures (testLifeParams)
@@ -50,7 +49,6 @@ horizontalShuttle =
       35
       True
 
--- | Pies sobre el tramo superior del shuttle horizontal (top y = 44).
 onHorizontalShuttleTop :: Position
 onHorizontalShuttleTop = position 60 44
 

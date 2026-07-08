@@ -1,7 +1,3 @@
-{- | Invariantes del núcleo puro verificadas con property testing, con generadores
-chicos y acotados (sin @Arbitrary World@). 'tasty-discover' las descubre por el
-prefijo @prop_@. Ver @docs/adr/0006@.
--}
 module Domain.PropertiesTest where
 
 import Domain.Fixtures (floorWorld, testLifeParams, testParams)
@@ -33,12 +29,10 @@ import Test.Tasty.QuickCheck (
   (===),
  )
 
--- | Intención del jugador con cada acción activada al azar.
 genInput :: Gen Input
 genInput =
   Input <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
--- | 'floorWorld' con el jugador perturbado a un estado aleatorio.
 genIdentityWorld :: Gen World
 genIdentityWorld = do
   x <- choose (-400, 400)
@@ -53,7 +47,6 @@ genIdentityWorld = do
           }
   pure floorWorld{worldPlayer = p}
 
--- | Caja axis-aligned con lados no negativos.
 genAabb :: Gen Aabb
 genAabb = do
   x <- choose (-200, 200)
@@ -62,10 +55,6 @@ genAabb = do
   h <- choose (0, 120)
   pure (Aabb x y (x + w) (y + h))
 
-{- | @dt@, velocidad de caída, alto de plataforma fina y separación inicial,
-acotados para que la distancia recorrida quepa en el presupuesto de sub-pasos
-(@ceil(2k) <= 12 <= 16@): un motor correcto nunca debería tunelar.
--}
 genTunnel :: Gen (DeltaTime, Float, Float, Float)
 genTunnel = do
   h <- choose (4, 12)
@@ -92,7 +81,6 @@ prop_aabbOverlapsReflexive :: Property
 prop_aabbOverlapsReflexive =
   forAll genAabb $ \a -> property (aabbOverlaps a a)
 
--- | Los sub-pasos impiden que un caído rápido tunele una plataforma fina.
 prop_substepPreventsTunneling :: Property
 prop_substepPreventsTunneling =
   forAll genTunnel $ \(dt, vy, h, gap) ->

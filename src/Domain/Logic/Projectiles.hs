@@ -1,4 +1,3 @@
--- | Lanzamiento, física y colisiones de proyectiles.
 module Domain.Logic.Projectiles (
   resolveProjectiles,
 )
@@ -166,11 +165,11 @@ resolveHits tp cp w =
       enemies'' = filter (not . isDepleted . enemyHealth) enemies'
    in (w{worldPlayer = player', worldEnemies = enemies''}, flying, removed)
  where
+  -- La propiedad decide a quién puede pegarle un disparo: los disparos de enemigos solo
+  -- dañan al jugador, los del jugador solo a los enemigos, sin fuego amigo entre enemigos.
   step (player, enemies, flying, removed) proj =
     let box = projectileAabb proj
      in case projectileOwner proj of
-          -- Los proyectiles enemigos (p. ej. del arquero) solo dañan al jugador;
-          -- nunca a otros enemigos. Sin esto habría fuego amigo entre enemigos.
           EnemyProjectile ->
             if hitsPlayer box player
               then (damagePlayer cp player, enemies, flying, removed)

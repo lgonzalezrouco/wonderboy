@@ -1,10 +1,3 @@
-{- | Orquesta la resolución de @behaviourHint@ sobre una 'LevelDefinition' vía el
-puerto 'LevelContentPort', rellenando preset y tuning antes del build puro.
-
-Precedencia: preset explícito > hint resuelto > default del kind. Los pares
-@(kind, hint)@ distintos se resuelven una sola vez ('nub') para evitar consultas
-redundantes.
--}
 module UseCases.ResolveBehaviours (
   resolveLevelBehaviours,
 )

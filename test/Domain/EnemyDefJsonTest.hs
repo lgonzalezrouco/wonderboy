@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | 'enemyDefBehaviourTuning' es salida del resolver, no input del JSON del autor.
 module Domain.EnemyDefJsonTest where
 
 import Data.Text (Text)

@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Pure crumbling platform simulation tests.
 module Domain.CrumblingPlatformTest where
 
 import Data.Text (Text)
@@ -44,7 +43,6 @@ testCrumbling :: CrumblingPlatform
 testCrumbling =
   spawnCrumblingPlatform 1 (position 0 0) 64 8
 
--- | Pies sobre el tramo superior (top y = 8).
 onCrumblingTop :: Player
 onCrumblingTop =
   (spawnPlayer (health 3) (position 0 8)){playerOnGround = True}

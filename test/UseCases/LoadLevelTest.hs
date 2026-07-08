@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | UseCases-level level loading: the @decode -> GameError@ seam called by the framework.
 module UseCases.LoadLevelTest where
 
 import Data.List (isInfixOf)

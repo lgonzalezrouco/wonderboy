@@ -1,4 +1,3 @@
--- | Pure player life, damage, and out-of-bounds tests.
 module Domain.PlayerLifeTest where
 
 import Domain.Fixtures (testPlayerProjectile)
@@ -144,13 +143,11 @@ mustMovingPlatform :: Maybe MovingPlatform -> MovingPlatform
 mustMovingPlatform (Just mp) = mp
 mustMovingPlatform Nothing = error "lowMovingPlatform: invalid fixture"
 
--- | Plataforma móvil cuyo borde inferior (y = 100) es el sólido más bajo del mundo.
 lowMovingPlatform :: MovingPlatform
 lowMovingPlatform =
   mustMovingPlatform
     (mkMovingPlatform 1 (position 0 100) 48 8 (position 0 100) (position 60 100) 35 True)
 
--- | Mundo sin plataformas estáticas: la línea de muerte la fija la plataforma móvil.
 movingPlatformWorld :: World
 movingPlatformWorld =
   floorWorld
@@ -158,9 +155,6 @@ movingPlatformWorld =
     , worldMovingPlatforms = [lowMovingPlatform]
     }
 
-{- | Línea de muerte = 100 (borde inferior móvil) − 64 (margen) = 36; por debajo es
-  out-of-bounds aunque no haya plataformas estáticas (ejercita el fold sobre móviles).
--}
 unit_oobBelowMovingPlatform :: Assertion
 unit_oobBelowMovingPlatform =
   let w = movingPlatformWorld{worldPlayer = spawnPlayer (health 3) (position 0 10)}

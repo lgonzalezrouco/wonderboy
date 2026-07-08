@@ -1,4 +1,3 @@
--- | 'motionForArchetype' y 'applyTuning' sobre stats (no sobre 'BehaviourProgram').
 module Domain.ArchetypeMotionTest where
 
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))

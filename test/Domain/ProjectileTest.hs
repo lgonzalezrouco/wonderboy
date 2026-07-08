@@ -1,4 +1,3 @@
--- | Pure throw and projectile tests.
 module Domain.ProjectileTest where
 
 import Domain.Fixtures (

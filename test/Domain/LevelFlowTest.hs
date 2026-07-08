@@ -32,7 +32,6 @@ exitForPlayer =
     , exitHeight = 64
     }
 
--- Player at (0,0) with default AABB overlaps exit at origin.
 worldInExit :: World
 worldInExit =
   World

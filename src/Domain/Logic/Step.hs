@@ -1,4 +1,3 @@
--- | Transición de un frame: orquesta behaviour, física y colisiones.
 module Domain.Logic.Step (
   advanceFrame,
   step,
@@ -38,22 +37,11 @@ import Domain.ValueObjects.LifeParams (LifeParams)
 import Domain.ValueObjects.PhysicsParams (PhysicsParams)
 import Domain.ValueObjects.Velocity (velY)
 
-{- | Transición completa de un frame: primero el DSL fija la velocidad de los enemigos
-('runBehaviourStep') y después 'step' integra física y colisiones. La política de frame
-congelado la aplica 'UseCases.UpdateGame.updateGame'; aquí 'isFrozen' es una identidad
-defensiva para llamadas aisladas.
--}
 advanceFrame :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
 advanceFrame params life dt input w
   | isFrozen dt = w
   | otherwise = step params life dt input (runBehaviourStep w)
 
-{- | Avanza la física del mundo un frame: input → gravedad → salto → integración → colisiones.
-Con el frame congelado es la identidad (guarda defensiva para llamadas aisladas de 'step').
-
-Los enemigos terrestres integran cinemática y resuelven colisión AABB; los voladores
-(@BatKind@, @BossBatKind@) ignoran plataformas. La velocidad la fija el DSL antes de este paso.
--}
 step :: PhysicsParams -> LifeParams -> DeltaTime -> Input -> World -> World
 step _ _ dt _ w | isFrozen dt = w
 step params life dt input w =
@@ -80,11 +68,6 @@ step params life dt input w =
       w1 = advanceBossArenaEngagement w'{worldPlayer = p5, worldEnemies = enemies'}
    in w1
 
-{- | Integra y resuelve colisiones en sub-pasos para reducir túnel AABB en sólidos finos.
-
-La física (input, gravedad, salto) corre una vez por frame; sólo cinemática y
-colisión se subdividen cuando @|vy| * dt@ supera la mitad del sólido más bajo.
--}
 integrateAndCollide :: DeltaTime -> Player -> [Platform] -> Float -> Player
 integrateAndCollide dt p plats vyBefore =
   let n = substeps dt p plats
@@ -100,33 +83,24 @@ integrateAndCollideEnemy params dt plats e
           e2 = integrateEnemy dt e1
        in resolveEnemyPlatforms plats vyBefore e2
 
-{- | Aplica integración + colisión @n@ veces de forma /estricta/.
-
-Recursión explícita con @seq@ (no @iterate@/@foldl@) para forzar cada @Player@ a WHNF por
-iteración: con @n@ grande, las alternativas perezosas acumularían una cadena de thunks.
--}
 runSubsteps :: Int -> DeltaTime -> [Platform] -> Float -> Player -> Player
 runSubsteps n dtSub plats vyBefore p
   | n <= 0 = p
   | otherwise =
+      -- seq mantiene cada substep estricto para que la recursión no acumule thunks.
       let p' = resolvePlayerPlatforms plats vyBefore (integratePlayer dtSub p)
        in p' `seq` runSubsteps (n - 1) dtSub plats vyBefore p'
 
-{- | Tope de sub-pasos por frame: cota dura del trabajo aun con sólidos
-  extremadamente finos o velocidades muy altas (evita @n@ patológico).
--}
+-- Tope duro de substeps para que una velocidad extrema no dispare el trabajo por frame.
 maxSubsteps :: Int
 maxSubsteps = 16
 
-{- | Tamaño mínimo de sub-paso (px): evita @maxStep == 0@ en 'substeps'.
-
-Si una plataforma tuviera @platformHeight <= 0@ (sólido degenerado), @minH * 0.5@
-sería @0@ y @dy / 0@ daría @Infinity@/@NaN@, corrompiendo @ceiling@. Este piso
-positivo garantiza una división bien definida.
--}
+-- Piso positivo: si platformHeight <= 0, maxStep sería 0 y dy/0 daría NaN en el ceiling de abajo.
 minSubstep :: Float
 minSubstep = 1e-3
 
+-- Parte el movimiento vertical del frame en substeps no mayores a la mitad de la
+-- plataforma más fina, así una caída rápida no la atraviesa de una sola integración.
 substeps :: DeltaTime -> Player -> [Platform] -> Int
 substeps dt p plats =
   let t = seconds dt
@@ -142,7 +116,7 @@ deltaTimeSub dt n =
 clampSubsteps :: Int -> Int
 clampSubsteps n = max 1 (min maxSubsteps n)
 
--- | Sin plataformas, un paso grueso evita subdividir en exceso.
+-- Sin plataformas: una altura enorme colapsa el cálculo a un único substep grueso.
 minPlatformHeight :: [Platform] -> Float
 minPlatformHeight [] = 1e6
 minPlatformHeight plats = minimum (platformHeight <$> plats)

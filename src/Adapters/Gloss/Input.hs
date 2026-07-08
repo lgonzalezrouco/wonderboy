@@ -1,4 +1,3 @@
--- | Adaptador de entrada: eventos Gloss → 'KeyState' y 'Input' de dominio.
 module Adapters.Gloss.Input (
   KeyState (..),
   noKeys,
@@ -16,7 +15,6 @@ import Graphics.Gloss.Interface.IO.Game qualified as Gloss (KeyState (Down))
 
 import Domain.ValueObjects.Input (Input (..))
 
--- | Teclas sostenidas relevantes para el juego (estado del adaptador, no dominio).
 data KeyState = KeyState
   { leftHeld :: Bool
   , rightHeld :: Bool
@@ -42,7 +40,6 @@ noKeys =
     , xHeld = False
     }
 
--- | Actualiza 'KeyState' ante un evento de tecla (KeyDown / KeyUp).
 handleKeyEvent :: Event -> KeyState -> KeyState
 handleKeyEvent (EventKey key state _ _) ks =
   let held = state == Gloss.Down
@@ -60,7 +57,9 @@ handleKeyEvent (EventKey key state _ _) ks =
         _ -> ks
 handleKeyEvent _ ks = ks
 
--- | Construye 'Input' de dominio y flags de salto/ataque/lanzamiento previos (edge detection).
+{- | Construye el 'Input' del dominio junto con los flags de tecla mantenida actuales de salto/ataque/tiro.
+El llamador los realimenta en el frame siguiente para que cada acción dispare una vez en el flanco de tecla presionada, no en cada frame.
+-}
 buildInput :: KeyState -> Bool -> Bool -> Bool -> (Input, Bool, Bool, Bool)
 buildInput ks prevJumpHeld prevAttackHeld prevThrowHeld =
   let jumpHeld = upHeld ks || wHeld ks

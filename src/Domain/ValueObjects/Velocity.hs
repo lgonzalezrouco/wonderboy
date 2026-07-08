@@ -1,7 +1,3 @@
-{- | Velocidad 2D (vx, vy) de una entidad del juego, en píxeles por segundo.
-
-Tipo separado de 'Position' para que el compilador no confunda ambos.
--}
 module Domain.ValueObjects.Velocity (
   Velocity (..),
   velocity,
@@ -12,11 +8,7 @@ where
 
 import GHC.Generics (Generic)
 
-{- | Par de componentes (vx, vy) en píxeles por segundo.
-
-Convención de signos: @vx > 0@ derecha, @vy > 0@ arriba (eje Y positivo hacia
-arriba); la gravedad resta de @vy@ en cada frame.
--}
+-- | Velocidad 2D (vx, vy) en px/s. +x a la derecha, +y hacia arriba. La gravedad se resta de vy en cada frame.
 newtype Velocity = Velocity (Float, Float)
   deriving (Eq, Show, Generic)
 

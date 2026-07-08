@@ -1,8 +1,3 @@
-{- | Parámetros de combate inyectados en el dominio puro cada frame.
-
-Evita que @Domain.Logic.Combat@ importe @UseCases.GameMonad@:
-'UpdateGame' construye este value object desde 'GameConfig'.
--}
 module Domain.ValueObjects.CombatParams (
   CombatParams (..),
   combatParams,
@@ -14,14 +9,12 @@ import GHC.Generics (Generic)
 import Domain.ValueObjects.Damage (Damage)
 import Domain.ValueObjects.Frames (Frames)
 
--- | Constantes de melee, contacto e invencibilidad para un frame.
 data CombatParams = CombatParams
   { cpAttackDuration :: Frames
   , cpInvincibilityDuration :: Frames
   , cpContactDamage :: Damage
   , cpMeleeReach :: Float
-  -- ^ Alcance horizontal base del melee (px lógicos); la hitbox de impacto
-  --   puede extenderse más según el arco (ver 'Domain.Logic.MeleeSwing').
+  -- ^ Alcance base del melee en px. La hitbox real puede pasarse de acá según el arco del golpe (ver Domain.Logic.MeleeSwing).
   , cpMeleeDamage :: Damage
   , cpEnemyHurtFlashDuration :: Frames
   }

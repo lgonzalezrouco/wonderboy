@@ -1,15 +1,3 @@
-{- | Benchmark headless de laziness/memoria para el bucle de frames puro. Dos modos,
-para comparar con las estadísticas del RTS:
-
-  * @strict@ — 'foldl'' forzando el checksum en cada frame (modela el bucle real).
-    Residencia acotada.
-  * @lazy@   — 'foldl' perezoso que acumula thunks y fuerza una sola vez al final.
-
-@
-cabal run wonderboy-bench -- strict 500000 +RTS -s
-cabal run wonderboy-bench -- lazy   500000 +RTS -s
-@
--}
 module Main (main) where
 
 import Data.Maybe (fromMaybe)
@@ -44,6 +32,7 @@ import UseCases.GameMonad (
   throwParamsFromConfig,
  )
 
+-- | Timestep fijo para el benchmark: 0.016 s (~16 ms), es decir, un frame a 60 Hz.
 dtFrame :: DeltaTime
 dtFrame = deltaTime 0.016
 
@@ -73,15 +62,11 @@ benchFrame0 =
     , pfLevelIndex = 1
     }
 
--- | Avanza un frame conservando el envoltorio de partida para seguir plegando.
 oneFrame :: PlayingFrame -> PlayingFrame
 oneFrame pf =
   let r = advanceSimulationFrame frameParams (gcLevelCount defaultConfig) dtFrame noInput pf
    in pf{pfWorld = frWorld r, pfLives = frLives r, pfScore = frScore r}
 
-{- | Checksum numérico del estado evolutivo (fuerza posiciones, velocidades,
-salud y el espinazo de las listas). Evita el programa de comportamiento coinductivo.
--}
 worldChecksum :: World -> Double
 worldChecksum w =
   playerC (worldPlayer w)
@@ -110,17 +95,9 @@ worldChecksum w =
       + fromIntegral (healthPoints (enemyHealth e))
   projC pr = f (posX (projectilePos pr)) + f (posY (projectilePos pr))
 
-{- | Fuerza el mundo en profundidad vía su 'Eq' derivado. Recorre toda la
-estructura (jugador, enemigos, plataformas, proyectiles…) menos el programa de
-comportamiento —la 'Eq' de 'Enemy' lo ignora—, de modo que termina aun con la
-descripción Free cíclica.
--}
 forceWorld :: World -> Bool
 forceWorld w = w == w
 
-{- | Pliegue estricto: fuerza el mundo completo y el acumulador en cada paso,
-de modo que ningún mundo ni thunk sobreviva al frame. Residencia acotada.
--}
 runStrict :: Int -> Double
 runStrict n = go n benchFrame0 0
  where
@@ -132,10 +109,6 @@ runStrict n = go n benchFrame0 0
             c = worldChecksum w'
          in forceWorld w' `seq` c `seq` go (k - 1) pf' (acc + c)
 
-{- | Pliegue perezoso: acumula @acc@ como una cadena de thunks que retiene, a
-través del checksum sin forzar, cada mundo intermedio hasta el final. La
-residencia crece con el número de frames.
--}
 runLazy :: Int -> Double
 runLazy n = go n benchFrame0 0
  where
