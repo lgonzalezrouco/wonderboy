@@ -47,6 +47,7 @@ import Domain.Logic.MeleeSwing (
   attackCueHeight,
   attackPhase,
   attackSwingAngle,
+  clamp01,
   meleeImpactPhase,
  )
 import Domain.Model.CrumblingPlatform (
@@ -82,8 +83,8 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (hasFramesLeft)
+import Domain.ValueObjects.Facing (Facing (..), facingScale)
+import Domain.ValueObjects.Frames (Frames, hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (Position, posX, posY)
@@ -316,8 +317,7 @@ renderPlayer catalog renderTick combatParams p =
       Just sprite ->
         drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
   -- Parpadea el cuerpo con tint rojo durante la invencibilidad post-golpe (el clásico destello de daño).
-  hurtFlash =
-    hasFramesLeft (playerInvincibilityFrames p) && damageFlashOn renderTick
+  hurtFlash = showsHurtFlash (playerInvincibilityFrames p) renderTick
   bodyPicture sprite =
     if hurtFlash then spriteHurtPicture sprite else spritePicture sprite
   bodyColor = if hurtFlash then damageBodyColor else playerColor
@@ -332,8 +332,11 @@ renderEnemy catalog renderTick e =
         else drawEntitySprite (enemyFacing e) box sprite
  where
   box = enemyAabb e
-  hurtFlash =
-    hasFramesLeft (enemyHurtFrames e) && damageFlashOn renderTick
+  hurtFlash = showsHurtFlash (enemyHurtFrames e) renderTick
+
+showsHurtFlash :: Frames -> Int -> Bool
+showsHurtFlash frames renderTick =
+  hasFramesLeft frames && damageFlashOn renderTick
 
 renderPickup :: SpriteCatalog -> Pickup -> Picture
 renderPickup catalog pickup =
@@ -793,12 +796,6 @@ renderAttackSpark phase angle
  where
   impact = clamp01 (1 - abs (phase - meleeImpactPhase) / attackSparkPhaseWidth)
 
-facingScale :: Facing -> Float
-facingScale facing =
-  case facing of
-    FacingLeft -> -1
-    FacingRight -> 1
-
 rotateAround :: Float -> Float -> Float -> Picture -> Picture
 rotateAround x y degrees picture =
   Translate x y $
@@ -807,9 +804,6 @@ rotateAround x y degrees picture =
 
 aabbCenterX :: Aabb -> Float
 aabbCenterX box = (aabbMinX box + aabbMaxX box) / 2
-
-clamp01 :: Float -> Float
-clamp01 = max 0 . min 1
 
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =
@@ -861,27 +855,44 @@ drawEntitySpriteWith facing box sprite picture =
       renderedH = spriteHeight sprite * spriteScale
       cx = (aabbMinX box + aabbMaxX box) / 2
       cy = aabbMinY box + renderedH / 2
-      faceScale = case facing of
-        FacingLeft -> -spriteScale
-        FacingRight -> spriteScale
+      faceScale = facingScale facing * spriteScale
    in Translate cx cy $
         Scale faceScale spriteScale picture
 
+data SpriteAlign
+  = AlignCentered
+  | AlignBottomCenter
+
+drawSpriteScaled :: Float -> Float -> Float -> Sprite -> Picture
+drawSpriteScaled cx cy spriteScale sprite =
+  Translate cx cy $
+    Scale spriteScale spriteScale (spritePicture sprite)
+
+heightScale :: Float -> Sprite -> Float
+heightScale targetHeight sprite = targetHeight / spriteHeight sprite
+
+drawSpriteAt :: SpriteAlign -> Float -> Float -> Float -> Sprite -> Picture
+drawSpriteAt align cx anchorY spriteScale sprite =
+  let renderedH = spriteHeight sprite * spriteScale
+      cy = case align of
+        AlignCentered -> anchorY
+        AlignBottomCenter -> anchorY + renderedH / 2
+   in drawSpriteScaled cx cy spriteScale sprite
+
 drawSpriteCenteredAtHeight :: Aabb -> Float -> Sprite -> Picture
 drawSpriteCenteredAtHeight box targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
-      cx = (aabbMinX box + aabbMaxX box) / 2
-      cy = (aabbMinY box + aabbMaxY box) / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+  drawSpriteAt
+    AlignCentered
+    ((aabbMinX box + aabbMaxX box) / 2)
+    ((aabbMinY box + aabbMaxY box) / 2)
+    (heightScale targetHeight sprite)
+    sprite
 
 drawStackedDoorBottomCenter :: Aabb -> Sprite -> Sprite -> Picture
 drawStackedDoorBottomCenter box topSprite midSprite =
   pictures
-    [ Translate cx (bottomY + midH / 2) $
-        Scale spriteScale spriteScale (spritePicture midSprite)
-    , Translate cx (bottomY + midH + topH / 2) $
-        Scale spriteScale spriteScale (spritePicture topSprite)
+    [ drawSpriteScaled cx (bottomY + midH / 2) spriteScale midSprite
+    , drawSpriteScaled cx (bottomY + midH + topH / 2) spriteScale topSprite
     ]
  where
   boxW = max 1 (aabbMaxX box - aabbMinX box)
@@ -899,23 +910,20 @@ drawSpriteBottomCenter box sprite =
   let boxW = max 1 (aabbMaxX box - aabbMinX box)
       boxH = max 1 (aabbMaxY box - aabbMinY box)
       spriteScale = min (boxW / spriteWidth sprite) (boxH / spriteHeight sprite)
-      renderedH = spriteHeight sprite * spriteScale
-      cx = (aabbMinX box + aabbMaxX box) / 2
-      cy = aabbMinY box + renderedH / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+   in drawSpriteAt
+        AlignBottomCenter
+        ((aabbMinX box + aabbMaxX box) / 2)
+        (aabbMinY box)
+        spriteScale
+        sprite
 
 drawSpriteBottomCenterAtHeight :: Float -> Float -> Float -> Sprite -> Picture
 drawSpriteBottomCenterAtHeight cx bottomY targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
-      renderedH = spriteHeight sprite * spriteScale
-      cy = bottomY + renderedH / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+  drawSpriteAt AlignBottomCenter cx bottomY (heightScale targetHeight sprite) sprite
 
 drawSpriteAtHeight :: Float -> Sprite -> Picture
 drawSpriteAtHeight targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
+  let spriteScale = heightScale targetHeight sprite
    in Scale spriteScale spriteScale (spritePicture sprite)
 
 drawSpriteCover :: Float -> Float -> Sprite -> Picture

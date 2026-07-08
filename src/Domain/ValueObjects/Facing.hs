@@ -1,6 +1,7 @@
 module Domain.ValueObjects.Facing (
   Facing (..),
   facingTowardHorizontal,
+  facingScale,
 )
 where
 
@@ -15,3 +16,7 @@ facingTowardHorizontal current dx = case compare dx 0 of
   GT -> FacingRight
   LT -> FacingLeft
   EQ -> current
+
+facingScale :: Facing -> Float
+facingScale FacingLeft = -1
+facingScale FacingRight = 1

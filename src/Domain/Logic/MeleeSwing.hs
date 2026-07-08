@@ -9,13 +9,14 @@ module Domain.Logic.MeleeSwing (
   attackBodyLunge,
   attackCueHandInset,
   attackCueHeight,
+  clamp01,
 )
 where
 
 import Domain.Model.Player (Player (..), playerAabb, playerAttackFrames, playerFacing)
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..))
+import Domain.ValueObjects.Facing (Facing (..), facingScale)
 import Domain.ValueObjects.Frames (frameCount, hasFramesLeft)
 
 -- Punto del swing (0–1) donde la hoja realmente conecta.
@@ -80,12 +81,12 @@ isMeleeImpactFrame cp p =
 meleeHitboxWhenImpact :: CombatParams -> Player -> Maybe Aabb
 meleeHitboxWhenImpact cp p
   | isMeleeImpactFrame cp p =
-      Just (meleeHitboxAtImpact cp (playerAabb p) (playerFacing p))
+      Just (meleeHitboxAtImpact (playerAabb p) (playerFacing p))
   | otherwise =
       Nothing
 
-meleeHitboxAtImpact :: CombatParams -> Aabb -> Facing -> Aabb
-meleeHitboxAtImpact _cp body facing =
+meleeHitboxAtImpact :: Aabb -> Facing -> Aabb
+meleeHitboxAtImpact body facing =
   let phase = meleeImpactPhase
       envelope = sin (pi * phase)
       faceScale = facingScale facing
@@ -110,12 +111,6 @@ extendMeleeReach reach box facing =
   case facing of
     FacingRight -> box{aabbMaxX = aabbMaxX box + reach}
     FacingLeft -> box{aabbMinX = aabbMinX box - reach}
-
-facingScale :: Facing -> Float
-facingScale facing =
-  case facing of
-    FacingLeft -> -1
-    FacingRight -> 1
 
 clamp01 :: Float -> Float
 clamp01 = max 0 . min 1

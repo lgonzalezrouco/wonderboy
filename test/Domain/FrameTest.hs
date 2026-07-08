@@ -63,14 +63,17 @@ playingFrame w =
     , pfLevelIndex = 1
     }
 
-runFrame :: World -> FrameResult
-runFrame w =
+runFrameWith :: Input -> World -> FrameResult
+runFrameWith input w =
   advanceSimulationFrame
     testFrameParams
     (gcLevelCount defaultConfig)
     dtFrame
-    noInput
+    input
     (playingFrame w)
+
+runFrame :: World -> FrameResult
+runFrame = runFrameWith noInput
 
 spawnBossFromCatalog :: Int -> EnemyKind -> Position -> Enemy
 spawnBossFromCatalog eid kind pos =
@@ -166,23 +169,8 @@ unit_frameBossPhaseUsesPreFrameHealth =
           { worldPlayer = p
           , worldEnemies = [boss]
           }
-      afterAttack =
-        advanceSimulationFrame
-          testFrameParams
-          (gcLevelCount defaultConfig)
-          dtFrame
-          (noInput{inputAttack = True})
-          (playingFrame w)
+      afterAttack = runFrameWith (noInput{inputAttack = True}) w
       afterImpact =
-        iterate
-          ( advanceSimulationFrame
-              testFrameParams
-              (gcLevelCount defaultConfig)
-              dtFrame
-              noInput
-              . playingFrame
-              . frWorld
-          )
-          afterAttack
+        iterate (runFrame . frWorld) afterAttack
           !! stepsToMeleeImpact testCombatParams
    in bossPhaseIndexIn (frWorld afterImpact) @?= 1

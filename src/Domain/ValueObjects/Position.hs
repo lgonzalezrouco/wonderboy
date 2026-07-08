@@ -3,6 +3,7 @@ module Domain.ValueObjects.Position (
   position,
   posX,
   posY,
+  positionBelowY,
   translate,
 )
 where
@@ -21,6 +22,9 @@ posX (Position (x, _)) = x
 
 posY :: Position -> Float
 posY (Position (_, y)) = y
+
+positionBelowY :: Float -> Position -> Bool
+positionBelowY yThreshold (Position (_, y)) = y < yThreshold
 
 translate :: Float -> Float -> Position -> Position
 translate dx dy (Position (x, y)) = position (x + dx) (y + dy)

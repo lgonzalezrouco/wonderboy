@@ -5,7 +5,7 @@ where
 
 import Data.List (foldl')
 
-import Domain.Logic.PlayerLife (applyDamage, deathLineY)
+import Domain.Logic.PlayerLife (applyContactDamage, deathLineY)
 import Domain.Model.FallingHazard (
   FallingHazard (..),
   FallingHazardPhase (..),
@@ -15,15 +15,14 @@ import Domain.Model.FallingHazard (
 import Domain.Model.Player (
   Player (..),
   playerAabb,
-  playerInvincibilityFrames,
  )
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (aabbOverlaps)
-import Domain.ValueObjects.CombatParams (CombatParams (..))
+import Domain.ValueObjects.CombatParams (CombatParams)
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.LifeParams (LifeParams)
-import Domain.ValueObjects.Position (posY, translate)
+import Domain.ValueObjects.Position (positionBelowY, translate)
 
 resolveFallingHazards ::
   LifeParams ->
@@ -49,7 +48,7 @@ advanceHazard dt despawnLine h =
   case fallingHazardPhase h of
     HazardFalling ->
       let moved = moveDown dt h
-       in if posY (fallingHazardPos moved) < despawnLine
+       in if positionBelowY despawnLine (fallingHazardPos moved)
             then despawnHazard h
             else moved
     HazardWaiting remaining ->
@@ -80,9 +79,10 @@ despawnHazard h =
 damageFromFalling :: CombatParams -> DeltaTime -> Player -> FallingHazard -> Player
 damageFromFalling cp dt player h
   | fallingHazardPhase h /= HazardFalling = player
-  | not (aabbOverlaps (fallingHazardAabb (moveDown dt h)) (playerAabb player)) = player
-  | hasFramesLeft (playerInvincibilityFrames player) = player
-  | otherwise =
-      applyDamage
-        (cpContactDamage cp)
-        player{playerInvincibilityFrames = cpInvincibilityDuration cp}
+  | not (fallingHazardWillHitPlayer dt h player) = player
+  | otherwise = applyContactDamage cp player
+
+-- Daño según la posición del hazard en el próximo paso, no la actual.
+fallingHazardWillHitPlayer :: DeltaTime -> FallingHazard -> Player -> Bool
+fallingHazardWillHitPlayer dt h player =
+  aabbOverlaps (fallingHazardAabb (moveDown dt h)) (playerAabb player)

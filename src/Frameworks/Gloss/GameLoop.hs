@@ -66,7 +66,7 @@ runGame = runGameWith demoLevelPaths
 
 runGameWith :: [FilePath] -> IO ()
 runGameWith paths = do
-  let cfg = configForLevelCatalog paths
+  let cfg = configForLevelCatalog (length paths)
   defs <- bootstrapCatalogIO paths
   world <- loadWorldFromCatalog defs 0
   sprites <- loadSpriteCatalog

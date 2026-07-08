@@ -23,189 +23,72 @@ import Domain.ValueObjects.Aabb (
   aabbMinY,
   aabbOverlaps,
  )
-import Domain.ValueObjects.Position (posX, translate)
+import Domain.ValueObjects.Position (Position, posX, translate)
 import Domain.ValueObjects.Tolerance (epsilon, nearZero)
-import Domain.ValueObjects.Velocity (velX, velY, velocity)
+import Domain.ValueObjects.Velocity (Velocity, velX, velY, velocity)
 
 maxResolvePasses :: Int
 maxResolvePasses = 8
 
+-- Accesores/mutadores compartidos para resolver solapes cuerpo–plataforma.
+data BodyOps a = BodyOps
+  { bodyAabb :: a -> Aabb
+  , bodyVel :: a -> Velocity
+  , bodyPos :: a -> Position
+  , setBodyVel :: Velocity -> a -> a
+  , setBodyPos :: Position -> a -> a
+  , onLand :: a -> a
+  , beforePass :: a -> a
+  , zeroVxOnWall :: Bool
+  , overlapVy :: Float -> a -> Float
+  , doneOverlapBody :: a -> a -> a
+  }
+
+playerOps :: BodyOps Player
+playerOps =
+  BodyOps
+    { bodyAabb = playerAabb
+    , bodyVel = playerVel
+    , bodyPos = playerPos
+    , setBodyVel = \v p -> p{playerVel = v}
+    , setBodyPos = \pos p -> p{playerPos = pos}
+    , onLand = \p -> p{playerOnGround = True}
+    , beforePass = \p -> p{playerOnGround = False}
+    , zeroVxOnWall = False
+    , overlapVy = \_ p -> velY (playerVel p)
+    , doneOverlapBody = \_ after -> after
+    }
+
+enemyOps :: BodyOps Enemy
+enemyOps =
+  BodyOps
+    { bodyAabb = enemyAabb
+    , bodyVel = enemyVel
+    , bodyPos = enemyPos
+    , setBodyVel = \v e -> e{enemyVel = v}
+    , setBodyPos = \pos e -> e{enemyPos = pos}
+    , onLand = id
+    , beforePass = id
+    , zeroVxOnWall = True
+    , overlapVy = const
+    , doneOverlapBody = const
+    }
+
 resolvePlayerPlatforms :: [Platform] -> Float -> Player -> Player
 resolvePlayerPlatforms plats vyBefore =
-  resolvePasses maxResolvePasses vyBefore (sortPlatforms plats)
+  resolvePasses playerOps maxResolvePasses vyBefore (sortPlatforms plats)
 
 resolveEnemyPlatforms :: [Platform] -> Float -> Enemy -> Enemy
 resolveEnemyPlatforms plats vyBefore e
   | isFlyingKind (enemyKind e) = e
   | otherwise =
-      resolveEnemyPasses maxResolvePasses vyBefore (sortPlatforms plats) e
-
-resolveEnemyPasses :: Int -> Float -> [Platform] -> Enemy -> Enemy
-resolveEnemyPasses 0 _ _ e = e
-resolveEnemyPasses n vyBefore plats e =
-  let e' = resolveEnemyOnce vyBefore plats e
-   in if doneResolvingEnemy e e' n plats then e' else resolveEnemyPasses (n - 1) vyBefore plats e'
-
-doneResolvingEnemy :: Enemy -> Enemy -> Int -> [Platform] -> Bool
-doneResolvingEnemy e e' n plats =
-  e' == e || n <= 1 || not (enemyOverlapsAnyPlatform plats e)
-
-resolveEnemyOnce :: Float -> [Platform] -> Enemy -> Enemy
-resolveEnemyOnce vyBefore plats e =
-  foldl' (resolveEnemyAgainst vyBefore) e plats
+      resolvePasses enemyOps maxResolvePasses vyBefore (sortPlatforms plats) e
 
 enemyOverlapsAnyPlatform :: [Platform] -> Enemy -> Bool
-enemyOverlapsAnyPlatform plats e =
-  let box = enemyAabb e
-   in any (aabbOverlaps box . platformAabb) plats
-
-resolveEnemyAgainst :: Float -> Enemy -> Platform -> Enemy
-resolveEnemyAgainst vyBefore e plat =
-  let box = enemyAabb e
-      solid = platformAabb plat
-   in if aabbOverlaps box solid
-        then resolveEnemyOverlap vyBefore e box solid
-        else e
-
-resolveEnemyOverlap :: Float -> Enemy -> Aabb -> Aabb -> Enemy
-resolveEnemyOverlap vyBefore e box solid
-  | overlapX + epsilon < overlapY = resolveEnemyAxisX e box solid
-  | otherwise =
-      let eY = resolveEnemyAxisY vyBefore e box solid
-          box' = enemyAabb eY
-       in if eY /= e || restingOnTop box' solid || touchingCeiling box' solid
-            then eY
-            else resolveEnemyAxisX eY box' solid
- where
-  overlapX = uncurry min (separationsX box solid)
-  overlapY = uncurry min (separationsY box solid)
-
-resolveEnemyAxisY :: Float -> Enemy -> Aabb -> Aabb -> Enemy
-resolveEnemyAxisY vyBefore e box solid
-  | vyBefore <= 0
-  , pushUp > epsilon
-  , pushUp <= pushDown + epsilon =
-      landEnemyOnTop pushUp e
-  | vyBefore <= 0
-  , nearZero pushUp
-  , restingOnTop box solid =
-      landEnemyOnTop 0 e
-  | vyBefore > 0
-  , pushDown > epsilon
-  , pushDown < pushUp =
-      bumpEnemyCeiling pushDown e
-  | otherwise =
-      e
- where
-  (pushUp, pushDown) = separationsY box solid
-
-landEnemyOnTop :: Float -> Enemy -> Enemy
-landEnemyOnTop pushUp = zeroEnemyVy . nudgeEnemyY pushUp
-
-bumpEnemyCeiling :: Float -> Enemy -> Enemy
-bumpEnemyCeiling pushDown = zeroEnemyVy . nudgeEnemyY (-pushDown)
-
-resolveEnemyAxisX :: Enemy -> Aabb -> Aabb -> Enemy
-resolveEnemyAxisX e box solid =
-  case horizontalNudge (separationsX box solid) (velX (enemyVel e)) of
-    Nothing -> e
-    Just dx -> zeroEnemyVx . nudgeEnemyX dx $ e
-
-zeroEnemyVy :: Enemy -> Enemy
-zeroEnemyVy e = e{enemyVel = velocity (velX (enemyVel e)) 0}
-
-zeroEnemyVx :: Enemy -> Enemy
-zeroEnemyVx e = e{enemyVel = velocity 0 (velY (enemyVel e))}
-
-nudgeEnemyX :: Float -> Enemy -> Enemy
-nudgeEnemyX dx e =
-  e{enemyPos = translate dx 0 (enemyPos e)}
-
-nudgeEnemyY :: Float -> Enemy -> Enemy
-nudgeEnemyY dy e =
-  e{enemyPos = translate 0 dy (enemyPos e)}
-
-sortPlatforms :: [Platform] -> [Platform]
-sortPlatforms =
-  sortBy (comparing (negate . aabbMaxY . platformAabb))
-
-resolvePasses :: Int -> Float -> [Platform] -> Player -> Player
-resolvePasses 0 _ _ p = p
-resolvePasses n vyBefore plats p =
-  let p' = resolveOnce vyBefore plats p
-   in if doneResolving p p' n plats then p' else resolvePasses (n - 1) vyBefore plats p'
-
--- Se detiene en un punto fijo (p' == p): aabbOverlaps es inclusivo, así que un cuerpo apoyado
--- justo sobre un borde igual "solapa". Sin esto quemaríamos todas las pasadas en cada frame quieto.
-doneResolving :: Player -> Player -> Int -> [Platform] -> Bool
-doneResolving p p' n plats =
-  p' == p || n <= 1 || not (playerOverlapsAnyPlatform plats p')
-
-resolveOnce :: Float -> [Platform] -> Player -> Player
-resolveOnce vyBefore plats p =
-  foldl' (resolveAgainst vyBefore) (p{playerOnGround = False}) plats
+enemyOverlapsAnyPlatform = overlapsAnyPlatform enemyOps
 
 playerOverlapsAnyPlatform :: [Platform] -> Player -> Bool
-playerOverlapsAnyPlatform plats p =
-  let box = playerAabb p
-   in any (aabbOverlaps box . platformAabb) plats
-
-resolveAgainst :: Float -> Player -> Platform -> Player
-resolveAgainst _vyBefore p plat =
-  let box = playerAabb p
-      solid = platformAabb plat
-   in if aabbOverlaps box solid
-        then resolveOverlap (velY (playerVel p)) p box solid
-        else p
-
--- Empuja por el eje de menor penetración: el solape más chico es el que el cuerpo
--- acaba de cruzar, así que corregir ese es lo que de verdad los separa.
-resolveOverlap :: Float -> Player -> Aabb -> Aabb -> Player
-resolveOverlap vyBefore p box solid
-  | overlapX + epsilon < overlapY = resolveAxisX p box solid
-  | otherwise =
-      let pY = resolveAxisY vyBefore p box solid
-          box' = playerAabb pY
-       in if pY /= p || restingOnTop box' solid || touchingCeiling box' solid
-            then pY
-            else resolveAxisX pY box' solid
- where
-  overlapX = uncurry min (separationsX box solid)
-  overlapY = uncurry min (separationsY box solid)
-
-resolveAxisY :: Float -> Player -> Aabb -> Aabb -> Player
-resolveAxisY vyBefore p box solid
-  | vyBefore <= 0
-  , pushUp > epsilon
-  , pushUp <= pushDown + epsilon =
-      landOnTop pushUp p
-  | vyBefore <= 0
-  , nearZero pushUp
-  , restingOnTop box solid =
-      landOnTop 0 p
-  | vyBefore > 0
-  , pushDown > epsilon
-  , pushDown < pushUp =
-      bumpCeiling pushDown p
-  | otherwise =
-      p
- where
-  (pushUp, pushDown) = separationsY box solid
-
-landOnTop :: Float -> Player -> Player
-landOnTop pushUp p =
-  (zeroVy . nudgeY pushUp $ p){playerOnGround = True}
-
-bumpCeiling :: Float -> Player -> Player
-bumpCeiling pushDown = zeroVy . nudgeY (-pushDown)
-
-restingOnTop :: Aabb -> Aabb -> Bool
-restingOnTop box solid =
-  nearZero (aabbMinY box - aabbMaxY solid)
-
-touchingCeiling :: Aabb -> Aabb -> Bool
-touchingCeiling box solid =
-  nearZero (aabbMaxY box - aabbMinY solid)
+playerOverlapsAnyPlatform = overlapsAnyPlatform playerOps
 
 playerRestingOnPlatformTop :: Player -> Platform -> Bool
 playerRestingOnPlatformTop p plat =
@@ -219,11 +102,99 @@ playerRidingPlatformTop p plat =
         && footX >= aabbMinX solid
         && footX <= aabbMaxX solid
 
-resolveAxisX :: Player -> Aabb -> Aabb -> Player
-resolveAxisX p box solid =
-  case horizontalNudge (separationsX box solid) (velX (playerVel p)) of
-    Nothing -> p
-    Just dx -> nudgeX dx p
+sortPlatforms :: [Platform] -> [Platform]
+sortPlatforms =
+  sortBy (comparing (negate . aabbMaxY . platformAabb))
+
+resolvePasses :: (Eq a) => BodyOps a -> Int -> Float -> [Platform] -> a -> a
+resolvePasses _ 0 _ _ body = body
+resolvePasses ops n vyBefore plats body =
+  let body' = resolveOnce ops vyBefore plats body
+   in if doneResolving ops body body' n plats
+        then body'
+        else resolvePasses ops (n - 1) vyBefore plats body'
+
+-- Se detiene en un punto fijo (body' == body): aabbOverlaps es inclusivo, así que un cuerpo
+-- apoyado justo sobre un borde igual "solapa". Sin esto quemaríamos todas las pasadas en cada frame quieto.
+doneResolving :: (Eq a) => BodyOps a -> a -> a -> Int -> [Platform] -> Bool
+doneResolving ops body body' n plats =
+  body' == body
+    || n <= 1
+    || not (overlapsAnyPlatform ops plats (doneOverlapBody ops body body'))
+
+resolveOnce :: (Eq a) => BodyOps a -> Float -> [Platform] -> a -> a
+resolveOnce ops vyBefore plats body =
+  foldl' (resolveAgainst ops vyBefore) (beforePass ops body) plats
+
+overlapsAnyPlatform :: BodyOps a -> [Platform] -> a -> Bool
+overlapsAnyPlatform ops plats body =
+  let box = bodyAabb ops body
+   in any (aabbOverlaps box . platformAabb) plats
+
+resolveAgainst :: (Eq a) => BodyOps a -> Float -> a -> Platform -> a
+resolveAgainst ops vyBefore body plat =
+  let box = bodyAabb ops body
+      solid = platformAabb plat
+   in if aabbOverlaps box solid
+        then resolveOverlap ops (overlapVy ops vyBefore body) body box solid
+        else body
+
+-- Empuja por el eje de menor penetración: el solape más chico es el que el cuerpo
+-- acaba de cruzar, así que corregir ese es lo que de verdad los separa.
+resolveOverlap :: (Eq a) => BodyOps a -> Float -> a -> Aabb -> Aabb -> a
+resolveOverlap ops vyBefore body box solid
+  | overlapX + epsilon < overlapY = resolveAxisX ops body box solid
+  | otherwise =
+      let bodyY = resolveAxisY ops vyBefore body box solid
+          box' = bodyAabb ops bodyY
+       in if bodyY /= body || restingOnTop box' solid || touchingCeiling box' solid
+            then bodyY
+            else resolveAxisX ops bodyY box' solid
+ where
+  overlapX = uncurry min (separationsX box solid)
+  overlapY = uncurry min (separationsY box solid)
+
+resolveAxisY :: BodyOps a -> Float -> a -> Aabb -> Aabb -> a
+resolveAxisY ops vyBefore body box solid
+  | vyBefore <= 0
+  , pushUp > epsilon
+  , pushUp <= pushDown + epsilon =
+      landOnTop ops pushUp body
+  | vyBefore <= 0
+  , nearZero pushUp
+  , restingOnTop box solid =
+      landOnTop ops 0 body
+  | vyBefore > 0
+  , pushDown > epsilon
+  , pushDown < pushUp =
+      bumpCeiling ops pushDown body
+  | otherwise =
+      body
+ where
+  (pushUp, pushDown) = separationsY box solid
+
+landOnTop :: BodyOps a -> Float -> a -> a
+landOnTop ops pushUp body =
+  onLand ops (zeroVy ops (nudgeY ops pushUp body))
+
+bumpCeiling :: BodyOps a -> Float -> a -> a
+bumpCeiling ops pushDown = zeroVy ops . nudgeY ops (-pushDown)
+
+restingOnTop :: Aabb -> Aabb -> Bool
+restingOnTop box solid =
+  nearZero (aabbMinY box - aabbMaxY solid)
+
+touchingCeiling :: Aabb -> Aabb -> Bool
+touchingCeiling box solid =
+  nearZero (aabbMaxY box - aabbMinY solid)
+
+resolveAxisX :: BodyOps a -> a -> Aabb -> Aabb -> a
+resolveAxisX ops body box solid =
+  case horizontalNudge (separationsX box solid) (velX (bodyVel ops body)) of
+    Nothing -> body
+    Just dx ->
+      let nudged = nudgeX ops dx body
+       in if zeroVxOnWall ops then zeroVx ops nudged else nudged
 
 horizontalNudge :: (Float, Float) -> Float -> Maybe Float
 horizontalNudge (pushLeft, pushRight) vx
@@ -242,13 +213,20 @@ separationsX :: Aabb -> Aabb -> (Float, Float)
 separationsX box solid =
   (aabbMaxX box - aabbMinX solid, aabbMaxX solid - aabbMinX box)
 
-zeroVy :: Player -> Player
-zeroVy p = p{playerVel = velocity (velX (playerVel p)) 0}
+zeroVy :: BodyOps a -> a -> a
+zeroVy ops body =
+  let v = bodyVel ops body
+   in setBodyVel ops (velocity (velX v) 0) body
 
-nudgeX :: Float -> Player -> Player
-nudgeX dx p =
-  p{playerPos = translate dx 0 (playerPos p)}
+zeroVx :: BodyOps a -> a -> a
+zeroVx ops body =
+  let v = bodyVel ops body
+   in setBodyVel ops (velocity 0 (velY v)) body
 
-nudgeY :: Float -> Player -> Player
-nudgeY dy p =
-  p{playerPos = translate 0 dy (playerPos p)}
+nudgeX :: BodyOps a -> Float -> a -> a
+nudgeX ops dx body =
+  setBodyPos ops (translate dx 0 (bodyPos ops body)) body
+
+nudgeY :: BodyOps a -> Float -> a -> a
+nudgeY ops dy body =
+  setBodyPos ops (translate 0 dy (bodyPos ops body)) body

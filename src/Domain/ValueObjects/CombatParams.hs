@@ -1,6 +1,5 @@
 module Domain.ValueObjects.CombatParams (
   CombatParams (..),
-  combatParams,
 )
 where
 
@@ -19,21 +18,3 @@ data CombatParams = CombatParams
   , cpEnemyHurtFlashDuration :: Frames
   }
   deriving (Eq, Show, Generic)
-
-combatParams ::
-  Frames ->
-  Frames ->
-  Damage ->
-  Float ->
-  Damage ->
-  Frames ->
-  CombatParams
-combatParams attack invincibility contact reach meleeDamage hurtFlash =
-  CombatParams
-    { cpAttackDuration = attack
-    , cpInvincibilityDuration = invincibility
-    , cpContactDamage = contact
-    , cpMeleeReach = reach
-    , cpMeleeDamage = meleeDamage
-    , cpEnemyHurtFlashDuration = hurtFlash
-    }

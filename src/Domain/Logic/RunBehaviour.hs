@@ -2,6 +2,7 @@ module Domain.Logic.RunBehaviour (
   runBehaviourStep,
   stepEnemyBehaviour,
   playerHorizontalDistance,
+  playerWithinHorizontalRange,
 )
 where
 
@@ -67,7 +68,7 @@ stepProgram w (BehaviourProgram prog) e =
       | otherwise ->
           (BehaviourProgram next, w, e)
     Free (IfPlayerWithinRange range thenBranch elseBranch _) ->
-      let (branch, e') = stepBranch (playerHorizontalDistance w e <= range) thenBranch elseBranch e
+      let (branch, e') = stepBranch (playerWithinHorizontalRange w e range) thenBranch elseBranch e
        in stepProgram w branch e'
     Free (IfNearSpawn radius thenBranch elseBranch _) ->
       let (branch, e') = stepBranch (nearSpawnHorizontally radius e) thenBranch elseBranch e
@@ -174,6 +175,10 @@ shootSpawnPos e width height =
 
 playerHorizontalDistance :: World -> Enemy -> Float
 playerHorizontalDistance w e = abs (playerHorizontalDelta w e)
+
+playerWithinHorizontalRange :: World -> Enemy -> Float -> Bool
+playerWithinHorizontalRange w e range =
+  playerHorizontalDistance w e <= range
 
 playerHorizontalDelta :: World -> Enemy -> Float
 playerHorizontalDelta w e =

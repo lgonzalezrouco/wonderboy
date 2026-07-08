@@ -23,7 +23,7 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.LifeParams (LifeParams)
-import Domain.ValueObjects.Position (posY, translate)
+import Domain.ValueObjects.Position (positionBelowY, translate)
 
 advanceCrumblingPlatforms ::
   LifeParams ->
@@ -41,11 +41,16 @@ advanceCrumblingPlatforms lp dt player w =
 
 tryTrigger :: Player -> CrumblingPlatform -> CrumblingPlatform
 tryTrigger player cp
-  | CrumbleIntact <- crumblingPlatformPhase cp
-  , playerOnGround player
-  , playerRidingPlatformTop player (crumblingPlatformAsPlatform cp) =
+  | crumblingTriggeredByPlayer player cp =
       cp{crumblingPlatformPhase = CrumbleCountingDown crumbleCountdownFrames}
   | otherwise = cp
+
+-- Jugador apoyado sobre una ledge intacta: arranca el countdown.
+crumblingTriggeredByPlayer :: Player -> CrumblingPlatform -> Bool
+crumblingTriggeredByPlayer player cp =
+  CrumbleIntact == crumblingPlatformPhase cp
+    && playerOnGround player
+    && playerRidingPlatformTop player (crumblingPlatformAsPlatform cp)
 
 advanceOne :: DeltaTime -> Float -> CrumblingPlatform -> Maybe CrumblingPlatform
 advanceOne dt despawnLine cp =
@@ -62,7 +67,7 @@ advanceOne dt despawnLine cp =
               }
     CrumbleFalling ->
       let moved = moveDown dt cp
-       in if posY (crumblingPlatformPos moved) < despawnLine
+       in if positionBelowY despawnLine (crumblingPlatformPos moved)
             then Nothing
             else Just moved
 

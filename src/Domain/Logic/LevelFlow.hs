@@ -15,14 +15,14 @@ where
 import Data.List (find)
 import Data.Maybe (isJust)
 
-import Domain.Model.Enemy (Enemy, enemyHealth, enemyKind)
+import Domain.Logic.EnemyDamage (enemyIsAlive)
+import Domain.Model.Enemy (Enemy, enemyKind)
 import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.ExitZone (exitZoneAabb)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.Player (playerAabb)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (aabbOverlaps)
-import Domain.ValueObjects.Health (isDepleted)
 import Domain.ValueObjects.LevelCount (LevelCount, isFinalLevel)
 import Domain.ValueObjects.Lives (Lives, livesCount)
 import Domain.ValueObjects.Score (Score)
@@ -37,7 +37,7 @@ meetsMinScore s w = s >= worldMinScore w
 findLivingBoss :: World -> Maybe Enemy
 findLivingBoss w = find isLivingBoss (worldEnemies w)
  where
-  isLivingBoss e = isBossKind (enemyKind e) && not (isDepleted (enemyHealth e))
+  isLivingBoss e = isBossKind (enemyKind e) && enemyIsAlive e
 
 hasLivingBoss :: World -> Bool
 hasLivingBoss = isJust . findLivingBoss

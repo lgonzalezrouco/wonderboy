@@ -1,5 +1,7 @@
 module Domain.Logic.PlayerLife (
   applyDamage,
+  applyContactDamage,
+  playerIsInvincible,
   deathLineY,
   isPlayerOutOfBounds,
   resolveHazardsAndDeath,
@@ -17,11 +19,14 @@ import Domain.Model.Platform (Platform (..))
 import Domain.Model.Player (
   Player (..),
   playerHealth,
+  playerInvincibilityFrames,
   playerPos,
   spawnPlayer,
  )
 import Domain.Model.World (World (..))
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Damage (Damage)
+import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (health, isDepleted, reduceHealth)
 import Domain.ValueObjects.LifeParams (LifeParams (..))
 import Domain.ValueObjects.Lives (Lives, livesCount, loseLife, noLives)
@@ -30,6 +35,18 @@ import Domain.ValueObjects.Position (Position, posY)
 applyDamage :: Damage -> Player -> Player
 applyDamage amount p =
   p{playerHealth = reduceHealth amount (playerHealth p)}
+
+playerIsInvincible :: Player -> Bool
+playerIsInvincible p = hasFramesLeft (playerInvincibilityFrames p)
+
+-- Daño por contacto (enemigo, proyectil enemigo, hazard) e i-frames posteriores.
+applyContactDamage :: CombatParams -> Player -> Player
+applyContactDamage cp p
+  | playerIsInvincible p = p
+  | otherwise =
+      applyDamage
+        (cpContactDamage cp)
+        p{playerInvincibilityFrames = cpInvincibilityDuration cp}
 
 lowestPlatformBottomY :: World -> Float
 lowestPlatformBottomY w =
@@ -80,10 +97,13 @@ resolveHazardsAndDeath lp lives phase w =
   case phase of
     Playing ->
       let w'
-            | isPlayerOutOfBounds lp w =
-                w{worldPlayer = (worldPlayer w){playerHealth = health 0}}
+            | isPlayerOutOfBounds lp w = killPlayerFromFall w
             | otherwise = w
        in if isDepleted (playerHealth (worldPlayer w'))
             then resolveDeath lp lives w'
             else (w', lives, Playing)
     _ -> (w, lives, phase)
+
+killPlayerFromFall :: World -> World
+killPlayerFromFall w =
+  w{worldPlayer = (worldPlayer w){playerHealth = health 0}}

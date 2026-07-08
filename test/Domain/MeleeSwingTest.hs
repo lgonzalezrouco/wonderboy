@@ -43,7 +43,7 @@ unit_impactHitboxExtendsBeyondFixedReach :: Assertion
 unit_impactHitboxExtendsBeyondFixedReach =
   let body = Aabb{aabbMinX = 0, aabbMinY = 0, aabbMaxX = 32, aabbMaxY = 48}
       fixedReach = body{aabbMaxX = aabbMaxX body + cpMeleeReach testCombatParams}
-      impact = meleeHitboxAtImpact testCombatParams body FacingRight
+      impact = meleeHitboxAtImpact body FacingRight
    in aabbMaxX impact > aabbMaxX fixedReach @?= True
 
 unit_golemHurtFlashOnSurvivingMelee :: Assertion

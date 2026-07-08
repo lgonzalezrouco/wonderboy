@@ -179,43 +179,18 @@ worldGrounded = fallUntilGround 500 initialWorld
 
 worldWithCeiling :: World
 worldWithCeiling =
-  World
+  floorWorld
     { worldPlayer = risingPlayer (position 0 25)
-    , worldEnemies = []
     , worldPlatforms = [ceilingPlatform]
-    , worldMovingPlatforms = []
     , worldSpawnPoint = position 0 25
-    , worldPickups = []
-    , worldMinScore = score 0
-    , worldExit = defaultExitZone
-    , worldProjectiles = []
-    , worldNextProjectileId = 1
-    , worldFallingHazards = []
-    , worldCrumblingPlatforms = []
-    , worldBossArena = Nothing
-    , worldBossArenaEngaged = False
     }
 
 worldWithWall :: World
 worldWithWall =
-  World
+  floorWorld
     { worldPlayer = spawnPlayer defaultMaxHealth (position 33 8)
-    , worldEnemies = []
-    , worldPlatforms =
-        [ floorPlatform
-        , wallPlatform
-        ]
-    , worldMovingPlatforms = []
+    , worldPlatforms = [floorPlatform, wallPlatform]
     , worldSpawnPoint = position 33 8
-    , worldPickups = []
-    , worldMinScore = score 0
-    , worldExit = defaultExitZone
-    , worldProjectiles = []
-    , worldNextProjectileId = 1
-    , worldFallingHazards = []
-    , worldCrumblingPlatforms = []
-    , worldBossArena = Nothing
-    , worldBossArenaEngaged = False
     }
 
 wallPlatform :: Platform

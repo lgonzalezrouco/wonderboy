@@ -1,12 +1,10 @@
 module Domain.CombatTest where
 
-import Domain.Fixtures (swingToImpact, testCombatParams)
+import Domain.Fixtures (floorWorld, swingToImpact, testCombatParams)
 import Domain.Logic.BehaviourCatalog (patrolHorizontal)
 import Domain.Logic.Combat (resolveCombat)
 import Domain.Model.Enemy (enemyHealth, mkEnemy, spawnEnemy)
 import Domain.Model.EnemyKind (EnemyKind (..))
-import Domain.Model.ExitZone (defaultExitZone)
-import Domain.Model.Platform (platform)
 import Domain.Model.Player (
   Player (..),
   playerAttackFrames,
@@ -20,31 +18,8 @@ import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frameCount, frames, noFrames)
 import Domain.ValueObjects.Health (health)
 import Domain.ValueObjects.Input (Input (..), noInput)
-import Domain.ValueObjects.Position (Position, position)
-import Domain.ValueObjects.Score (score)
+import Domain.ValueObjects.Position (position)
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-
-testSpawn :: Position
-testSpawn = position 0 80
-
-floorWorld :: World
-floorWorld =
-  World
-    { worldPlayer = spawnPlayer (health 3) testSpawn
-    , worldEnemies = []
-    , worldPlatforms = [platform (position (-200) 0) 400 8]
-    , worldMovingPlatforms = []
-    , worldSpawnPoint = testSpawn
-    , worldPickups = []
-    , worldMinScore = score 0
-    , worldExit = defaultExitZone
-    , worldProjectiles = []
-    , worldNextProjectileId = 1
-    , worldFallingHazards = []
-    , worldCrumblingPlatforms = []
-    , worldBossArena = Nothing
-    , worldBossArenaEngaged = False
-    }
 
 unit_attackEdgeStartsWindow :: Assertion
 unit_attackEdgeStartsWindow =

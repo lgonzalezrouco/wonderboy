@@ -4,15 +4,13 @@ import Data.Maybe (fromMaybe)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
 
-import Domain.Logic.BehaviourCatalog (defaultProgramForKind)
 import Domain.Logic.Frame (
   FrameParams (..),
   FrameResult (..),
   PlayingFrame (..),
   advanceSimulationFrame,
  )
-import Domain.Model.Enemy (Enemy (..), spawnEnemy)
-import Domain.Model.EnemyKind (EnemyKind (SnailKind))
+import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.Player (Player (..))
 import Domain.Model.Projectile (Projectile (..))
 import Domain.Model.World (World (..), initialWorld)
@@ -20,7 +18,7 @@ import Domain.ValueObjects.DeltaTime (DeltaTime, deltaTime)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Lives (lives)
-import Domain.ValueObjects.Position (posX, posY, position)
+import Domain.ValueObjects.Position (posX, posY)
 import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velX, velY)
 import UseCases.GameMonad (
@@ -45,18 +43,10 @@ frameParams =
     , fpThrow = throwParamsFromConfig defaultConfig
     }
 
-benchWorld :: World
-benchWorld =
-  initialWorld
-    { worldEnemies = []
-    }
-_unusedEnemyCtors :: (EnemyKind, Int -> World)
-_unusedEnemyCtors = (SnailKind, \_ -> initialWorld{worldEnemies = [spawnEnemy 1 SnailKind (position 600 8) (defaultProgramForKind SnailKind)]})
-
 benchFrame0 :: PlayingFrame
 benchFrame0 =
   PlayingFrame
-    { pfWorld = benchWorld
+    { pfWorld = initialWorld
     , pfLives = lives 3
     , pfScore = score 0
     , pfLevelIndex = 1

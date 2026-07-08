@@ -12,15 +12,15 @@ where
 import GHC.Generics (Generic)
 
 import Domain.Model.World (defaultMaxHealth)
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Damage (Damage, damage)
 import Domain.ValueObjects.Frames (Frames, frames)
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.LevelCount (LevelCount, levelCount)
-import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
+import Domain.ValueObjects.LifeParams (LifeParams (..))
 import Domain.ValueObjects.Lives (Lives, lives)
-import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
-import Domain.ValueObjects.ThrowParams (ThrowParams (..), throwParams)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
+import Domain.ValueObjects.ThrowParams (ThrowParams (..))
 
 data GameConfig = GameConfig
   { gcGravity :: Float
@@ -79,41 +79,45 @@ defaultConfig =
     , gcProjectileHeight = 12.0
     }
 
-configForLevelCatalog :: [a] -> GameConfig
-configForLevelCatalog paths =
-  defaultConfig{gcLevelCount = levelCount (length paths)}
+configForLevelCatalog :: Int -> GameConfig
+configForLevelCatalog n =
+  defaultConfig{gcLevelCount = levelCount n}
 
 physicsParamsFromConfig :: GameConfig -> PhysicsParams
 physicsParamsFromConfig cfg =
-  physicsParams
-    (gcGravity cfg)
-    (gcMoveSpeed cfg)
-    (gcJumpSpeed cfg)
+  PhysicsParams
+    { ppGravity = gcGravity cfg
+    , ppMoveSpeed = gcMoveSpeed cfg
+    , ppJumpSpeed = gcJumpSpeed cfg
+    }
 
 lifeParamsFromConfig :: GameConfig -> LifeParams
 lifeParamsFromConfig cfg =
-  lifeParams
-    (gcMaxHealth cfg)
-    (gcDeathMargin cfg)
-    (gcInvincibilityDuration cfg)
+  LifeParams
+    { lpMaxHealth = gcMaxHealth cfg
+    , lpDeathMargin = gcDeathMargin cfg
+    , lpRespawnInvincibilityFrames = gcInvincibilityDuration cfg
+    }
 
 combatParamsFromConfig :: GameConfig -> CombatParams
 combatParamsFromConfig cfg =
-  combatParams
-    (gcAttackDuration cfg)
-    (gcInvincibilityDuration cfg)
-    (gcContactDamage cfg)
-    (gcMeleeReach cfg)
-    (gcMeleeDamage cfg)
-    (gcEnemyHurtFlashDuration cfg)
+  CombatParams
+    { cpAttackDuration = gcAttackDuration cfg
+    , cpInvincibilityDuration = gcInvincibilityDuration cfg
+    , cpContactDamage = gcContactDamage cfg
+    , cpMeleeReach = gcMeleeReach cfg
+    , cpMeleeDamage = gcMeleeDamage cfg
+    , cpEnemyHurtFlashDuration = gcEnemyHurtFlashDuration cfg
+    }
 
 throwParamsFromConfig :: GameConfig -> ThrowParams
 throwParamsFromConfig cfg =
-  throwParams
-    (gcThrowCooldown cfg)
-    (gcThrowLifetime cfg)
-    (gcThrowHorizontalSpeed cfg)
-    (gcThrowLiftSpeed cfg)
-    (gcProjectileWidth cfg)
-    (gcProjectileHeight cfg)
-    (gcMeleeDamage cfg)
+  ThrowParams
+    { tpCooldown = gcThrowCooldown cfg
+    , tpLifetime = gcThrowLifetime cfg
+    , tpHorizontalSpeed = gcThrowHorizontalSpeed cfg
+    , tpLiftSpeed = gcThrowLiftSpeed cfg
+    , tpWidth = gcProjectileWidth cfg
+    , tpHeight = gcProjectileHeight cfg
+    , tpDamage = gcMeleeDamage cfg
+    }

@@ -1,14 +1,18 @@
 module Domain.Logic.EnemyDamage (
   applyPlayerDamageToEnemy,
+  enemyIsAlive,
   tickEnemyHurtFrames,
 )
 where
 
-import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.Enemy (Enemy (..), enemyHealth)
 import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Damage (Damage)
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.Health (isDepleted, reduceHealth)
+
+enemyIsAlive :: Enemy -> Bool
+enemyIsAlive e = not (isDepleted (enemyHealth e))
 
 -- Hace parpadear al enemigo en un golpe que sobrevive. Omite el parpadeo en un golpe fatal porque está por eliminarse.
 applyPlayerDamageToEnemy :: CombatParams -> Damage -> Enemy -> Enemy

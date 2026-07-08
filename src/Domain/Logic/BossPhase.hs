@@ -7,7 +7,7 @@ import Data.List (find)
 import Data.Maybe (fromMaybe)
 
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
-import Domain.Logic.RunBehaviour (playerHorizontalDistance)
+import Domain.Logic.RunBehaviour (playerWithinHorizontalRange)
 import Domain.Model.BossPhase (
   BossDefinition (..),
   BossEventKind (..),
@@ -88,8 +88,12 @@ conditionMet ::
 conditionMet _ _ _ e _ (HealthAtOrBelowRatio ratio) =
   healthAtOrBelowRatio (enemyHealth e) (enemyMaxHealth e) ratio
 conditionMet cp _ w e _ (OnBossEvent PlayerInMeleeRange) =
-  playerHorizontalDistance w e <= cpMeleeReach cp
+  playerWithinHorizontalRange w e (cpMeleeReach cp)
 conditionMet _ _ _ e healthBefore (OnBossEvent TookDamageThisFrame) =
+  tookDamageThisFrame healthBefore e
+
+tookDamageThisFrame :: Maybe Health -> Enemy -> Bool
+tookDamageThisFrame healthBefore e =
   maybe False (\before -> healthPoints before > healthPoints (enemyHealth e)) healthBefore
 
 applyBossPhase :: BossDefinition -> BossPhaseIndex -> Enemy -> Enemy
