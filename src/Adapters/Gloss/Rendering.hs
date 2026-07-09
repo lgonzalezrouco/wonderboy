@@ -37,6 +37,7 @@ import Adapters.Gloss.Config (
 import Adapters.Gloss.Sprites (
   Sprite (..),
   SpriteCatalog (..),
+  enemyBasePicture,
   enemySprite,
   playerSprite,
  )
@@ -298,7 +299,6 @@ renderWorldLayer catalog renderTick showHitboxes gv =
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
-          , renderBossArenaWalls (gvBossArenaWalls gv)
           , renderPlayer catalog renderTick combatParams (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay (gvMeleeHitbox gv) w else Blank
           ]
@@ -326,12 +326,13 @@ renderEnemy catalog renderTick e =
   case enemySprite catalog renderTick e of
     Nothing -> aabbToPicture (enemyColorForKind (enemyKind e)) box
     Just sprite ->
-      if hurtFlash
-        then drawEntitySpriteWith (enemyFacing e) box sprite (spriteHurtPicture sprite)
-        else drawEntitySprite (enemyFacing e) box sprite
+      drawEntitySpriteWith (enemyFacing e) box sprite (bodyPicture sprite)
  where
   box = enemyAabb e
   hurtFlash = showsHurtFlash (enemyHurtFrames e) renderTick
+  bodyPicture sprite
+    | hurtFlash = spriteHurtPicture sprite
+    | otherwise = enemyBasePicture e sprite
 
 showsHurtFlash :: Frames -> Int -> Bool
 showsHurtFlash frames renderTick =
@@ -460,13 +461,6 @@ renderMovingPlatform catalog platform =
 renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
-
-renderBossArenaWalls :: [Platform] -> Picture
-renderBossArenaWalls =
-  pictures . map (aabbToPicture bossArenaWallColor . platformAabb)
-
-bossArenaWallColor :: Color
-bossArenaWallColor = makeColor 0.95 0.45 0.2 0.55
 
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
@@ -841,10 +835,6 @@ aabbOutline color box =
 renderFootAnchor :: Position -> Color -> Picture
 renderFootAnchor pos color =
   Translate (posX pos) (posY pos) (Color color (circleSolid hitboxFootRadius))
-
-drawEntitySprite :: Facing -> Aabb -> Sprite -> Picture
-drawEntitySprite facing box sprite =
-  drawEntitySpriteWith facing box sprite (spritePicture sprite)
 
 drawEntitySpriteWith :: Facing -> Aabb -> Sprite -> Picture -> Picture
 drawEntitySpriteWith facing box sprite picture =

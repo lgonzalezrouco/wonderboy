@@ -4,6 +4,7 @@ module Adapters.Gloss.Sprites (
   loadSpriteCatalog,
   playerSprite,
   enemySprite,
+  enemyBasePicture,
 )
 where
 
@@ -19,6 +20,7 @@ import Data.ByteString qualified as BS
 import Graphics.Gloss.Data.Bitmap (bitmapDataOfBMP, bitmapOfBMP, bitmapSize)
 import Graphics.Gloss.Data.Picture (Picture)
 
+import Domain.Model.BossPhase (bossPhaseNumber)
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.Player (Player (..))
@@ -29,6 +31,8 @@ data Sprite = Sprite
   { spritePicture :: Picture
   , spriteHurtPicture :: Picture
   -- ^ Variante con tint rojo para el destello de daño. Reutiliza 'spritePicture' en los sprites sin tint (sin un segundo bitmap).
+  , spritePhaseTints :: [Picture]
+  -- ^ Índice = fase; 0 = neutro. Vacío fuera de los jefes.
   , spriteWidth :: Float
   , spriteHeight :: Float
   }
@@ -99,8 +103,8 @@ loadSpriteCatalog =
     <*> loadHurtableSprite "assets/sprites/enemies/golem-idle.bmp"
     <*> loadHurtableSprite "assets/sprites/enemies/golem-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/archer-idle.bmp"
-    <*> loadHurtableSprite "assets/sprites/bosses/boss-golem.bmp"
-    <*> loadHurtableSprite "assets/sprites/bosses/boss-bat.bmp"
+    <*> loadBossSprite golemPhaseTintColors "assets/sprites/bosses/boss-golem.bmp"
+    <*> loadBossSprite batPhaseTintColors "assets/sprites/bosses/boss-bat.bmp"
     <*> loadSprite "assets/sprites/projectiles/projectile-rock.bmp"
     <*> loadSprite "assets/sprites/tiles/grass-center.bmp"
     <*> loadSprite "assets/sprites/hazards/weight.bmp"
@@ -120,16 +124,17 @@ loadWalkSprites =
       [1 .. 11 :: Int]
 
 loadSprite :: FilePath -> IO (Maybe Sprite)
-loadSprite = loadSpriteWith Nothing
+loadSprite = loadSpriteWith Nothing []
 
 loadHurtableSprite :: FilePath -> IO (Maybe Sprite)
-loadHurtableSprite = loadSpriteWith (Just tintRedBMP)
+loadHurtableSprite = loadSpriteWith (Just tintRedBMP) []
 
-{- | Lee un BMP y deriva su tamaño del propio bitmap (sin dimensiones hardcodeadas).
-Cuando se le pasa un tint, construye la variante de daño a partir del mismo BMP.
--}
-loadSpriteWith :: Maybe (BMP -> BMP) -> FilePath -> IO (Maybe Sprite)
-loadSpriteWith tintHurt relPath = do
+loadBossSprite :: [Maybe RGB] -> FilePath -> IO (Maybe Sprite)
+loadBossSprite = loadSpriteWith (Just tintRedBMP)
+
+-- | Deriva el tamaño del propio bitmap (sin dimensiones hardcodeadas) y arma las variantes tintadas.
+loadSpriteWith :: Maybe (BMP -> BMP) -> [Maybe RGB] -> FilePath -> IO (Maybe Sprite)
+loadSpriteWith tintHurt phaseColors relPath = do
   path <- getDataFileName relPath
   loaded <- try (readBMP path)
   case loaded of
@@ -142,38 +147,58 @@ loadSpriteWith tintHurt relPath = do
           (width, height) = bitmapSize bitmapData
           normalPicture = bitmapOfBMP bmp
           hurtPicture = maybe normalPicture (\tint -> bitmapOfBMP (tint bmp)) tintHurt
+          phasePicture' = maybe normalPicture (\rgb -> bitmapOfBMP (tintTowardBMP rgb phaseTintStrength bmp))
        in pure
             ( Just
                 Sprite
                   { spritePicture = normalPicture
                   , spriteHurtPicture = hurtPicture
+                  , spritePhaseTints = map phasePicture' phaseColors
                   , spriteWidth = fromIntegral width
                   , spriteHeight = fromIntegral height
                   }
             )
 
--- | Mezcla hacia rojo puro para el tint de daño: 0 = sin cambios, 1 = rojo plano.
-tintStrength :: Float
-tintStrength = 0.6
+type RGB = (Word8, Word8, Word8)
+
+hurtTintStrength :: Float
+hurtTintStrength = 0.6
+
+phaseTintStrength :: Float
+phaseTintStrength = 0.45
+
+golemPhaseTintColors :: [Maybe RGB]
+golemPhaseTintColors = [Nothing, Just phaseCyan, Just phaseViolet]
+
+batPhaseTintColors :: [Maybe RGB]
+batPhaseTintColors = [Nothing, Just phaseViolet]
+
+phaseCyan :: RGB
+phaseCyan = (96, 176, 255)
+
+phaseViolet :: RGB
+phaseViolet = (150, 78, 214)
 
 tintRedBMP :: BMP -> BMP
-tintRedBMP bmp =
-  let (width, height) = bmpDimensions bmp
-   in packRGBA32ToBMP32 width height (tintRedRGBA (unpackBMPToRGBA32 bmp))
+tintRedBMP = tintTowardBMP (255, 0, 0) hurtTintStrength
 
-tintRedRGBA :: ByteString -> ByteString
-tintRedRGBA = BS.pack . tintPixels . BS.unpack
+-- | Mezcla RGB hacia el color objetivo; el canal alfa se preserva.
+tintTowardBMP :: RGB -> Float -> BMP -> BMP
+tintTowardBMP target strength bmp =
+  let (width, height) = bmpDimensions bmp
+   in packRGBA32ToBMP32 width height (tintTowardRGBA target strength (unpackBMPToRGBA32 bmp))
+
+tintTowardRGBA :: RGB -> Float -> ByteString -> ByteString
+tintTowardRGBA (tr, tg, tb) strength = BS.pack . tintPixels . BS.unpack
  where
   tintPixels (r : g : b : a : rest) =
-    tintChannel 255 r : tintChannel 0 g : tintChannel 0 b : a : tintPixels rest
+    blend tr r : blend tg g : blend tb b : a : tintPixels rest
   tintPixels remainder = remainder
-
-tintChannel :: Word8 -> Word8 -> Word8
-tintChannel target component =
-  round
-    ( fromIntegral component * (1 - tintStrength)
-        + fromIntegral target * tintStrength
-    )
+  blend target component =
+    round
+      ( fromIntegral component * (1 - strength)
+          + fromIntegral target * strength
+      )
 
 spriteLoadFailure :: FilePath -> SomeException -> IO (Maybe Sprite)
 spriteLoadFailure relPath err =
@@ -215,6 +240,19 @@ enemySprite catalog renderFrame enemy =
   patrolSprite frame idle walk
     | moving = idleOrWalk frame idle walk
     | otherwise = idle
+
+enemyBasePicture :: Enemy -> Sprite -> Picture
+enemyBasePicture enemy sprite =
+  case enemyBossPhase enemy of
+    Just idx -> phasePicture (bossPhaseNumber idx) sprite
+    Nothing -> spritePicture sprite
+
+phasePicture :: Int -> Sprite -> Picture
+phasePicture n sprite
+  | n >= 0, n < length tints = tints !! n
+  | otherwise = spritePicture sprite
+ where
+  tints = spritePhaseTints sprite
 
 idleOrWalk :: Int -> Maybe Sprite -> Maybe Sprite -> Maybe Sprite
 idleOrWalk frame idle walk

@@ -7,13 +7,12 @@ where
 
 import Control.Monad (guard)
 
-import Domain.Logic.BossArena (bossArenaSealed, bossArenaWallPlatforms, bossArenaWallsActive, playerWithinBossArena)
+import Domain.Logic.BossArena (bossArenaSealed, playerWithinBossArena)
 import Domain.Logic.LevelFlow (findLivingBoss, showBossExitHint, showExitScoreHint)
 import Domain.Logic.MeleeSwing (meleeHitboxDuringSwing)
 import Domain.Model.Enemy (enemyHealth, enemyMaxHealth)
 import Domain.Model.GamePhase (GamePhase)
-import Domain.Model.Platform (Platform)
-import Domain.Model.World (World (..), worldBossArena)
+import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb)
 import Domain.ValueObjects.BossHealth (BossHealth, bossHealth)
 import Domain.ValueObjects.CombatParams (CombatParams)
@@ -41,8 +40,6 @@ data GameView = GameView
   , gvBossArenaSealed :: Bool
   , gvMeleeHitbox :: Maybe Aabb
   -- ^ Presente durante toda la ventana de swing del ataque (para visualización).
-  , gvBossArenaWalls :: [Platform]
-  -- ^ Vacío salvo que el jugador esté encerrado en la arena del boss con el boss aún vivo.
   }
   deriving (Eq, Show)
 
@@ -69,11 +66,6 @@ gameViewFromState cfg gs =
         , gvBossExitHint = showBossExitHint s w
         , gvBossArenaSealed = bossArenaSealed w
         , gvMeleeHitbox = meleeHitboxDuringSwing combatParams p
-        , gvBossArenaWalls =
-            maybe
-              []
-              (\arena -> if bossArenaWallsActive w then bossArenaWallPlatforms arena else [])
-              (worldBossArena w)
         }
 
 bossHealthFromWorld :: World -> Maybe BossHealth
