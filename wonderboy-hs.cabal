@@ -150,6 +150,8 @@ library
       , Domain.Logic.BossArena
       , Domain.Logic.Collision
       , Domain.Logic.Combat
+      , Domain.Logic.EnemyDamage
+      , Domain.Logic.MeleeSwing
       , Domain.Logic.Projectiles
       , Domain.Logic.CrumblingPlatforms
       , Domain.Logic.FallingHazards
@@ -264,7 +266,9 @@ test-suite wonderboy-hs-test
       , Domain.Fixtures
       , Domain.FrameTest
       , Domain.PlayerLifeTest
+      , Domain.PropertiesTest
       , Domain.CombatTest
+      , Domain.MeleeSwingTest
       , Domain.EnemyFsmTest
       , Domain.NewEnemyKindsTest
       , Domain.MovingPlatformTest
@@ -307,7 +311,19 @@ test-suite wonderboy-hs-test
       , bytestring >=0.11 && <0.13
       , tasty >=1.5 && <1.6
       , tasty-hunit >=0.10 && <0.11
+      , tasty-quickcheck >=0.10 && <0.12
       , text >=2.0 && <2.2
 
     build-tool-depends:
         tasty-discover:tasty-discover >=5.0 && <5.3
+
+-- Headless memory/laziness benchmark: folds many pure frames and forces the
+-- evolving world state each frame (checksum). Run with `+RTS -s` to compare a
+-- lazy vs a strict fold. Not part of the game or the test suite.
+executable wonderboy-bench
+    import:           warnings, deps
+    main-is:          Main.hs
+    hs-source-dirs:   bench
+    default-language: GHC2021
+    build-depends:    wonderboy-hs
+    ghc-options:      -rtsopts

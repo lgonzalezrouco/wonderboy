@@ -1,4 +1,3 @@
--- | Composition tests for 'Domain.Logic.Frame.advanceSimulationFrame'.
 module Domain.FrameTest where
 
 import Data.List (find)
@@ -8,6 +7,7 @@ import Domain.Fixtures (
   dtFrame,
   floorWorld,
   mkTestPickup,
+  stepsToMeleeImpact,
   testCombatParams,
   testLifeParams,
   testParams,
@@ -63,14 +63,17 @@ playingFrame w =
     , pfLevelIndex = 1
     }
 
-runFrame :: World -> FrameResult
-runFrame w =
+runFrameWith :: Input -> World -> FrameResult
+runFrameWith input w =
   advanceSimulationFrame
     testFrameParams
     (gcLevelCount defaultConfig)
     dtFrame
-    noInput
+    input
     (playingFrame w)
+
+runFrame :: World -> FrameResult
+runFrame = runFrameWith noInput
 
 spawnBossFromCatalog :: Int -> EnemyKind -> Position -> Enemy
 spawnBossFromCatalog eid kind pos =
@@ -160,18 +163,14 @@ unit_frameBossPhaseUsesPreFrameHealth =
           { enemyHealth = health 14
           , enemyMaxHealth = health 20
           }
-      -- Arranca el swing por input: el melee daña en el frame de inicio ('attackStarted').
-      p = spawnPlayer defaultMaxHealth (position 170 8) -- mira a la derecha por defecto
+      p = spawnPlayer defaultMaxHealth (position 170 8)
       w =
         floorWorld
           { worldPlayer = p
           , worldEnemies = [boss]
           }
-      result =
-        advanceSimulationFrame
-          testFrameParams
-          (gcLevelCount defaultConfig)
-          dtFrame
-          (noInput{inputAttack = True})
-          (playingFrame w)
-   in bossPhaseIndexIn (frWorld result) @?= 1
+      afterAttack = runFrameWith (noInput{inputAttack = True}) w
+      afterImpact =
+        iterate (runFrame . frWorld) afterAttack
+          !! stepsToMeleeImpact testCombatParams
+   in bossPhaseIndexIn (frWorld afterImpact) @?= 1

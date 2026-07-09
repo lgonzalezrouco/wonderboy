@@ -1,7 +1,3 @@
-{- | Proyectiles de jugador y enemigo (entidades de corta duración).
-
-Reutilizable por el arco del jugador (M19) y disparos enemigos (M20).
--}
 module Domain.Model.Projectile (
   ProjectileMotion (..),
   ProjectileOwner (..),
@@ -20,21 +16,16 @@ import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
 
--- | Perfil de movimiento del proyectil.
 data ProjectileMotion
-  = -- | Gravedad + despawn al tocar plataforma (arco del jugador en M19).
-    Ballistic
-  | -- | Velocidad constante (proyectiles enemigos).
-    Linear
+  = Ballistic -- arco por gravedad, desaparece al chocar con una plataforma (tiros del jugador)
+  | Linear -- velocidad constante, sin gravedad (disparos del enemigo)
   deriving (Eq, Show, Generic)
 
--- | Quién disparó el proyectil.
 data ProjectileOwner
   = PlayerProjectile
   | EnemyProjectile
   deriving (Eq, Show, Generic)
 
--- | Estado de un proyectil en un frame.
 data Projectile = Projectile
   { projectileId :: Int
   , projectilePos :: Position
@@ -47,7 +38,6 @@ data Projectile = Projectile
   }
   deriving (Eq, Show, Generic)
 
--- | Caja de colisión del proyectil (centro inferior en 'projectilePos').
 projectileAabb :: Projectile -> Aabb
 projectileAabb p =
   aabbFromBottomCenter
@@ -55,9 +45,8 @@ projectileAabb p =
     (projectileWidth p)
     (projectileHeight p)
 
-{- | Crea un proyectil del jugador con velocidad inicial según 'Facing'.
-
-La posición es el punto de spawn; el tamaño viene de 'ThrowParams'.
+{- | Genera un tiro del jugador desde la posición dada en la dirección 'Facing'. Los
+Floats son la velocidad horizontal y el empuje hacia arriba (px/s), luego el ancho y alto de la caja (px).
 -}
 spawnPlayerProjectile ::
   Int ->
@@ -84,9 +73,8 @@ spawnPlayerProjectile pid pos facing hSpeed liftSpeed lifetime width height =
         , projectileHeight = height
         }
 
-{- | Crea un proyectil enemigo con velocidad inicial hacia @(dx, dy)@.
-
-La posición es el punto de spawn; el vector no tiene que estar normalizado.
+{- | Genera un disparo del enemigo dirigido hacia (dx, dy) (no hace falta normalizarlo). 'speed'
+(px/s) fija la magnitud, luego el lifetime y el ancho y alto de la caja (px).
 -}
 spawnEnemyProjectile ::
   Int ->

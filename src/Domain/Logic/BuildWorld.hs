@@ -1,10 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{- | Construcción pura de 'World' desde 'LevelDefinition'.
-
-Valida ids duplicados y delega en smart constructors de plataformas,
-pickups y enemigos.
--}
 module Domain.Logic.BuildWorld (
   buildWorld,
   buildEnemy,
@@ -49,7 +44,6 @@ import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (scaleHealth)
 import Domain.ValueObjects.Score (score)
 
--- | Construye el mundo inicial del nivel a partir de la definición autoral.
 buildWorld :: LevelDefinition -> Either LevelBuildError World
 buildWorld lvl = do
   checkMinScore (levelMinScore lvl)

@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | JSON level definition decode, build, and validation tests.
 module Domain.LevelLoadTest where
 
 import Data.Text (Text)

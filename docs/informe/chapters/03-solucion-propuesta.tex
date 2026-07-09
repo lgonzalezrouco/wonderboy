@@ -5,21 +5,16 @@
 \label{subsec:solucion-vision}
 
 Los problemas del capítulo anterior se abordan con una separación estricta de
-responsabilidades. La simulación de un \emph{frame} vive en un núcleo puro que
-transforma un \emph{world} en otro \emph{world}. La orchestration del
-\emph{run} (vidas, fase de partida, puntaje entre etapas) se expresa con una
-pila monádica sin \texttt{IO}. Los efectos del entorno (entrada, reloj,
-archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
+responsabilidades. La simulación de un frame vive en un núcleo puro que transforma un
+mundo en otro mundo. La orquestación de la partida (vidas, fase de juego, puntaje entre
+etapas) se expresa con una pila monádica sin \texttt{IO}. Los efectos del entorno (entrada,
+reloj, archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gloss.
 
 \subsection{Arquitectura por capas}
 \label{subsec:solucion-capas}
 
-El repositorio sigue una arquitectura en cuatro niveles, inspirada en la
-arquitectura hexagonal~\cite{cockburn2005hexagonal}.
-La regla de dependencias es unidireccional:
-\texttt{Frameworks} y \texttt{Adapters} pueden usar \texttt{UseCases} y
-\texttt{Domain}. \texttt{UseCases} importa solo \texttt{Domain}. \texttt{Domain}
-no importa capas superiores.
+Cuatro capas con dependencia unidireccional hacia \texttt{Domain}
+(figura~\ref{fig:capas-dependencias})~\cite{cockburn2005hexagonal}.
 
 \begin{figure}[htbp]
   \centering
@@ -27,164 +22,79 @@ no importa capas superiores.
     \texttt{Frameworks} & \texttt{Adapters} & \texttt{UseCases} & \texttt{Domain} \\
     \textit{con \texttt{IO}} & \textit{con \texttt{IO}} & \textit{sin \texttt{IO}} & \textit{puro}
   \end{tabular}
-  \caption{Dependencias entre capas. Las flechas indican quién puede importar a quién.}
+  \caption{Dependencias entre capas.}
   \label{fig:capas-dependencias}
 \end{figure}
-
-\begin{center}
-  \captionof{table}{Rol de cada capa en el motor.}
-  \label{tab:capas-rol}
-  \smallskip
-  \begin{tabular}{@{}p{2.4cm}p{2.2cm}p{5.2cm}p{4.2cm}@{}}
-    \textbf{Capa} & \textbf{Pureza} & \textbf{Responsabilidad} & \textbf{Ejemplos} \\
-    \hline
-    \texttt{Domain/} & 100\% pura &
-    Modelos, \emph{value objects} y lógica de simulación: física, colisiones,
-    combate, construcción del \emph{world} desde la \emph{level definition},
-    DSL de comportamiento, interpreter del behaviour step y transición de
-    \emph{frame} completa. &
-    \texttt{World}, \texttt{advanceSimulationFrame}, \texttt{runBehaviourStep} \\
-    \texttt{UseCases/} & Mónadas abstractas &
-    Orchestration del \emph{frame} y del \emph{run}: pila \texttt{GameM},
-    \texttt{updateGame}, \emph{bootstrap} del catálogo, ports y carga desde JSON. &
-    \texttt{GameMonad}, \texttt{BootstrapRun}, \texttt{LoadLevel} \\
-    \texttt{Adapters/} & \texttt{IO} concreto &
-    Traducción entre medios externos y tipos del dominio: teclado Gloss
-    $\rightarrow$ \texttt{Input}, disco $\rightarrow$ \texttt{Text},
-    API del LLM $\rightarrow$ definiciones, \texttt{GameView} $\rightarrow$ imagen. &
-    \texttt{Gloss.Input}, \texttt{Anthropic.Content}, \texttt{BootstrapRunIO} \\
-    \texttt{Frameworks/} & \texttt{IO} &
-    Wiring del bucle de juego: \texttt{playIO}, estado de aplicación
-    ajeno al dominio, llamadas a \texttt{runGameM} y \texttt{updateGame}. &
-    \texttt{Gloss.GameLoop} \\
-  \end{tabular}
-\end{center}
-
-\texttt{Domain/} agrupa \texttt{Model/} (entidades y agregados),
-\texttt{ValueObjects/} (magnitudes con invariantes) y \texttt{Logic/}
-(transformaciones puras). Los modelos materializan el vocabulario del dominio
-(sección~\ref{subsubsec:dominio-modelado}): \texttt{World}, \texttt{LevelDefinition},
-\texttt{GamePhase}, archetypes de comportamiento. Los \emph{value objects} encapsulan
-unidades (\texttt{DeltaTime}, \texttt{Score}, \texttt{BehaviourTuning}) para que la
-lógica no mezcle \texttt{Float}s sin significado. \texttt{UseCases/} concentra el estado global del motor, define ports
-(\texttt{Ports/}) para servicios externos y eleva las funciones puras del dominio
-al contexto monádico.
-\texttt{Adapters/} encapsula Gloss y el sistema de archivos sin introducir
-reglas de juego. \texttt{Frameworks/} une adaptadores y casos de uso en el
-ejecutable jugable.
 
 \subsection{Núcleo de simulación}
 \label{subsec:solucion-nucleo}
 
-El agregado central de la simulación local es el \emph{world}: \emph{player},
-\emph{enemy}, plataformas, ítems, proyectiles y demás contenido dinámico del
-nivel en un instante. No hay mutación in situ: cada \emph{frame} produce un
-valor nuevo. Esa disciplina responde al problema de estado global del
-dominio (sección~\ref{subsubsec:problema-estado}): el paso de simulación es
-una función total y sustituible.
-
-La transición principal de un \emph{frame} en juego es
-\texttt{advanceSimulationFrame}, en \texttt{Domain.\allowbreak Logic.\allowbreak Frame}.
-Recibe
-parámetros de física y reglas (\texttt{FrameParams}, proyectados desde la
-configuración), el \emph{delta time}, la entrada del jugador y un
-\texttt{PlayingFrame} (\emph{world}, vidas, puntaje e índice de nivel), y
-devuelve un \texttt{FrameResult} con el \emph{world} siguiente, vidas,
-puntaje y fase posiblemente actualizados. Un \emph{frame} en \texttt{Playing}
-es así una función pura total sobre ese \emph{snapshot}: la denotación del \emph{frame}
-queda en el dominio, no en la mónada.
+El agregado central es el mundo. Cada frame lo reemplaza por completo
+(sección~\ref{subsubsec:problema-estado}). La denotación del paso en juego:
 
 \begin{lstlisting}
 advanceSimulationFrame
   :: FrameParams -> LevelCount -> DeltaTime -> Input
   -> PlayingFrame -> FrameResult
+
+data PlayingFrame = PlayingFrame
+  { pfWorld     :: World
+  , pfLives     :: Lives
+  , pfScore     :: Score
+  , pfLevelIndex :: Int
+  }
+
+data FrameResult = FrameResult
+  { frWorld  :: World
+  , frLives  :: Lives
+  , frScore  :: Score
+  , frPhase  :: GamePhase
+  }
 \end{lstlisting}
 
-El primer paso interno es \texttt{advanceFrame}, seguido del resto del pipeline
-(sección~\ref{subsec:pipeline-frame}). A continuación se encadenan combate, proyectiles,
-peligros, fases de jefe, \emph{pickup}s, victoria de nivel
-(sección~\ref{subsubsec:dominio-entidades}) y muerte, en orden fijo.
-\texttt{step} concentra gravedad, salto,
-integración de velocidades y resolución \emph{AABB} del \emph{player} y los \emph{enemy}
-terrestres. Las plataformas móviles y los \emph{hazard} temporales se actualizan
-en la misma cadena.
+Composición interna (orden fijo):
 
-\texttt{UseCases.\allowbreak UpdateGame.\allowbreak updateGame} no recompone esa cadena: lee
-\texttt{GameConfig} y \texttt{GameState}, aplica la política de \emph{frame}
-congelado (cuando el \emph{delta time} es cero o la fase es terminal, no avanza) y fases
-terminales, invoca \texttt{advanceSimulation\-Frame} cuando corresponde y escribe el resultado
-en el estado del \emph{run}.
+\begin{lstlisting}
+wAfterFrame       = advanceFrame params life dt input (pfWorld playing)
+wAfterCombat      = resolveCombat combat input wAfterFrame
+wAfterProjectiles = resolveProjectiles throwP combat params dt input wAfterCombat
+wAfterHazards     = resolveFallingHazards life combat dt wAfterProjectiles
+wAfterBoss        = resolveBossPhases combat wBefore wAfterHazards
+-- ... pickups, victoria hibrida, muerte, fase final
+\end{lstlisting}
 
-\subsection{Orchestration con mónadas}
+\texttt{advanceFrame} antecede a combate y reglas de victoria
+(sección~\ref{subsec:pipeline-frame}). \texttt{updateGame} solo invoca
+\texttt{advanceSimulationFrame} cuando la fase y el intervalo de tiempo lo permiten.
+
+\subsection{Orquestación con mónadas}
 \label{subsec:solucion-monadas}
 
-El \emph{world} cubre la instantánea de un nivel, pero una partida (\emph{run})
-necesita más: vidas restantes, fase (\texttt{Playing}, \texttt{GameOver},
-victoria de nivel, etc.), puntaje del nivel en curso e índice de etapa. Esos
-campos viven en \texttt{GameState}, que envuelve \texttt{gsWorld}. Los
-parámetros que no cambian \emph{frame} a \emph{frame} (gravedad, velocidades,
-daño de contacto, duración de invencibilidad, cantidad de niveles del
-\emph{run}) se agrupan en \texttt{GameConfig} y se sirven de solo lectura.
-
-La pila \texttt{GameM} modela tres efectos sobre una base pura
-(\texttt{Identity}), en el orden elegido para \texttt{GameM}:
+La partida agrega a \texttt{GameState} lo que el mundo no cubre (vidas, fase,
+puntaje del nivel, índice de etapa). \texttt{GameConfig} se sirve de solo lectura.
+La pila:
 
 \begin{lstlisting}
 newtype GameM a = GameM {
   unGameM :: ReaderT GameConfig
              (StateT GameState (ExceptT GameError Identity)) a
 }
+
+updateGame :: (MonadReader GameConfig m, MonadState GameState m)
+             => DeltaTime -> Input -> m ()
 \end{lstlisting}
 
-\textbf{\texttt{ReaderT}} expone \texttt{GameConfig} a cualquier acción del
-motor mediante \texttt{ask} y \texttt{asks}. \texttt{updateGame} lo usa para
-armar \texttt{FrameParams} y el conteo de niveles del \emph{run} antes de
-llamar a \texttt{advanceSimulationFrame}. El dominio recibe \emph{value objects}, no el
-registro de configuración completo.
-
-\textbf{\texttt{StateT}} mantiene \texttt{GameState}. En cada \emph{frame}
-\texttt{updateGame} hace \texttt{get}, delega el cálculo del \emph{frame} en el dominio
-y \texttt{modify} escribe \emph{world}, vidas, puntaje y fase devueltos por
-\texttt{FrameResult}.
-Transiciones de \emph{run} como cargar el siguiente nivel (\texttt{startLevel}),
-reiniciar la partida (\texttt{restartRun}) o avanzar tras completar una etapa
-también son acciones \texttt{StateT} que reemplazan o reinician campos de
-\texttt{GameState} conservando las vidas cuando corresponde.
-
-\textbf{\texttt{ExceptT}} canaliza errores recuperables sin excepciones en el
-núcleo. \texttt{GameError} agrupa fallos al decodificar JSON de una
-\emph{level definition} o al validar el \emph{layout} al construir el \emph{world}
-(\texttt{LoadLevel}, \texttt{BuildWorld}). \texttt{runGameM} desenvuelve la
-pila y devuelve \texttt{Either GameError (a, GameState)}. El bucle Gloss
-trata el \texttt{Left} como error fatal de arranque o de carga.
-
-La actualización de un \emph{frame} en juego sigue el esquema: leer
-configuración y estado, si la fase y el \emph{delta time} lo permiten invocar
-\texttt{advanceSimulationFrame}, escribir el \texttt{GameState} resultante.
-\texttt{updateGame} está
-polimórfica en \texttt{MonadReader} y \texttt{MonadState}: no depende del
-concreto \texttt{GameM}, lo que facilita tests con instancias mínimas.
-
-Fuera del paso \emph{frame} a \emph{frame}, \texttt{GameState} y
-\texttt{GameConfig} separan lo que el capítulo anterior llamó estado local del
-nivel y estado del \emph{run}. El \emph{world} sigue siendo el valor que las
-funciones puras sustituyen. La mónada de estado solo coordina cuándo se
-reemplaza y qué metadatos del \emph{run} se actualizan en el mismo acto.
+\texttt{ReaderT} provee configuración y \texttt{StateT} el estado de partida.
+\texttt{ExceptT} errores de carga (\texttt{runGameM :: ... -> Either GameError (a, GameState)}).
+\texttt{updateGame} es polimórfica en \texttt{MonadReader} y \texttt{MonadState} para
+facilitar tests sin \texttt{GameM} concreto.
 
 \subsection{Comportamiento e interpretación}
 \label{subsec:solucion-behaviour}
 
-Cada \emph{enemy} activo lleva un \texttt{BehaviourProgram}: un AST de
-\texttt{EntityAction} envuelto en un \emph{free monad}. Las primitivas
-describen acciones cinematográficas y de sensado (\texttt{SetVelocity},
-\texttt{WaitFrames}, \texttt{MoveTowardPlayer}, ramas por distancia al
-\emph{player} o al punto de aparición, disparo, etc.) sin ejecutar física ni
-tocar \texttt{IO}. \texttt{advanceFrame} invoca \texttt{runBehaviourStep} antes de
-\texttt{step}: el ritmo de decisión (IA) y el de cinemática permanecen desacoplados en el
-mismo \emph{delta time} (sección~\ref{subsec:dsl}).
-
-Un patrón de patrulla horizontal ilustra la idea sin entrar en todos los
-constructores del AST:
+Cada enemigo lleva un \texttt{BehaviourProgram} (\texttt{Free EntityAction}).
+\texttt{runBehaviourStep} consume una instrucción por frame antes de \texttt{step}
+(sección~\ref{subsec:dsl}).
 
 \begin{lstlisting}
 patrolHorizontal speed leg =
@@ -195,126 +105,63 @@ patrolHorizontal speed leg =
     >>> patrolHorizontal speed leg
 \end{lstlisting}
 
-En el código la recursión se expresa con \texttt{fix}. La sintaxis
-completa del DSL, los programas por archetype de \emph{enemy}, la cadena
-\emph{preset}/\emph{hint}/\emph{tuning} y las máquinas de estado reactivas se desarrollan
-en el capítulo~\ref{sec:detalles-diseno}.
+\paragraph{Mónada libre frente a ADT recursivo.}
+Un ADT \texttt{data Behaviour = ... | Seq Behaviour Behaviour} con intérprete
+también separa descripción de ejecución. Elegimos \texttt{Free EntityAction} para
+reutilizar \texttt{Monad} (\lstinline|>>>|, \lstinline|fix|) y extender primitivas en el functor
+sin reescribir la forma recursiva.
 
-\subsection{Catálogo del run}
+\begin{lstlisting}
+data EntityAction next
+  = SetVelocity Velocity next
+  | WaitFrames Frames next
+  | IfPlayerWithinRange Float BehaviourProgram BehaviourProgram next
+  | MoveTowardPlayer Float next
+  | Shoot next
+  deriving (Functor)
+
+newtype BehaviourProgram = BehaviourProgram
+  { unBehaviourProgram :: Free EntityAction () }
+\end{lstlisting}
+
+\subsection{Catálogo de la partida}
 \label{subsec:solucion-catalogo}
 
-Antes del primer \emph{frame}, \texttt{BootstrapRun} arma la lista de
-\emph{level definition}s del \emph{run}: lee los JSON fijos del disco, opcionalmente
-reemplaza cada \emph{slot} por una definición pedida a la API del LLM y resuelve
-los \texttt{behaviourHint} del catálogo resultante mediante \texttt{LevelContentPort}. La orchestration pura
-vive en \texttt{UseCases.BootstrapRun}. El \texttt{IO} de arranque (disco y red) queda en \texttt{Adapters/}.
-El framework guarda el catálogo en \texttt{AppState} y materializa el \emph{world}
-inicial con \texttt{worldFromCatalog}. Al pasar de etapa reutiliza la misma lista sin
-volver a consultar la red.
+\texttt{BootstrapRun} arma el catálogo de la partida antes del primer frame
+(JSON fijos, generación opcional por LLM, resolución de \texttt{behaviourHint} vía
+\texttt{LevelContentPort}, con \texttt{IO} solo en adaptadores).
 
 \begin{center}
-  \captionof{table}{Dos formas de armar el catálogo del \emph{run}.}
+  \captionof{table}{Origen del catálogo de la partida.}
   \label{tab:catalogo-modos}
   \smallskip
   \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X@{}}
-    \textbf{Modo} & \textbf{Activación} & \textbf{Origen del contenido} \\
+    \textbf{Modo} & \textbf{Activación} & \textbf{Contenido} \\
     \hline
-    JSON fijos &
-    Por defecto (sin \envvar{WONDERBOY_GENERATE_LEVELS}). &
-    Tres archivos en \texttt{levels/}, escritos a mano en el repositorio.
-    \emph{Layout} reproducible. \texttt{behaviourHint} opcional en cada enemigo:
-    \texttt{LevelContentPort} lo traduce a archetype y \emph{tuning} al arrancar. \\
-    JSON generados por LLM &
-    \envvar{WONDERBOY_GENERATE_LEVELS} activa. &
-    La API del LLM produce un JSON por etapa (intro, desafío, jefe). Cada
-    arranque puede ofrecer un \emph{layout} distinto y un \emph{world} nuevo, sin repetir
-    siempre los mismos niveles. Sin \texttt{behaviourHint}: cada \emph{enemy} usa el
-    \emph{default} de su \texttt{kind}. Si falla la generación de un \emph{slot},
-    se usa el JSON fijo de ese índice. \\
+    JSON fijos & Por defecto &
+    Tres JSON de referencia por etapa, con \texttt{behaviourHint} opcional. \\
+    LLM &
+    \envvar{WONDERBOY\_GENERATE\_LEVELS} &
+    Un JSON por etapa, con respaldo a la definición fija del índice si falla. \\
   \end{tabularx}
 \end{center}
-
-\begin{samepage}
-\begin{center}
-  \captionof{table}{Ports de contenido y sus adaptadores.}
-  \label{tab:puertos-contenido}
-  \smallskip
-  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
-    \textbf{Puerto (\texttt{UseCases/})} & \textbf{Responsabilidad} &
-    \textbf{Sin servicio / fallo} \\
-    \hline
-    \texttt{LevelContentPort} &
-    Generar una \emph{level definition} por perfil de etapa (intro, desafío, jefe)
-    y traducir \texttt{behaviourHint} (texto) a \emph{archetype}
-    (\texttt{patrol}, \texttt{chase}, \texttt{guard}) y \texttt{BehaviourTuning}
-    (escala de \texttt{speed}, \texttt{reach}, \texttt{toughness}). &
-    \texttt{Nothing} en generación $\rightarrow$ JSON fijo del disco.
-    \texttt{Nothing} en resolución de hint $\rightarrow$ \emph{default} del \texttt{kind}. \\
-  \end{tabularx}
-\end{center}
-\end{samepage}
-
-El \emph{stub} \texttt{NoContent} permite tests sin clave de la API del LLM. El adaptador
-\texttt{Anthropic.Content} implementa el puerto en producción. El decoding de JSON y
-\texttt{buildWorld} son puras sobre \texttt{Text}.
 
 \subsection{Frontera con el medio}
 \label{subsec:solucion-frontera}
 
-La interacción con el medio externo (sección~\ref{subsubsec:problema-medio})
-queda acotada en \texttt{Adapters/} y \texttt{Frameworks/}. Ningún módulo de
-\texttt{Domain/} importa Gloss ni realiza \texttt{IO}.
-
-Los adaptadores \emph{traducen}. \texttt{Gloss.Input} mantiene un
-\texttt{KeyState} con teclas sostenidas y genera un \texttt{Input} de dominio
-por \emph{frame}, incluyendo bordes de pulsación para salto, ataque y
-lanzamiento. \texttt{LevelFile} lee bytes del disco y devuelve
-\texttt{Text}. El decoding de JSON y \texttt{buildWorld} ocurren en
-\texttt{UseCases/} y \texttt{Domain/}, sin \texttt{IO}. \texttt{Gloss.Rendering}
-recibe un \texttt{GameView} y produce la imagen del \emph{frame} (sprites, cámara con
-scroll y \emph{tiling} del fondo).
-
-\texttt{GameView} es un tipo de solo lectura de la capa de casos de uso: proyecta \emph{world},
-vidas, fase, puntaje, datos del \emph{HUD} y parámetros de combate necesarios para
-dibujar. El \emph{HUD} (\emph{heads-up display}) es la capa de información en pantalla
-(vidas, puntaje) que no forma parte del \emph{world} simulado. El framework lo construye
-con \texttt{gameViewFromState} a partir de
-\texttt{GameConfig} y \texttt{GameState} antes de llamar al adaptador de
-rendering. Así los adaptadores no importan \texttt{UseCases.GameMonad}.
-
-\texttt{Frameworks.Gloss.GameLoop} \emph{integra} el ciclo. Mantiene un
-\texttt{AppState} ajeno al motor: catálogo de \emph{level definition}s ya
-resueltas, sprites, contador de animación y teclas previas para detectar
-flancos. Ese estado es de la aplicación Gloss, no del \emph{run}. En cada paso del
-bucle, Gloss entrega un \emph{delta time} en segundos. El adaptador de tiempo lo acota,
-se arma el \texttt{Input}, y se ejecuta
-\texttt{runGameM cfg gameState (updateGame dt' input)}. El \texttt{GameState}
-actualizado vuelve al \texttt{AppState}. El dibujado usa la \texttt{GameView}
-derivada. En \texttt{LevelComplete} o \texttt{Victory} la simulación queda congelada
-hasta confirmar con Enter o Space. El framework carga el siguiente nivel o reinicia el
-\emph{run} (\texttt{GameOver} también reinicia tras confirmar).
+El núcleo de dominio no importa Gloss ni realiza \texttt{IO}. Un frame en el borde:
 
 \begin{center}
   \begin{tabular}{@{}c@{}}
-    Reloj Gloss \\[0.4em]
-    $\downarrow$ \\[0.2em]
-    \texttt{capDeltaTime} $\rightarrow$ \texttt{DeltaTime} \\[0.6em]
-    Eventos de teclado $\rightarrow$ \texttt{KeyState} $\rightarrow$ \texttt{buildInput} $\rightarrow$ \texttt{Input} \\[0.6em]
-    \texttt{runGameM}\,(\texttt{updateGame}\,\texttt{dt'}\,\texttt{input}) $\rightarrow$ \texttt{GameState}' \\[0.6em]
-    \texttt{gameViewFromState} $\rightarrow$ \texttt{GameView} \\[0.6em]
-    $\downarrow$ \\[0.2em]
-    \texttt{renderFrame} $\rightarrow$ \texttt{Picture}
+    Reloj Gloss $\rightarrow$ \texttt{capDeltaTime} $\rightarrow$ \texttt{DeltaTime} \\[0.4em]
+    Teclado $\rightarrow$ \texttt{buildInput} $\rightarrow$ \texttt{Input} \\[0.4em]
+    \texttt{runGameM (updateGame dt input)} $\rightarrow$ \texttt{GameState} \\[0.4em]
+    \texttt{gameViewFromState} $\rightarrow$ \texttt{renderFrame} $\rightarrow$ \texttt{Picture}
   \end{tabular}
-  \captionof{figure}{Flujo de un \emph{frame} en la frontera con Gloss. La simulación pura
-    ocurre en \texttt{advanceSimulationFrame}, invocada desde
-    \texttt{updateGame}. Gloss solo suministra tiempo y entrada y muestra el
-    resultado.}
+  \captionof{figure}{Borde Gloss. La simulación pura ocurre en
+    \texttt{advanceSimulationFrame}.}
   \label{fig:flujo-frame}
 \end{center}
-
-El arranque del catálogo (generación, resolución de hints y \emph{fallback}s) se
-describe en la sección~\ref{subsec:solucion-catalogo}. Los adaptadores de la API del LLM usan
-la API de mensajes de Anthropic (modelo Claude Haiku por defecto).
 
 \subsection{Stack tecnológico}
 \label{subsec:solucion-stack}
@@ -328,31 +175,18 @@ la API de mensajes de Anthropic (modelo Claude Haiku por defecto).
     \textbf{Biblioteca} & \textbf{Rol} \\
     \hline
     Haskell (GHC)~\cite{ghc967} &
-    Lenguaje del motor. Inmutabilidad y tipos algebraicos en el dominio,
-    lazy evaluation donde simplifica la composición. \\
+    Tipos algebraicos y evaluación \textit{lazy} con pliegues estrictos en el camino crítico
+    (sección~\ref{subsubsec:teoria-lazy}). \\
     Gloss~\cite{hackageSupportLibs} &
-    Ventana, bucle \texttt{playIO}, eventos de teclado y primitivas de dibujo.
-    Integrado en \texttt{Frameworks/} y \texttt{Adapters/Gloss/}
-    (sección~\ref{subsec:solucion-frontera}). \\
+    Bucle \texttt{playIO}, entrada y dibujo en la capa de integración y adaptador Gloss. \\
     \texttt{mtl}~\cite{mtl} &
-    Transformadores \texttt{ReaderT}, \texttt{StateT} y \texttt{ExceptT} y sus
-    typeclasses. Base de \texttt{GameM} (sección~\ref{subsec:solucion-monadas}). \\
+    \texttt{GameM} = \texttt{ReaderT} + \texttt{StateT} + \texttt{ExceptT}. \\
     \texttt{free}~\cite{free} &
-    \emph{Free monad} sobre \texttt{EntityAction} para el DSL de
-    comportamiento (sección~\ref{subsec:solucion-behaviour}). \\
-    Aeson~\cite{hackageSupportLibs} &
-    Deserialización de \emph{level definition}s desde JSON. La lectura del archivo
-    es \texttt{IO}. El \emph{decode} es puro sobre \texttt{Text}. \\
-    \texttt{http-client}~\cite{hackageSupportLibs} &
-    Cliente HTTP para los adaptadores de la API del LLM: generación de niveles y
-    resolución de \texttt{behaviourHint} (sección~\ref{subsec:solucion-frontera}). \\
-    tasty, tasty-hunit~\cite{hackageSupportLibs} &
-    Tests unitarios de lógica pura y de orchestration. El detalle de casos
-    relevantes se presenta en el capítulo~\ref{sec:detalles-diseno}. \\
+    Lenguaje de comportamiento (\texttt{Free EntityAction}). \\
+    Aeson, \texttt{http-client}~\cite{hackageSupportLibs} &
+    Niveles JSON y cliente HTTP para el adaptador LLM. \\
+    tasty, tasty-hunit, tasty-quickcheck~\cite{hackageSupportLibs} &
+    Pruebas de sanidad y propiedades (\texttt{prop\_*}, sección~\ref{subsec:pruebas}). \\
   \end{tabularx}
 \end{center}
 \end{samepage}
-
-El ejecutable \texttt{wonderboy-hs} enlaza el framework Gloss con la biblioteca
-del motor. La configuración de compilación y las dependencias exactas figuran en
-el manifiesto Cabal del repositorio.

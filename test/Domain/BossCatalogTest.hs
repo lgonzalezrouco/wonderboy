@@ -1,4 +1,3 @@
--- | Verifica que los umbrales de fase del catálogo de jefes sean válidos.
 module Domain.BossCatalogTest where
 
 import Data.Maybe (mapMaybe)
@@ -14,7 +13,6 @@ import Domain.Model.BossPhase (
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.ValueObjects.HealthRatio (healthRatioValue)
 
--- | Ratios de todas las condiciones @HealthAtOrBelowRatio@ de una definición.
 phaseRatios :: BossDefinition -> [Float]
 phaseRatios def =
   [ healthRatioValue ratio
@@ -22,12 +20,6 @@ phaseRatios def =
   , HealthAtOrBelowRatio ratio <- phaseConditions phase
   ]
 
-{- | Todo umbral de fase debe quedar estrictamente dentro de (0, 1).
-
-Un literal inválido en 'Domain.Logic.BossCatalog' caería a 'maxHealthRatio'
-(1.0) y la fase dispararía a salud completa; este test detecta ese caso en CI en
-vez de dejarlo pasar en silencio.
--}
 unit_bossPhaseRatiosAreValidThresholds :: Assertion
 unit_bossPhaseRatiosAreValidThresholds =
   assertBool

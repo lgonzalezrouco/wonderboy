@@ -1,15 +1,5 @@
-{- | Orquestación del ciclo de actualización del juego.
-
-'updateGame' lee 'GameConfig' con 'MonadReader', aplica la política de frame
-congelado y fases terminales, y eleva 'Domain.Logic.Frame.advanceSimulationFrame'
-al estado del juego con 'MonadState'.
-'runFrames' corre @n@ frames seguidos reutilizando 'runGameM'.
--}
 module UseCases.UpdateGame (
-  -- * Ciclo de update
   updateGame,
-
-  -- * Simulación de varios frames
   runFrames,
 )
 where
@@ -38,16 +28,6 @@ import UseCases.GameMonad (
   throwParamsFromConfig,
  )
 
-{- | Actualiza el estado del juego para un frame dado.
-
-Con 'GameOver', 'LevelComplete' o 'Victory' no avanza simulación. Con el frame
-congelado ('Domain.ValueObjects.DeltaTime.isFrozen') tampoco avanza nada. En
-'Playing' con tiempo delega en 'advanceSimulationFrame'.
-
-La firma es polimórfica en las typeclasses 'mtl' que realmente usa
-('MonadReader' 'GameConfig', 'MonadState' 'GameState'); no necesita 'MonadError'
-porque la transición de frame es total. 'GameM' es una instancia válida.
--}
 updateGame ::
   (MonadReader GameConfig m, MonadState GameState m) =>
   DeltaTime ->
@@ -82,10 +62,6 @@ updateGame dt input = do
             }
       )
 
-{- | Corre @n@ frames consecutivos con el mismo @dt@ e 'Input', o el primer error.
-
-Con @n <= 0@ devuelve el estado sin tocarlo.
--}
 runFrames ::
   GameConfig ->
   Int ->

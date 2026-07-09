@@ -5,89 +5,77 @@
 \label{subsec:conclusiones-logros}
 
 El problema central del capítulo~\ref{sec:contexto-problema} era reconciliar un
-\emph{world} que evoluciona como valor puro con un \emph{run} que depende del
-tiempo real, la entrada del jugador y datos cargados desde fuera. La solución que
-implementamos sostuvo esa frontera de punta a punta:
-\texttt{advanceSimulationFrame} concentra en \texttt{Domain/} la denotación de
-un \emph{frame} completo sin \texttt{IO}. \texttt{updateGame} solo aplica
-política de fases y eleva ese resultado al \texttt{GameState}. La orchestration
-del \emph{run} queda en \texttt{UseCases/} con \texttt{StateT}, \texttt{ReaderT}
-y \texttt{ExceptT}. Gloss, el teclado, el disco y la API del LLM se limitan a
-\texttt{Adapters/} y \texttt{Frameworks/}. Esa separación no fue solo
-organización de carpetas: permitió razonar sobre el paso de simulación como
-función sustituible y delegar los efectos del entorno a un borde estable.
+mundo que evoluciona como valor puro con una partida que depende del tiempo real, la
+entrada del jugador y datos cargados desde fuera. La solución sostuvo esa frontera:
+\texttt{advanceSimulationFrame} concentra en el núcleo de dominio la denotación de
+un frame completo sin \texttt{IO}. \texttt{updateGame} aplica política de fases y eleva
+ese resultado al \texttt{GameState}. La orquestación de la partida usa
+\texttt{StateT}, \texttt{ReaderT} y \texttt{ExceptT}. Gloss, el teclado, el disco y la
+API del LLM quedan en adaptadores y en la capa de integración.
 
-En paralelo, los conceptos del dominio del capítulo~\ref{subsubsec:dominio-modelado}
-quedaron materializados en \texttt{Domain/Model} y \texttt{Domain/ValueObjects}:
-el mismo vocabulario del glosario aparece en tipos y \emph{pattern matching}, y la lógica
-pura opera sobre esos nombres.
+Los conceptos del dominio (cap.~\ref{subsubsec:dominio-modelado}) quedaron
+materializados en tipos del modelo y objetos de valor: el vocabulario del glosario
+aparece en coincidencia de patrones y la lógica pura opera sobre esos nombres.
 
-Como segundo eje, el DSL de comportamiento sobre \emph{free monad} mostró en la
-práctica la distinción entre describir acciones de una \emph{entity} e
-interpretarlas en el dominio. Patrol, chase y disparo a distancia se
-expresan como programas en el AST. \texttt{runBehaviourStep} consume una
-instrucción por \emph{frame} antes de integrar física y colisiones. Variar la IA
-de un archetype equivale a cambiar el programa o el interpreter, no a entrelazar
-condicionales de decisión con la cinemática del \emph{player}.
+El lenguaje de comportamiento sobre \texttt{Free EntityAction} separó descripción e interpretación de
+comportamiento. Patrulla, persecución y disparo a distancia se expresan como programas
+en el árbol de sintaxis. \texttt{runBehaviourStep} consume una instrucción por frame antes de la
+física (cap.~\ref{subsec:dsl}).
 
-Como tercer eje, el catálogo del \emph{run} puede armarse con JSON fijos o con
-generación opcional por la API del LLM de Anthropic
-(sección~\ref{subsec:solucion-catalogo}).
-\texttt{BootstrapRun} orquesta el ensamblado sin \texttt{IO} y el núcleo de simulación no
-distingue si el \emph{preset} vino del autor, del resolver o del \emph{default} del
-\texttt{kind}.
+El catálogo de la partida admite JSON fijos o generación opcional por LLM
+(cap.~\ref{subsec:solucion-catalogo}). El núcleo no distingue el origen de cada plantilla.
 
-El resto de las piezas del motor (carga de \emph{level definition}s,
-pila monádica para vidas y fases de partida, combate y reglas de victoria) se
-integraron en esa arquitectura sin romper la pureza del núcleo. El juego
-jugable, con una versión publicada en itch.io, validó el modelo en pantalla.
+El ataque cuerpo a cuerpo modela un único frame de impacto
+(cap.~\ref{subsec:combate}), con tests que verifican un golpe por ataque.
 
-Los tests automatizados se limitaron a \emph{smoke checks} sobre lógica pura y
-orchestration sin \texttt{IO}.
+El juego publicado en \url{https://lgonzalezrouco.itch.io/wonderboy} validó el modelo en
+pantalla. Las pruebas combinan ejemplos fijos y propiedades QuickCheck
+(cap.~\ref{subsec:pruebas}). La medición de memoria del motor respalda la discusión sobre
+evaluación \textit{lazy} (cap.~\ref{subsubsec:teoria-lazy}).
 
 \subsection{Dificultades}
 \label{subsec:conclusiones-dificultades}
 
-La parte que más iteración demandó fue la física y las colisiones \emph{AABB}. Mantener
-un paso puro sobre el \emph{world} no eliminó los casos borde del dominio:
+La parte que más iteración demandó fue la física y las colisiones AABB. Mantener
+un paso puro sobre el mundo no eliminó los casos borde del dominio:
 túnel en plataformas finas, elección del eje de menor penetración, distinguir
 aterrizaje de golpe de techo con \texttt{vyBefore} (velocidad vertical antes de mover
-posición) y el \emph{displacement carry} del \emph{player} sobre plataformas móviles.
+posición) y el arrastre por desplazamiento del jugador sobre plataformas móviles.
 Cada regla parecía local, pero interactuaba con las demás en el mismo
-\emph{frame}. Hubo que ajustar sub-pasos, orden de resolución y tests con
-\emph{world}s fijos hasta que el comportamiento en pantalla coincidiera con el
+frame. Hubo que ajustar sub-pasos, orden de resolución y tests con
+mundos fijos hasta que el comportamiento en pantalla coincidiera con el
 modelo.
 
-En un orden distinto, fijar el orden del \emph{pipeline} dentro de
-\texttt{advanceSimulationFrame} (\emph{behaviour step}, física, combate, proyectiles,
+En un orden distinto, fijar el orden de la secuencia dentro de
+\texttt{advanceSimulationFrame} (paso de comportamiento, física, combate, proyectiles,
 victoria y muerte) requirió cuidado para no duplicar estado ni romper el
-determinismo ante un \emph{delta time} variable. Una vez cerrado ese contrato en
-el dominio, \texttt{updateGame} y los tests de orchestration encajaron sin
+determinismo ante un intervalo de tiempo variable. Una vez cerrado ese contrato en
+el dominio, \texttt{updateGame} y los tests de orquestación encajaron sin
 reabrir el diseño de capas.
 
 \subsection{Trabajo futuro}
 \label{subsec:conclusiones-futuro}
 
-El \emph{DSL} y los archetypes cubren un conjunto acotado de patrones. Convendría
+El lenguaje de comportamiento y los arquetipos cubren un conjunto acotado de patrones. Convendría
 ampliar primitivas y programas compuestos sin tocar la cadena de física. Los
 jefes siguen dependiendo de un catálogo interno de fases: autorarlos desde la
-\emph{level definition} o desde \emph{hints} dedicados sería el siguiente paso de
-contenido. La generación y la resolución de hints dependen de un modelo externo:
+definición de nivel o desde pistas dedicados sería el siguiente paso de
+contenido. La generación y la resolución de pistas dependen de un modelo externo:
 \texttt{buildWorld} rechaza JSON inválido, pero no garantiza jugabilidad ni un mapeo
-correcto de texto ambiguo. Ante fallo, el motor usa el \emph{fallback} o el
-\emph{default} del \texttt{kind}.
+correcto de texto ambiguo. Ante fallo, el motor usa el respaldo o el
+valor por defecto del \texttt{kind}.
 
 \subsection{Reflexión personal}
 \label{subsec:conclusiones-reflexion}
 
 Este fue el primer videojuego que desarrollamos en toda la carrera, y el proceso
 resultó muy gratificante. Pasar de rectángulos de colores a sprites y ver cómo el
-\emph{world} tomaba forma en cada \emph{frame} mantuvo la motivación a lo largo
-del proyecto. Al principio costó escribir en Haskell: para quien no está
-habituado, la sintaxis y la \emph{laziness} no son lo más transparentes. Con el tiempo
-aprendimos a ``hablar en francés'' y las ventajas del lenguaje se hicieron
-evidentes en el propio diseño del motor. Antes de esta materia conceptos como
-funciones puras, \emph{side effects}, \emph{referential transparency} o \emph{higher-order functions}
-casi no figuraban en nuestro vocabulario de programación. Llevarnos
-esa forma de leer programas como descripciones de valores es, en la práctica, lo
-que más nos queda del curso.
+mundo tomaba forma en cada frame mantuvo la motivación a lo largo
+del proyecto. Al principio costó escribir en Haskell: la sintaxis y la
+evaluación \textit{lazy} no son transparentes de entrada. Con el tiempo las ventajas del lenguaje
+se hicieron evidentes en el propio diseño del motor (en particular la posibilidad
+de tratar el paso de simulación como función pura sustituible y testeable). Antes
+de esta materia conceptos como funciones puras, efectos secundarios, transparencia
+referencial o funciones de orden superior casi no figuraban en nuestro vocabulario
+de programación. Llevarnos esa forma de leer programas como descripciones de valores
+es, en la práctica, lo que más nos queda del curso.

@@ -1,10 +1,10 @@
--- | Carga y selección de sprites para el adaptador Gloss.
 module Adapters.Gloss.Sprites (
   Sprite (..),
   SpriteCatalog (..),
   loadSpriteCatalog,
   playerSprite,
   enemySprite,
+  enemyBasePicture,
 )
 where
 
@@ -20,24 +20,24 @@ import Data.ByteString qualified as BS
 import Graphics.Gloss.Data.Bitmap (bitmapDataOfBMP, bitmapOfBMP, bitmapSize)
 import Graphics.Gloss.Data.Picture (Picture)
 
+import Domain.Model.BossPhase (bossPhaseNumber)
 import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (EnemyKind (..))
 import Domain.Model.Player (Player (..))
 import Domain.ValueObjects.Velocity (velX, velY)
 import Paths_wonderboy_hs (getDataFileName)
 
--- | Bitmap cargado junto con su tamaño original en píxeles.
 data Sprite = Sprite
   { spritePicture :: Picture
-  -- ^ Bitmap en su color original.
   , spriteHurtPicture :: Picture
-  -- ^ Variante teñida de rojo para el estado de daño. En sprites sin tinte
-  --   coincide con 'spritePicture' (se comparte el mismo 'Picture', sin costo extra).
+  -- ^ Variante con tint rojo para el destello de daño. Reutiliza 'spritePicture' en los sprites sin tint (sin un segundo bitmap).
+  , spritePhaseTints :: [Picture]
+  -- ^ Índice = fase; 0 = neutro. Vacío fuera de los jefes.
   , spriteWidth :: Float
   , spriteHeight :: Float
   }
 
--- | Catálogo de sprites opcionales. Ausencias caen al render de color.
+-- | Sprites opcionales. Una entrada ausente ('Nothing') cae al renderizado con color plano.
 data SpriteCatalog = SpriteCatalog
   { scBackgroundGrasslands :: Maybe Sprite
   , scBackgroundCastle :: Maybe Sprite
@@ -76,7 +76,7 @@ data SpriteCatalog = SpriteCatalog
   , scHudAttackSword :: Maybe Sprite
   }
 
--- | Carga todos los sprites conocidos. Los errores dejan entradas vacías.
+-- | Carga todos los sprites conocidos. Una falla de carga o parseo deja esa entrada en 'Nothing' en vez de abortar.
 loadSpriteCatalog :: IO SpriteCatalog
 loadSpriteCatalog =
   SpriteCatalog
@@ -100,11 +100,11 @@ loadSpriteCatalog =
     <*> loadSprite "assets/sprites/enemies/snail-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-idle.bmp"
     <*> loadSprite "assets/sprites/enemies/bat-fly.bmp"
-    <*> loadSprite "assets/sprites/enemies/golem-idle.bmp"
-    <*> loadSprite "assets/sprites/enemies/golem-walk.bmp"
+    <*> loadHurtableSprite "assets/sprites/enemies/golem-idle.bmp"
+    <*> loadHurtableSprite "assets/sprites/enemies/golem-walk.bmp"
     <*> loadSprite "assets/sprites/enemies/archer-idle.bmp"
-    <*> loadSprite "assets/sprites/bosses/boss-golem.bmp"
-    <*> loadSprite "assets/sprites/bosses/boss-bat.bmp"
+    <*> loadBossSprite golemPhaseTintColors "assets/sprites/bosses/boss-golem.bmp"
+    <*> loadBossSprite batPhaseTintColors "assets/sprites/bosses/boss-bat.bmp"
     <*> loadSprite "assets/sprites/projectiles/projectile-rock.bmp"
     <*> loadSprite "assets/sprites/tiles/grass-center.bmp"
     <*> loadSprite "assets/sprites/hazards/weight.bmp"
@@ -123,20 +123,18 @@ loadWalkSprites =
       (\i -> loadHurtableSprite ("assets/sprites/player/player-walk-" <> pad2 i <> ".bmp"))
       [1 .. 11 :: Int]
 
--- | Carga un sprite sin variante de daño: la versión teñida reusa el bitmap normal.
 loadSprite :: FilePath -> IO (Maybe Sprite)
-loadSprite = loadSpriteWith Nothing
+loadSprite = loadSpriteWith Nothing []
 
--- | Carga un sprite del jugador con su variante de daño teñida de rojo.
 loadHurtableSprite :: FilePath -> IO (Maybe Sprite)
-loadHurtableSprite = loadSpriteWith (Just tintRedBMP)
+loadHurtableSprite = loadSpriteWith (Just tintRedBMP) []
 
-{- | Lee un BMP y deriva ancho/alto con 'bitmapSize' (sin dimensiones hardcodeadas).
-La transformación opcional produce la variante de daño a partir del mismo BMP; si es
-'Nothing', esa variante reusa el 'Picture' normal y no se construye un segundo bitmap.
--}
-loadSpriteWith :: Maybe (BMP -> BMP) -> FilePath -> IO (Maybe Sprite)
-loadSpriteWith tintHurt relPath = do
+loadBossSprite :: [Maybe RGB] -> FilePath -> IO (Maybe Sprite)
+loadBossSprite = loadSpriteWith (Just tintRedBMP)
+
+-- | Deriva el tamaño del propio bitmap (sin dimensiones hardcodeadas) y arma las variantes tintadas.
+loadSpriteWith :: Maybe (BMP -> BMP) -> [Maybe RGB] -> FilePath -> IO (Maybe Sprite)
+loadSpriteWith tintHurt phaseColors relPath = do
   path <- getDataFileName relPath
   loaded <- try (readBMP path)
   case loaded of
@@ -149,43 +147,58 @@ loadSpriteWith tintHurt relPath = do
           (width, height) = bitmapSize bitmapData
           normalPicture = bitmapOfBMP bmp
           hurtPicture = maybe normalPicture (\tint -> bitmapOfBMP (tint bmp)) tintHurt
+          phasePicture' = maybe normalPicture (\rgb -> bitmapOfBMP (tintTowardBMP rgb phaseTintStrength bmp))
        in pure
             ( Just
                 Sprite
                   { spritePicture = normalPicture
                   , spriteHurtPicture = hurtPicture
+                  , spritePhaseTints = map phasePicture' phaseColors
                   , spriteWidth = fromIntegral width
                   , spriteHeight = fromIntegral height
                   }
             )
 
--- | Intensidad de la mezcla hacia rojo puro (0 = sin cambio, 1 = rojo plano).
-tintStrength :: Float
-tintStrength = 0.6
+type RGB = (Word8, Word8, Word8)
 
-{- | Tiñe de rojo un BMP preservando dimensiones y canal alfa: solo cambia los
-canales de color, así la silueta y la transparencia del sprite quedan intactas.
--}
+hurtTintStrength :: Float
+hurtTintStrength = 0.6
+
+phaseTintStrength :: Float
+phaseTintStrength = 0.45
+
+golemPhaseTintColors :: [Maybe RGB]
+golemPhaseTintColors = [Nothing, Just phaseCyan, Just phaseViolet]
+
+batPhaseTintColors :: [Maybe RGB]
+batPhaseTintColors = [Nothing, Just phaseViolet]
+
+phaseCyan :: RGB
+phaseCyan = (96, 176, 255)
+
+phaseViolet :: RGB
+phaseViolet = (150, 78, 214)
+
 tintRedBMP :: BMP -> BMP
-tintRedBMP bmp =
-  let (width, height) = bmpDimensions bmp
-   in packRGBA32ToBMP32 width height (tintRedRGBA (unpackBMPToRGBA32 bmp))
+tintRedBMP = tintTowardBMP (255, 0, 0) hurtTintStrength
 
--- | Mezcla cada píxel RGBA hacia rojo puro, dejando intacto el alfa.
-tintRedRGBA :: ByteString -> ByteString
-tintRedRGBA = BS.pack . tintPixels . BS.unpack
+-- | Mezcla RGB hacia el color objetivo; el canal alfa se preserva.
+tintTowardBMP :: RGB -> Float -> BMP -> BMP
+tintTowardBMP target strength bmp =
+  let (width, height) = bmpDimensions bmp
+   in packRGBA32ToBMP32 width height (tintTowardRGBA target strength (unpackBMPToRGBA32 bmp))
+
+tintTowardRGBA :: RGB -> Float -> ByteString -> ByteString
+tintTowardRGBA (tr, tg, tb) strength = BS.pack . tintPixels . BS.unpack
  where
   tintPixels (r : g : b : a : rest) =
-    tintChannel 255 r : tintChannel 0 g : tintChannel 0 b : a : tintPixels rest
+    blend tr r : blend tg g : blend tb b : a : tintPixels rest
   tintPixels remainder = remainder
-
--- | Acerca un canal de color hacia 'target' según 'tintStrength'.
-tintChannel :: Word8 -> Word8 -> Word8
-tintChannel target component =
-  round
-    ( fromIntegral component * (1 - tintStrength)
-        + fromIntegral target * tintStrength
-    )
+  blend target component =
+    round
+      ( fromIntegral component * (1 - strength)
+          + fromIntegral target * strength
+      )
 
 spriteLoadFailure :: FilePath -> SomeException -> IO (Maybe Sprite)
 spriteLoadFailure relPath err =
@@ -195,13 +208,9 @@ spriteLoadFailure relPath err =
       hPutStrLn stderr ("Warning: failed to load sprite " <> relPath <> ": " <> show err)
       pure Nothing
 
-{- | Sprite del jugador según estado visible y contador de render.
-
-El estado de daño NO elige un sprite propio: durante la invencibilidad el jugador
-sigue animándose con su sprite de movimiento normal (idle/caminar/salto, que cicla
-con 'renderFrame'). El efecto de "recibió daño" lo aporta sólo el tinte rojo con
-parpadeo en 'Adapters.Gloss.Rendering.renderPlayer'; así la animación no se congela
-en un único frame mientras dura la invencibilidad.
+{- | Elige el sprite del jugador según el estado visible y el contador de render. El
+estado de daño deliberadamente no elige un sprite propio: la animación de caminar/idle sigue corriendo
+y 'Adapters.Gloss.Rendering.renderPlayer' aplica el tint rojo, así que ningún frame se congela.
 -}
 playerSprite :: SpriteCatalog -> Int -> Player -> Maybe Sprite
 playerSprite catalog renderFrame player
@@ -214,7 +223,6 @@ playerSprite catalog renderFrame player
       then cyclingSprite renderFrame (scPlayerWalk catalog) <|> scPlayerIdle catalog
       else scPlayerIdle catalog
 
--- | Sprite de enemigo por clase y movimiento visible.
 enemySprite :: SpriteCatalog -> Int -> Enemy -> Maybe Sprite
 enemySprite catalog renderFrame enemy =
   case enemyKind enemy of
@@ -232,6 +240,19 @@ enemySprite catalog renderFrame enemy =
   patrolSprite frame idle walk
     | moving = idleOrWalk frame idle walk
     | otherwise = idle
+
+enemyBasePicture :: Enemy -> Sprite -> Picture
+enemyBasePicture enemy sprite =
+  case enemyBossPhase enemy of
+    Just idx -> phasePicture (bossPhaseNumber idx) sprite
+    Nothing -> spritePicture sprite
+
+phasePicture :: Int -> Sprite -> Picture
+phasePicture n sprite
+  | n >= 0, n < length tints = tints !! n
+  | otherwise = spritePicture sprite
+ where
+  tints = spritePhaseTints sprite
 
 idleOrWalk :: Int -> Maybe Sprite -> Maybe Sprite -> Maybe Sprite
 idleOrWalk frame idle walk

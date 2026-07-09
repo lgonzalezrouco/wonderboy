@@ -1,7 +1,3 @@
-{- | Configuración global del juego (inmutable durante una partida).
-
-Proyecciones hacia value objects del dominio para la lógica de física, vida y combate.
--}
 module UseCases.Engine.GameConfig (
   GameConfig (..),
   defaultConfig,
@@ -13,67 +9,52 @@ module UseCases.Engine.GameConfig (
 )
 where
 
--- Grupo 1 — stdlib / base
 import GHC.Generics (Generic)
 
--- Grupo 3 — proyecto
 import Domain.Model.World (defaultMaxHealth)
-import Domain.ValueObjects.CombatParams (CombatParams (..), combatParams)
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Damage (Damage, damage)
 import Domain.ValueObjects.Frames (Frames, frames)
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.LevelCount (LevelCount, levelCount)
-import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
+import Domain.ValueObjects.LifeParams (LifeParams (..))
 import Domain.ValueObjects.Lives (Lives, lives)
-import Domain.ValueObjects.PhysicsParams (PhysicsParams, physicsParams)
-import Domain.ValueObjects.ThrowParams (ThrowParams (..), throwParams)
+import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
+import Domain.ValueObjects.ThrowParams (ThrowParams (..))
 
-{- | Configuración global del juego, inmutable durante una partida.
-
-Todos los parámetros que no cambian frame a frame viven aquí:
-el 'ReaderT' los pone a disposición de cualquier acción en 'GameM' vía 'ask'\/'asks'.
--}
 data GameConfig = GameConfig
   { gcGravity :: Float
-  -- ^ Aceleración gravitatoria en px\/s² (hacia abajo).
+  -- ^ px/s², aceleración hacia abajo aplicada en cada frame
   , gcMoveSpeed :: Float
-  -- ^ Velocidad horizontal del jugador al recibir input (px\/s).
+  -- ^ px/s, velocidad horizontal mientras se mantiene una dirección
   , gcJumpSpeed :: Float
-  -- ^ Velocidad vertical inicial al saltar desde el suelo (px\/s).
+  -- ^ px/s, velocidad hacia arriba aplicada al inicio de un salto
   , gcStartingLives :: Lives
-  -- ^ Vidas al iniciar una partida nueva (run-wide; no por nivel).
   , gcMaxHealth :: Health
-  -- ^ Salud tras spawn o respawn.
   , gcDeathMargin :: Float
-  -- ^ Margen bajo la plataforma más baja para out-of-bounds (px).
+  -- ^ px por debajo de la plataforma más baja. Caer más allá de esta línea mata al jugador
   , gcAttackDuration :: Frames
-  -- ^ Frames de ventana activa de melee.
   , gcInvincibilityDuration :: Frames
-  -- ^ Frames de invencibilidad tras contacto enemigo o respawn.
+  -- ^ i-frames tras un golpe por contacto, también se reusa como invencibilidad de respawn
   , gcContactDamage :: Damage
-  -- ^ Daño por frame de contacto enemigo.
   , gcMeleeReach :: Float
-  -- ^ Alcance horizontal del melee en px lógicos.
+  -- ^ px que el hitbox de melee se extiende frente al cuerpo del jugador
   , gcMeleeDamage :: Damage
-  -- ^ Daño infligido a un enemigo por un melee que conecta.
+  , gcEnemyHurtFlashDuration :: Frames
   , gcLevelCount :: LevelCount
-  -- ^ Niveles en el run actual; la victoria ocurre al completar el último.
   , gcThrowCooldown :: Frames
-  -- ^ Frames de espera tras despawn del proyectil del jugador.
   , gcThrowLifetime :: Frames
-  -- ^ Vida inicial de cada proyectil lanzado.
   , gcThrowHorizontalSpeed :: Float
-  -- ^ Velocidad horizontal de lanzamiento (px/s).
+  -- ^ px/s, velocidad horizontal de un proyectil lanzado
   , gcThrowLiftSpeed :: Float
-  -- ^ Impulso vertical inicial del arco (px/s).
+  -- ^ px/s, velocidad inicial hacia arriba de un proyectil lanzado
   , gcProjectileWidth :: Float
-  -- ^ Ancho de la caja del proyectil.
+  -- ^ px, ancho del hitbox del proyectil
   , gcProjectileHeight :: Float
-  -- ^ Alto de la caja del proyectil.
+  -- ^ px, alto del hitbox del proyectil
   }
   deriving (Eq, Show, Generic)
 
--- | Configuración por defecto para pruebas y el demo de @app\/Main.hs@.
 defaultConfig :: GameConfig
 defaultConfig =
   GameConfig
@@ -88,6 +69,7 @@ defaultConfig =
     , gcContactDamage = damage 1
     , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
+    , gcEnemyHurtFlashDuration = frames 24
     , gcLevelCount = levelCount 3
     , gcThrowCooldown = frames 30
     , gcThrowLifetime = frames 120
@@ -97,49 +79,45 @@ defaultConfig =
     , gcProjectileHeight = 12.0
     }
 
--- | Ajusta 'gcLevelCount' al tamaño del catálogo de niveles del run.
-configForLevelCatalog :: [a] -> GameConfig
-configForLevelCatalog paths =
-  defaultConfig{gcLevelCount = levelCount (length paths)}
+configForLevelCatalog :: Int -> GameConfig
+configForLevelCatalog n =
+  defaultConfig{gcLevelCount = levelCount n}
 
--- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Step.step'.
 physicsParamsFromConfig :: GameConfig -> PhysicsParams
 physicsParamsFromConfig cfg =
-  physicsParams
-    (gcGravity cfg)
-    (gcMoveSpeed cfg)
-    (gcJumpSpeed cfg)
+  PhysicsParams
+    { ppGravity = gcGravity cfg
+    , ppMoveSpeed = gcMoveSpeed cfg
+    , ppJumpSpeed = gcJumpSpeed cfg
+    }
 
-{- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.PlayerLife'.
-
-Los frames de invencibilidad de respawn usan 'gcInvincibilityDuration', el __mismo__
-campo que los de contacto (ver 'combatParamsFromConfig'): hoy comparten valor a propósito.
--}
 lifeParamsFromConfig :: GameConfig -> LifeParams
 lifeParamsFromConfig cfg =
-  lifeParams
-    (gcMaxHealth cfg)
-    (gcDeathMargin cfg)
-    (gcInvincibilityDuration cfg)
+  LifeParams
+    { lpMaxHealth = gcMaxHealth cfg
+    , lpDeathMargin = gcDeathMargin cfg
+    , lpRespawnInvincibilityFrames = gcInvincibilityDuration cfg
+    }
 
--- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Combat'.
 combatParamsFromConfig :: GameConfig -> CombatParams
 combatParamsFromConfig cfg =
-  combatParams
-    (gcAttackDuration cfg)
-    (gcInvincibilityDuration cfg)
-    (gcContactDamage cfg)
-    (gcMeleeReach cfg)
-    (gcMeleeDamage cfg)
+  CombatParams
+    { cpAttackDuration = gcAttackDuration cfg
+    , cpInvincibilityDuration = gcInvincibilityDuration cfg
+    , cpContactDamage = gcContactDamage cfg
+    , cpMeleeReach = gcMeleeReach cfg
+    , cpMeleeDamage = gcMeleeDamage cfg
+    , cpEnemyHurtFlashDuration = gcEnemyHurtFlashDuration cfg
+    }
 
--- | Proyecta 'GameConfig' al value object puro usado por 'Domain.Logic.Projectiles'.
 throwParamsFromConfig :: GameConfig -> ThrowParams
 throwParamsFromConfig cfg =
-  throwParams
-    (gcThrowCooldown cfg)
-    (gcThrowLifetime cfg)
-    (gcThrowHorizontalSpeed cfg)
-    (gcThrowLiftSpeed cfg)
-    (gcProjectileWidth cfg)
-    (gcProjectileHeight cfg)
-    (gcMeleeDamage cfg)
+  ThrowParams
+    { tpCooldown = gcThrowCooldown cfg
+    , tpLifetime = gcThrowLifetime cfg
+    , tpHorizontalSpeed = gcThrowHorizontalSpeed cfg
+    , tpLiftSpeed = gcThrowLiftSpeed cfg
+    , tpWidth = gcProjectileWidth cfg
+    , tpHeight = gcProjectileHeight cfg
+    , tpDamage = gcMeleeDamage cfg
+    }

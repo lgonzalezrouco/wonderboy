@@ -1,4 +1,3 @@
--- | Pure pickup overlap and collection tests.
 module Domain.PickupTest where
 
 import Domain.Fixtures (mkTestPickup, worldWithPickups)

@@ -1,4 +1,3 @@
--- | Clampeo de 'Amplifier' a @[1.0, 3.0]@ y fallback de no finitos.
 module Domain.AmplifierTest where
 
 import Test.Tasty.HUnit (Assertion, (@?=))

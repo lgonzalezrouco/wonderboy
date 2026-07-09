@@ -3,15 +3,13 @@ module Adapters.Gloss.TilingTest where
 import Adapters.Gloss.Tiling (tilesToCover)
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
--- | Tile natural del juego: puente de 70 px escalado a 'platformVisualHeight' 35.
 tileSize :: Float
 tileSize = 35
 
--- | Ancho de las plataformas móviles: 105 = 3 * 35, el múltiplo exacto que dispara el bug.
 movingWidth :: Float
 movingWidth = 105
 
--- | Reproduce cómo el render deriva el ancho del AABB: @(posX + w) - posX@, inexacto en 'Float'.
+-- (posX + w) - posX se deja literal para reproducir la imprecisión de Float. No simplificar a movingWidth.
 recalcWidth :: Float -> Float
 recalcWidth posX = (posX + movingWidth) - posX
 

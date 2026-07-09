@@ -1,7 +1,3 @@
-{- | Cantidad de niveles en un run (catálogo de progresión).
-
-El demo usa tres; el motor acepta cualquier valor >= 1 según el catálogo cargado.
--}
 module Domain.ValueObjects.LevelCount (
   LevelCount,
   levelCount,
@@ -12,18 +8,15 @@ where
 
 import GHC.Generics (Generic)
 
--- | Niveles en el run actual (siempre >= 1).
 newtype LevelCount = LevelCount Int
   deriving (Eq, Show, Generic)
 
--- | Construye 'LevelCount', saturando en 1.
 levelCount :: Int -> LevelCount
 levelCount n = LevelCount (max 1 n)
 
--- | Valor entero del catálogo.
 levelCountPoints :: LevelCount -> Int
 levelCountPoints (LevelCount n) = n
 
--- | @levelIndex@ es 1-based; 'True' si completar este nivel termina el run.
+-- | El índice de nivel arranca en 1. Verdadero cuando completar este nivel termina la partida.
 isFinalLevel :: Int -> LevelCount -> Bool
 isFinalLevel idx lc = idx >= levelCountPoints lc

@@ -1,10 +1,7 @@
-{- | Vida del jugador: daño, out-of-bounds, muerte y respawn (puro).
-
-La orquestación por frame vive en @UseCases.UpdateGame@; este módulo
-expone transformaciones totales sobre 'World', vidas y 'GamePhase'.
--}
 module Domain.Logic.PlayerLife (
   applyDamage,
+  applyContactDamage,
+  playerIsInvincible,
   deathLineY,
   isPlayerOutOfBounds,
   resolveHazardsAndDeath,
@@ -22,22 +19,35 @@ import Domain.Model.Platform (Platform (..))
 import Domain.Model.Player (
   Player (..),
   playerHealth,
+  playerInvincibilityFrames,
   playerPos,
   spawnPlayer,
  )
 import Domain.Model.World (World (..))
+import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Damage (Damage)
+import Domain.ValueObjects.Frames (hasFramesLeft)
 import Domain.ValueObjects.Health (health, isDepleted, reduceHealth)
 import Domain.ValueObjects.LifeParams (LifeParams (..))
 import Domain.ValueObjects.Lives (Lives, livesCount, loseLife, noLives)
 import Domain.ValueObjects.Position (Position, posY)
 
--- | Aplica @amount@ de daño a la salud del jugador (satura en 0).
 applyDamage :: Damage -> Player -> Player
 applyDamage amount p =
   p{playerHealth = reduceHealth amount (playerHealth p)}
 
--- | Coordenada Y del borde inferior de la plataforma más baja (0 si no hay plataformas).
+playerIsInvincible :: Player -> Bool
+playerIsInvincible p = hasFramesLeft (playerInvincibilityFrames p)
+
+-- Daño por contacto (enemigo, proyectil enemigo, hazard) e i-frames posteriores.
+applyContactDamage :: CombatParams -> Player -> Player
+applyContactDamage cp p
+  | playerIsInvincible p = p
+  | otherwise =
+      applyDamage
+        (cpContactDamage cp)
+        p{playerInvincibilityFrames = cpInvincibilityDuration cp}
+
 lowestPlatformBottomY :: World -> Float
 lowestPlatformBottomY w =
   let ys =
@@ -46,24 +56,18 @@ lowestPlatformBottomY w =
           ++ map (posY . crumblingPlatformPos) (anchoredCrumblingPlatforms w)
    in if null ys then 0 else minimum ys
 
--- | Instancias cuya posición anclada aún cuenta para la línea de muerte.
+-- Solo las plataformas todavía ancladas cuentan para la línea de muerte. Una que cae la arrastraría hacia abajo.
 anchoredCrumblingPlatforms :: World -> [CrumblingPlatform]
 anchoredCrumblingPlatforms w =
   filter crumblingPlatformIsAnchored (worldCrumblingPlatforms w)
 
-{- | Línea de muerte por caída: bajo la plataforma más baja menos el margen.
-
-También usada como umbral de despawn de peligros que caen (M21).
--}
 deathLineY :: LifeParams -> World -> Float
 deathLineY lp w = lowestPlatformBottomY w - lpDeathMargin lp
 
--- | 'True' si los pies del jugador están por debajo de la línea de muerte.
 isPlayerOutOfBounds :: LifeParams -> World -> Bool
 isPlayerOutOfBounds lp w =
   posY (playerPos (worldPlayer w)) < deathLineY lp w
 
--- | Respawn del jugador en el punto de spawn del nivel (solo el jugador).
 respawnPlayerAt :: LifeParams -> Position -> World -> World
 respawnPlayerAt lp spawn w =
   let p = spawnPlayer (lpMaxHealth lp) spawn
@@ -74,7 +78,6 @@ respawnPlayerAt lp spawn w =
         , worldBossArenaEngaged = False
         }
 
--- | Resuelve muerte cuando la salud ya es 0.
 resolveDeath :: LifeParams -> Lives -> World -> (World, Lives, GamePhase)
 resolveDeath lp lives w
   | livesCount lives > 1 =
@@ -84,7 +87,6 @@ resolveDeath lp lives w
       )
   | otherwise = (w, noLives, GameOver)
 
--- | Out-of-bounds y muerte tras un paso de física (solo en 'Playing').
 resolveHazardsAndDeath ::
   LifeParams ->
   Lives ->
@@ -95,10 +97,13 @@ resolveHazardsAndDeath lp lives phase w =
   case phase of
     Playing ->
       let w'
-            | isPlayerOutOfBounds lp w =
-                w{worldPlayer = (worldPlayer w){playerHealth = health 0}}
+            | isPlayerOutOfBounds lp w = killPlayerFromFall w
             | otherwise = w
        in if isDepleted (playerHealth (worldPlayer w'))
             then resolveDeath lp lives w'
             else (w', lives, Playing)
     _ -> (w, lives, phase)
+
+killPlayerFromFall :: World -> World
+killPlayerFromFall w =
+  w{worldPlayer = (worldPlayer w){playerHealth = health 0}}

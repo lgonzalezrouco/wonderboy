@@ -1,6 +1,3 @@
-{- | Tests de 'scaleHealth': escala la salud por un factor con piso de 1 HP, para que
-@toughness×@ nunca deje a un enemigo naciendo derrotado.
--}
 module Domain.ScaleHealthTest where
 
 import Test.Tasty.HUnit (Assertion, (@?=))

@@ -1,15 +1,12 @@
--- | Pure player life, damage, and out-of-bounds tests.
 module Domain.PlayerLifeTest where
 
-import Domain.Fixtures (testPlayerProjectile)
+import Domain.Fixtures (floorWorld, testLifeParams, testPlayerProjectile)
 import Domain.Logic.PlayerLife (
   applyDamage,
   resolveHazardsAndDeath,
  )
-import Domain.Model.ExitZone (defaultExitZone)
 import Domain.Model.GamePhase (GamePhase (..))
 import Domain.Model.MovingPlatform (MovingPlatform, mkMovingPlatform)
-import Domain.Model.Platform (platform)
 import Domain.Model.Player (
   Player (..),
   playerHealth,
@@ -18,41 +15,17 @@ import Domain.Model.Player (
   playerVel,
   spawnPlayer,
  )
-import Domain.Model.World (World (..))
+import Domain.Model.World (World (..), worldSpawnPoint)
 import Domain.ValueObjects.Damage (damage)
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
-import Domain.ValueObjects.LifeParams (LifeParams (..), lifeParams)
 import Domain.ValueObjects.Lives (lives)
 import Domain.ValueObjects.Position (Position, position)
-import Domain.ValueObjects.Score (score)
 import Domain.ValueObjects.Velocity (velX, velY, velocity)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
-testLifeParams :: LifeParams
-testLifeParams = lifeParams (health 3) 64 (frames 60)
-
 testSpawn :: Position
-testSpawn = position 0 80
-
-floorWorld :: World
-floorWorld =
-  World
-    { worldPlayer = spawnPlayer (health 3) testSpawn
-    , worldEnemies = []
-    , worldPlatforms = [platform (position (-200) 0) 400 8]
-    , worldMovingPlatforms = []
-    , worldSpawnPoint = testSpawn
-    , worldPickups = []
-    , worldMinScore = score 0
-    , worldExit = defaultExitZone
-    , worldProjectiles = []
-    , worldNextProjectileId = 1
-    , worldFallingHazards = []
-    , worldCrumblingPlatforms = []
-    , worldBossArena = Nothing
-    , worldBossArenaEngaged = False
-    }
+testSpawn = worldSpawnPoint floorWorld
 
 belowFloor :: Position
 belowFloor = position 0 (-100)
@@ -144,13 +117,11 @@ mustMovingPlatform :: Maybe MovingPlatform -> MovingPlatform
 mustMovingPlatform (Just mp) = mp
 mustMovingPlatform Nothing = error "lowMovingPlatform: invalid fixture"
 
--- | Plataforma móvil cuyo borde inferior (y = 100) es el sólido más bajo del mundo.
 lowMovingPlatform :: MovingPlatform
 lowMovingPlatform =
   mustMovingPlatform
     (mkMovingPlatform 1 (position 0 100) 48 8 (position 0 100) (position 60 100) 35 True)
 
--- | Mundo sin plataformas estáticas: la línea de muerte la fija la plataforma móvil.
 movingPlatformWorld :: World
 movingPlatformWorld =
   floorWorld
@@ -158,9 +129,6 @@ movingPlatformWorld =
     , worldMovingPlatforms = [lowMovingPlatform]
     }
 
-{- | Línea de muerte = 100 (borde inferior móvil) − 64 (margen) = 36; por debajo es
-  out-of-bounds aunque no haya plataformas estáticas (ejercita el fold sobre móviles).
--}
 unit_oobBelowMovingPlatform :: Assertion
 unit_oobBelowMovingPlatform =
   let w = movingPlatformWorld{worldPlayer = spawnPlayer (health 3) (position 0 10)}

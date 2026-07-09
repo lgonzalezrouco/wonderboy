@@ -2,29 +2,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- | Adaptador de 'LevelContentPort' sobre la API de Anthropic.
-
-Un actor (Anthropic LLM) = un adapter. Absorbe la lógica de los adaptadores
-anteriores (@Adapters.BehaviourResolver@ y @Adapters.LevelGenerator@) en una
-sola implementación de 'LevelContentPort'. Ver @docs\/adr\/0019-level-content-port.md@.
-
-'AnthropicContent' (@ReaderT AnthropicEnv IO@) encapsula el monad stack de 'IO';
-'runAnthropicContent' es el único punto de entrada desde el driver IO del arranque
-(@Adapters.BootstrapRunIO@).
--}
 module Adapters.Anthropic.Content (
   AnthropicEnv (..),
   AnthropicContent,
   runAnthropicContent,
-
-  -- * Helpers exportados para tests
   ResolverReply (..),
   extractJsonObject,
   resolvedFromReply,
 )
 where
 
--- Grupo 1 — stdlib / base
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import System.IO (hPutStrLn, stderr)
@@ -32,7 +19,6 @@ import System.IO (hPutStrLn, stderr)
 import Data.ByteString.Lazy qualified as BL
 import Data.Text qualified as T
 
--- Grupo 2 — terceros
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
@@ -47,7 +33,6 @@ import Data.Aeson (
   (.=),
  )
 
--- Grupo 3 — proyecto
 import Adapters.Anthropic.Client (
   AnthropicClient (..),
   FeatureCfg (..),
@@ -76,36 +61,18 @@ import UseCases.Serialization.LevelCodec (
   encodeLevelDefinitionText,
  )
 
--- ---------------------------------------------------------------------------
--- Entorno y monad
--- ---------------------------------------------------------------------------
-
-{- | Entorno compartido entre el generador y el resolver.
-
-Un único 'AnthropicClient' (manager + key + URL) y configuraciones separadas
-para cada feature, permitiendo distintos modelos y timeouts.
--}
 data AnthropicEnv = AnthropicEnv
   { aeClient :: AnthropicClient
-  -- ^ Conexión TLS reusable.
   , aeGeneratorCfg :: FeatureCfg
-  -- ^ Modelo, timeout y debug del generador de niveles.
   , aeResolverCfg :: FeatureCfg
-  -- ^ Modelo, timeout y debug del resolver de arquetipos.
   }
 
--- | Adapter de 'LevelContentPort' con acceso a 'IO' vía @ReaderT AnthropicEnv@.
 newtype AnthropicContent a = AnthropicContent
   {unAnthropicContent :: ReaderT AnthropicEnv IO a}
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader AnthropicEnv)
 
--- | Ejecuta el adapter con el entorno dado.
 runAnthropicContent :: AnthropicEnv -> AnthropicContent a -> IO a
 runAnthropicContent env m = runReaderT (unAnthropicContent m) env
-
--- ---------------------------------------------------------------------------
--- Instancia LevelContentPort
--- ---------------------------------------------------------------------------
 
 instance LevelContentPort AnthropicContent where
   generateLevel profile = do
@@ -116,23 +83,10 @@ instance LevelContentPort AnthropicContent where
     env <- ask
     liftIO (resolveOne env kind hint)
 
-  -- Los slots son independientes: una sola conexión TLS reusable atiende las
-  -- llamadas en paralelo, recortando la latencia de arranque a la del slot más
-  -- lento en vez de la suma de todos.
   generateLevels profiles = do
     env <- ask
     liftIO (mapConcurrently (generateOne env) profiles)
 
--- ---------------------------------------------------------------------------
--- Generación de niveles
--- ---------------------------------------------------------------------------
-
-{- | Intentos de generación por slot.
-
-Con @temperature@ 0.9 cada intento produce una muestra distinta, así que
-reintentar con el mismo @body@ recupera tanto fallas de red como respuestas que
-decodifican mal o no superan el 'buildWorld'.
--}
 maxGenerationAttempts :: Int
 maxGenerationAttempts = 2
 
@@ -170,13 +124,6 @@ generateOne env profile = do
                 pure Nothing
   attempt 1
 
-{- | Decodifica y __valida__ un nivel generado.
-
-Replica la barrera del generador anterior: además de decodificar el JSON, corre
-'buildWorld' y descarta el nivel si no construye, para que un nivel con JSON
-válido pero estructura inválida no entre al catálogo (y reviente el juego al
-llegar a ese slot). 'Nothing' ⇒ el llamador reintenta o usa el nivel fijo.
--}
 tryDecode :: FeatureCfg -> Text -> IO (Maybe LevelDefinition)
 tryDecode cfg raw = do
   let levelJson = stripCodeFences raw
@@ -207,12 +154,6 @@ generatorBody cfg prompt =
            ]
     ]
 
-{- | Quita cercas markdown si el modelo las agregó.
-
-Soporta cercas multilínea (@```json\\n…\\n```@) y de una sola línea
-(@```{…}```@): en el primer caso descarta la etiqueta de lenguaje hasta el salto
-de línea; en el segundo conserva el contenido en la misma línea.
--}
 stripCodeFences :: Text -> Text
 stripCodeFences raw =
   let trimmed = T.strip raw
@@ -328,10 +269,6 @@ exampleSection (Just example) =
       <> example
   ]
 
--- ---------------------------------------------------------------------------
--- Resolución de arquetipos
--- ---------------------------------------------------------------------------
-
 resolveOne :: AnthropicEnv -> EnemyKind -> Text -> IO (Maybe ResolvedBehaviour)
 resolveOne env kind hint = do
   let cfg = aeResolverCfg env
@@ -393,18 +330,11 @@ resolverPromptText kind hint =
     <> "Descripción: "
     <> hint
 
-{- | Primer objeto JSON @{@ … @}@ balanceado en un texto con prosa.
-
-Toma desde la primera @{@ hasta su @}@ de cierre (la que vuelve la profundidad de
-llaves a cero), de modo que la prosa posterior con más @}@ no extiende el recorte
-hasta el final del texto. 'Nothing' si no hay @{@ o el objeto no cierra.
--}
 extractJsonObject :: Text -> Maybe Text
 extractJsonObject t =
   let afterOpen = T.dropWhile (/= '{') t
    in (`T.take` afterOpen) <$> balancedEnd afterOpen
 
--- | Largo del primer objeto @{…}@ balanceado (incluye ambas llaves), o 'Nothing'.
 balancedEnd :: Text -> Maybe Int
 balancedEnd = go (0 :: Int) (0 :: Int) . T.unpack
  where
@@ -418,16 +348,11 @@ balancedEnd = go (0 :: Int) (0 :: Int) . T.unpack
           then Just (i + 1)
           else go depth' (i + 1) cs
 
--- | Respuesta cruda del resolver de comportamiento (JSON del modelo).
 data ResolverReply = ResolverReply
   { rrArchetype :: Text
-  -- ^ Arquetipo de movimiento sugerido (@patrol@\/@chase@\/@guard@).
   , rrSpeed :: Maybe Double
-  -- ^ Multiplicador de velocidad opcional (1.0 = base).
   , rrReach :: Maybe Double
-  -- ^ Amplificador de alcance opcional (>= 1.0).
   , rrToughness :: Maybe Double
-  -- ^ Amplificador de resistencia opcional (>= 1.0).
   }
 
 instance FromJSON ResolverReply where
@@ -439,7 +364,6 @@ instance FromJSON ResolverReply where
         <*> o .:? "reach"
         <*> o .:? "toughness"
 
--- | Mapeo puro de 'ResolverReply' a 'ResolvedBehaviour'.
 resolvedFromReply :: ResolverReply -> Maybe ResolvedBehaviour
 resolvedFromReply r =
   case parseBehaviourArchetype (T.toLower (T.strip (rrArchetype r))) of

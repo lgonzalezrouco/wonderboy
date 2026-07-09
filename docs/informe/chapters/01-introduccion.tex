@@ -4,18 +4,19 @@
 \subsection{Presentación general}
 \label{subsec:intro-presentacion}
 
-Este trabajo implementa un videojuego de plataformas en 2D. El núcleo del sistema es una simulación
-discreta por \emph{frame}: en cada paso se recibe un \emph{delta time} y una entrada externa,
-y se produce un nuevo \emph{world}, instantánea del estado en el \emph{game plane} con el
-\emph{player}, los \emph{enemy}, las plataformas y los ítems aún presentes en el nivel.
-El contenido estático de cada etapa proviene de una \emph{level definition} cargada antes de
-jugar. Durante la partida el motor actualiza ese \emph{world} frame a frame.
+Este trabajo implementa un videojuego de plataformas en 2D. El núcleo del sistema es una
+simulación discreta por frames: en cada paso se recibe un intervalo de tiempo
+(\texttt{DeltaTime}) y la intención del jugador (\texttt{Input}), y se produce un nuevo
+mundo (\texttt{World}), instantánea del plano de juego con el jugador, los enemigos, las
+plataformas y los ítems aún presentes en el nivel. El contenido estático de cada etapa
+proviene de una definición de nivel (\texttt{LevelDefinition}) cargada antes de jugar.
+Durante la partida el motor actualiza ese mundo frame a frame.
 
-La interacción con el \emph{medio} ocurre en la frontera del
-sistema: entrada del usuario, lectura de datos externos y rendering en tiempo real. Esas
-responsabilidades quedan fuera del núcleo de simulación. La lógica de juego se expresa como
-transformaciones puras sobre el \emph{world}, mientras que la orchestration de estado global,
-configuración y efectos se delega a capas superiores del motor.
+La interacción con el entorno externo queda en la frontera del sistema: entrada del
+usuario, lectura de archivos y dibujado en tiempo real. Esas responsabilidades no forman
+parte del núcleo de simulación. La lógica de juego se expresa como transformaciones puras
+sobre el mundo, mientras que la orquestación del estado global, la configuración y los
+errores recuperables se delegan a capas superiores del motor.
 
 \subsection{Motivación}
 \label{subsec:intro-motivacion}
@@ -26,79 +27,91 @@ manejo de efectos con mónadas. Un juego de plataformas resulta un caso de estud
 porque combina estado global, actualización continua y entrada en tiempo real.
 
 Elegimos un videojuego también por una razón práctica: el feedback visual hace
-tangible el comportamiento del programa. Cada \emph{frame} se puede observar de inmediato,
-y un error en física, colisiones o comportamiento de un \emph{enemy} se manifiesta en pantalla
-sin depender de trazas ni dumps de estado. Eso acorta el ciclo de validación y mantiene el
-foco en la corrección del modelo, no solo en que el código compile.
+tangible el comportamiento del programa. Cada frame se puede observar de inmediato,
+y un error en física, colisiones o comportamiento de un enemigo se manifiesta en pantalla
+sin depender de trazas ni volcados de estado. Eso acorta el ciclo de validación y mantiene el
+foco en la corrección del modelo.
+
+\subsection{Enlaces y ejecución}
+\label{subsec:intro-enlaces}
+
+El código fuente, el juego ejecutable y los comandos para compilarlo localmente están
+disponibles en:
+
+\begin{itemize}
+  \item \textbf{Código fuente:}
+    \url{https://github.com/lgonzalezrouco/wonderboy}
+  \item \textbf{Juego ejecutable:}
+    \url{https://lgonzalezrouco.itch.io/wonderboy}
+  \item \textbf{Compilación local:}
+    \texttt{cabal build all --enable-tests \&\& cabal run wonderboy-hs}
+\end{itemize}
 
 \subsection{Objetivos}
 \label{subsec:intro-objetivos}
 
 \textbf{Objetivo general.}
 Demostrar conceptos de Programación Funcional mediante la construcción de un videojuego de
-plataformas~2D jugable, con un motor modular que separa simulación pura, orchestration con
+plataformas~2D jugable, con un motor modular que separa simulación pura, orquestación con
 mónadas e integración con el entorno externo.
 
 \textbf{Objetivos específicos.}
 
 \begin{enumerate}
   \item Implementar un juego~2D jugable con las mecánicas centrales del dominio: movimiento
-    del \emph{player} con gravedad y salto, apoyo sobre plataformas estáticas y móviles,
+    del jugador con gravedad y salto, apoyo sobre plataformas estáticas y móviles,
     recolección de ítems con efecto sobre puntaje, y combate básico con ataques
-    cuerpo a cuerpo y a distancia. El \emph{run} debe soportar pérdida de vidas,
-    \emph{respawn} en un \emph{spawn point} y condición de victoria \emph{híbrida}
+    cuerpo a cuerpo y a distancia. La partida debe soportar pérdida de vidas,
+    reaparición en un punto de aparición y condición de victoria híbrida
     (sección~\ref{subsubsec:dominio-entidades}).
 
   \item Diseñar un motor modular por capas (\texttt{Domain}, \texttt{UseCases},
     \texttt{Adapters}, \texttt{Frameworks}), de modo que la simulación viva en un núcleo
-    puro sin \texttt{IO}, la orchestration del \emph{frame} quede en casos de uso, y la
+    puro sin \texttt{IO}, la orquestación del frame quede en casos de uso, y la
     entrada, el reloj y el dibujado se concentren en adaptadores concretos. La transición
-    central del motor se expresa como una función pura de paso sobre el \emph{world}.
+    central del motor se expresa como una función pura de paso sobre el mundo.
 
-  \item Modelar los conceptos del dominio del juego en tipos algebraicos y \emph{value objects}
-    dentro de \texttt{Domain/}: distinguir \emph{level definition} y \emph{world}, nombrar
-    fases de partida, magnitudes físicas y \emph{behaviour tuning} (\texttt{BehaviourTuning}) como
+  \item Modelar los conceptos del dominio del juego en tipos algebraicos y objetos de valor
+    en el núcleo de dominio: distinguir definición de nivel y mundo, nombrar
+    fases de partida, magnitudes físicas y ajuste de comportamiento (\texttt{BehaviourTuning}) como
     valores con invariantes, en lugar de repartir reglas en booleanos o strings sueltos.
 
-  \item Modelar comportamientos de \emph{entity} (en particular \emph{enemy}) mediante un
-    \emph{DSL} basado en \emph{free monad}: el \emph{AST} describe
-    acciones como desplazarse, esperar o atacar, y un interpreter puro en el dominio las ejecuta
-    sobre el \emph{world}. Esa separación permite combinar patrones de IA\footnote{En
-    este informe, \emph{IA} designa el comportamiento programado de los enemigos, no
-    inteligencia artificial generativa.} (patrol,
-    chase, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
+  \item Modelar comportamientos de entidades (en particular enemigos) mediante un
+    lenguaje de comportamiento basado en mónada libre: el árbol de sintaxis describe
+    acciones como desplazarse, esperar o atacar, y un intérprete puro en el dominio las ejecuta
+    sobre el mundo. Esa separación permite combinar patrones de IA\footnote{En
+    este informe, IA designa el comportamiento programado de los enemigos, no
+    inteligencia artificial generativa.} (patrulla,
+    persecución, disparo a distancia) sin mezclar lógica de comportamiento con física ni con
     efectos del entorno.
 
   \item Orquestar el estado global del juego, la configuración de física y parámetros de
     partida, y los errores recuperables al cargar datos, con una pila monádica en
     \texttt{UseCases/} (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
-    tiempo real interpreta el paso de simulación, aplica la entrada del \emph{player} y
-    mantiene el \emph{run} entre niveles.
+    tiempo real interpreta el paso de simulación, aplica la entrada del jugador y
+    mantiene la partida entre niveles.
 
-  \item Cargar \emph{level definition}s desde JSON: geometría de plataformas,
-    \emph{spawn point}, \emph{enemy}, ítems, \emph{exit zone} y \emph{hazard}s.
+  \item Cargar definiciones de nivel desde JSON: geometría de plataformas,
+    punto de aparición, enemigos, ítems, zona de salida y peligros.
     Opcionalmente, generar etapas mediante la API del LLM (Anthropic) y resolver
-    \texttt{behaviourHint} al armar el catálogo del \emph{run}. \texttt{GameConfig}
+    \texttt{behaviourHint} al armar el catálogo de la partida. \texttt{GameConfig}
     (gravedad, vidas, combate) vive en
     código, no en JSON.
 \end{enumerate}
-
-Como complemento propio del equipo, se publicó una versión ejecutable del juego en
-itch.io para facilitar su prueba fuera del entorno de desarrollo.
 
 \subsection{Metodología de trabajo}
 \label{subsec:intro-metodologia}
 
 El desarrollo siguió un enfoque incremental por funcionalidad: primero movimiento y física
-del \emph{player}, luego plataformas y colisiones, después ítems y combate, enemigos con
+del jugador, luego plataformas y colisiones, después ítems y combate, enemigos con
 comportamiento programable, y por último carga de niveles desde datos externos. Cada
-iteración cerraba un ciclo completo (modelo de dominio, integración en el \emph{frame} y
+iteración cerraba un ciclo completo (modelo de dominio, integración en el frame y
 prueba manual en el juego) antes de avanzar al siguiente bloque.
 
-Los cambios entraron al repositorio mediante \emph{pull requests} revisadas entre
+Los cambios entraron al repositorio mediante pull requests revisadas entre
 integrantes, complementadas por la validación manual en pantalla.
 
-Un pipeline de continuous integration en GitHub ejecuta en cada cambio la compilación con
+Un pipeline de integración continua en GitHub ejecuta en cada merge la compilación con
 tests habilitados, la suite \texttt{tasty}, la validación del paquete Cabal, la
 documentación Haddock, HLint y Fourmolu. Esos chequeos automáticos detectan regresiones de
 compilación, roturas en tests y desvíos de estilo antes del merge.

@@ -1,17 +1,6 @@
-{- | Plataforma móvil del nivel: sólido con trayectoria ping-pong entre dos extremos.
-
-Las plataformas móviles comparten el ancla bottom-left con 'Platform' estática.
-Los extremos @EndA@ y @EndB@ son posiciones del ancla en cada extremo del recorrido
-(eje horizontal o vertical, no diagonal).
--}
 module Domain.Model.MovingPlatform (
-  -- * Tipo
   MovingPlatform (..),
-
-  -- * Construcción
   mkMovingPlatform,
-
-  -- * Geometría
   movingPlatformAabb,
   movingPlatformAsPlatform,
   movingPlatformIsHorizontal,
@@ -23,11 +12,6 @@ import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomLeft)
 import Domain.ValueObjects.Position (Position, posX, posY)
 import Domain.ValueObjects.Tolerance (epsilon, near)
 
-{- | Plataforma con movimiento ping-pong entre @movingPlatformEndA@ y @EndB@.
-
-@movingPlatformPos@ es la esquina inferior izquierda en el frame actual.
-@movingPlatformTowardB@ indica si el ancla viaja hacia @EndB@ este frame.
--}
 data MovingPlatform = MovingPlatform
   { movingPlatformId :: Int
   , movingPlatformPos :: Position
@@ -36,11 +20,12 @@ data MovingPlatform = MovingPlatform
   , movingPlatformEndA :: Position
   , movingPlatformEndB :: Position
   , movingPlatformSpeed :: Float
+  -- ^ Velocidad de desplazamiento a lo largo de su recorrido, en px/s.
   , movingPlatformTowardB :: Bool
+  -- ^ True mientras va hacia endB. Se invierte en cada extremo para el recorrido ping-pong.
   }
   deriving (Eq, Show)
 
--- | Crea una plataforma móvil validando geometría y extremos alineados a un eje.
 mkMovingPlatform ::
   Int ->
   Position ->
@@ -92,17 +77,10 @@ inRange v a b =
       hi = max a b
    in v >= lo - epsilon && v <= hi + epsilon
 
-{- | 'True' si la plataforma recorre el eje horizontal.
-
-Única clasificación de eje del tipo: la calcula sobre los extremos ya validados
-(alineados a un eje, no degenerados) por 'mkMovingPlatform', de modo que el avance
-por frame en @Domain.Logic.MovingPlatforms@ no re-deriva la pregunta con otra regla.
--}
 movingPlatformIsHorizontal :: MovingPlatform -> Bool
 movingPlatformIsHorizontal mp =
   isHorizontal (movingPlatformEndA mp) (movingPlatformEndB mp)
 
--- | Caja de colisión (bottom-left anchor).
 movingPlatformAabb :: MovingPlatform -> Aabb
 movingPlatformAabb mp =
   aabbFromBottomLeft
@@ -110,7 +88,6 @@ movingPlatformAabb mp =
     (movingPlatformWidth mp)
     (movingPlatformHeight mp)
 
--- | Instantánea estática para reutilizar resolución AABB del jugador.
 movingPlatformAsPlatform :: MovingPlatform -> Platform
 movingPlatformAsPlatform mp =
   platform

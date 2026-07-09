@@ -1,4 +1,3 @@
--- | FSM reactivo y clases de enemigo (M13): sensado y presets con fixtures fijos.
 module Domain.EnemyFsmTest where
 
 import Domain.Fixtures (
@@ -6,6 +5,7 @@ import Domain.Fixtures (
   enemyFrom,
   floorWorld,
   runBehaviourN,
+  swingToImpact,
   testCombatParams,
   testLifeParams,
   testParams,
@@ -32,20 +32,10 @@ import Domain.Model.World (World (..), defaultMaxHealth)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (frames)
 import Domain.ValueObjects.Health (health)
-import Domain.ValueObjects.Input (Input (..), noInput)
+import Domain.ValueObjects.Input (noInput)
 import Domain.ValueObjects.Position (Position, posX, position)
 import Domain.ValueObjects.Velocity (velX, velY)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, (@?=))
-
-{- | Resuelve un frame de combate con el botón de ataque presionado, iniciando el swing.
-
-Los tests de melee deben __arrancar el swing por input__: el daño se aplica en el frame
-de inicio del swing ('attackStarted' en @Domain.Logic.Combat@), no por pre-cargar
-'playerAttackFrames'. Pre-cargar el contador (como se hacía antes) deja 'attackStarted'
-en 'False' y nunca dispara el golpe, además de ocultar el bug de doble golpe por swing.
--}
-startSwing :: World -> World
-startSwing = resolveCombat testCombatParams (noInput{inputAttack = True})
 
 golemAt :: Position -> Enemy
 golemAt pos = spawnEnemy 1 GolemKind pos (defaultProgramForKind GolemKind)
@@ -137,7 +127,7 @@ unit_golemSurvivesFirstMelee :: Assertion
 unit_golemSurvivesFirstMelee =
   let pos = position 170 8
       w = meleeWorld (spawnPlayer (health 3) pos) [golemAt pos]
-      w' = startSwing w
+      w' = swingToImpact testCombatParams w
    in case worldEnemies w' of
         [e] -> enemyHealth e @?= health 1
         _ -> assertFailure "golem should survive one hit"
@@ -146,15 +136,14 @@ unit_golemDiesOnSecondMelee :: Assertion
 unit_golemDiesOnSecondMelee =
   let pos = position 170 8
       w = meleeWorld (spawnPlayer (health 3) pos) [(golemAt pos){enemyHealth = health 1}]
-      w' = startSwing w
+      w' = swingToImpact testCombatParams w
    in worldEnemies w' @?= []
 
 unit_meleeOneHitPerSwing :: Assertion
 unit_meleeOneHitPerSwing =
   let pos = position 170 8
       w0 = meleeWorld (spawnPlayer (health 3) pos) [golemAt pos]
-      -- Frame de arranque por input, luego un frame sin botón: debe pegar una sola vez.
-      w1 = startSwing w0
+      w1 = swingToImpact testCombatParams w0
       w2 = resolveCombat testCombatParams noInput w1
    in case worldEnemies w2 of
         [e] -> enemyHealth e @?= health 1
@@ -167,5 +156,5 @@ unit_snailDiesInOneMelee =
         meleeWorld
           (spawnPlayer (health 3) pos)
           [spawnEnemy 1 SnailKind pos (patrolHorizontal 30 (frames 90))]
-      w' = startSwing w
+      w' = swingToImpact testCombatParams w
    in worldEnemies w' @?= []

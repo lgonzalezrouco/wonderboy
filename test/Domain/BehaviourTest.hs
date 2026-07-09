@@ -1,7 +1,3 @@
-{- | Semántica pura del DSL de comportamiento (M6): pasos de behaviour y su
-composición con la física en el dominio. La orquestación en 'GameM' vive en
-'UseCases.UpdateGameTest'.
--}
 module Domain.BehaviourTest where
 
 import Domain.Fixtures (dtFrame, testLifeParams, testParams)

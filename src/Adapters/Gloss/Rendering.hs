@@ -1,4 +1,3 @@
--- | Adaptador de renderizado: 'GameView' → primitivas Gloss con cámara y HUD.
 module Adapters.Gloss.Rendering (
   renderFrame,
 )
@@ -38,15 +37,25 @@ import Adapters.Gloss.Config (
 import Adapters.Gloss.Sprites (
   Sprite (..),
   SpriteCatalog (..),
+  enemyBasePicture,
   enemySprite,
   playerSprite,
  )
 import Adapters.Gloss.Tiling (tilesToCover)
+import Domain.Logic.MeleeSwing (
+  attackBodyLunge,
+  attackCueHandInset,
+  attackCueHeight,
+  attackPhase,
+  attackSwingAngle,
+  clamp01,
+  meleeImpactPhase,
+ )
 import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
   crumblingPlatformAabb,
  )
-import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyKind, enemyPos)
+import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyHurtFrames, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
 import Domain.Model.FallingHazard (
   FallingHazard (..),
@@ -58,7 +67,7 @@ import Domain.Model.MovingPlatform (MovingPlatform, movingPlatformAabb)
 import Domain.Model.Pickup (Pickup, pickupAabb, pickupPos)
 import Domain.Model.Platform (Platform, platformAabb)
 import Domain.Model.Player (
-  Player,
+  Player (..),
   playerAabb,
   playerAttackFrames,
   playerFacing,
@@ -75,14 +84,16 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.Aabb (Aabb (..))
 import Domain.ValueObjects.BossHealth (BossHealth (..))
 import Domain.ValueObjects.CombatParams (CombatParams (..))
-import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (frameCount, hasFramesLeft)
+import Domain.ValueObjects.Facing (Facing (..), facingScale)
+import Domain.ValueObjects.Frames (Frames, hasFramesLeft)
 import Domain.ValueObjects.Health (healthPoints)
 import Domain.ValueObjects.Lives (livesCount)
 import Domain.ValueObjects.Position (Position, posX, posY)
 import Domain.ValueObjects.Score (scorePoints)
 import UseCases.Engine.GameView (GameView (..))
 
+-- El layout del HUD está en píxeles de pantalla: el panel se dibuja fuera de renderZoom,
+-- así que son coordenadas de ventana, no unidades de mundo.
 hudMargin :: Float
 hudMargin = 14
 
@@ -92,91 +103,71 @@ hudPanelWidth = 280
 hudPanelHeight :: Float
 hudPanelHeight = 220
 
+-- Multiplicadores de escala del 'text' de Gloss, no píxeles (los demás valores hud*Scale también).
 hudLabelScale :: Float
 hudLabelScale = 0.2
 
 hudHintScale :: Float
 hudHintScale = 0.16
 
--- Geometría interna del panel (px de pantalla).
-
--- | Margen interno del panel para el contenido.
 hudContentInset :: Float
 hudContentInset = 14
 
--- | Desplazamiento de la primera fila bajo el borde superior del panel.
 hudRow1Offset :: Float
 hudRow1Offset = 30
 
--- | Separación vertical entre filas (LIVES, HEALTH, SCORE, ATTACK).
 hudRowGap :: Float
 hudRowGap = 36
 
--- | Separación vertical de la fila de hint respecto de la fila anterior.
 hudHintGap :: Float
 hudHintGap = 20
 
--- | Altura aproximada del texto del HUD a 'hudLabelScale' (ancla inferior izquierda).
 hudTextHeight :: Float
 hudTextHeight = 18
 
--- | Ancho fijo de la columna de rótulos; los valores empiezan después.
 hudLabelColumnWidth :: Float
 hudLabelColumnWidth = 112
 
--- | Centro vertical de iconos/pips respecto de la línea base del rótulo.
+-- Sube el valor de una fila media línea de texto para que quede centrado respecto de su label.
 hudValueCenterLift :: Float
 hudValueCenterLift = hudTextHeight / 2
 
--- | Paso horizontal entre iconos de vida consecutivos.
 hudLifeIconStride :: Float
 hudLifeIconStride = 20
 
--- | Lado del cuadrado de un icono de vida.
 hudLifeIconSize :: Float
 hudLifeIconSize = 14
 
--- | Paso horizontal entre pips de salud consecutivos.
 hudHealthPipStride :: Float
 hudHealthPipStride = 26
 
--- | Ancho de un pip de salud.
 hudHealthPipWidth :: Float
 hudHealthPipWidth = 22
 
--- | Alto de un pip de salud.
 hudHealthPipHeight :: Float
 hudHealthPipHeight = 10
 
--- | Desplazamiento horizontal del recuadro "ATTACK" respecto del contenido.
 hudAttackBoxOffsetX :: Float
 hudAttackBoxOffsetX = 8
 
--- | Ajuste vertical del recuadro "ATTACK".
 hudAttackBoxDrop :: Float
 hudAttackBoxDrop = 6
 
--- | Ancho del recuadro indicador de ataque.
 hudAttackBoxWidth :: Float
 hudAttackBoxWidth = 52
 
--- | Alto del recuadro indicador de ataque.
 hudAttackBoxHeight :: Float
 hudAttackBoxHeight = 14
 
--- | Escala del texto "GAME OVER" en el overlay.
 hudGameOverScale :: Float
 hudGameOverScale = 0.42
 
--- | Desplazamiento vertical del texto "GAME OVER".
 hudGameOverOffsetY :: Float
 hudGameOverOffsetY = 24
 
--- | Desplazamiento vertical del hint bajo "GAME OVER".
 hudGameOverHintOffsetY :: Float
 hudGameOverHintOffsetY = -18
 
--- | Barra de salud del jefe (centro superior).
 bossBarWidth :: Float
 bossBarWidth = 220
 
@@ -207,7 +198,7 @@ platformVisualHeight = 35
 floorVisualDepth :: Float
 floorVisualDepth = 190
 
--- | Margen para decidir si una pared toca el borde derecho del mapa (px lógicos).
+-- | Holgura (en px lógicos) para considerar que una pared está junto al borde derecho del mapa.
 wallEdgeEpsilon :: Float
 wallEdgeEpsilon = 1
 
@@ -229,33 +220,11 @@ exitDoorGap = 12
 exitSignVisualHeight :: Float
 exitSignVisualHeight = 42
 
-attackCueHeight :: Float
-attackCueHeight = 42
-
-attackCueHandInset :: Float
-attackCueHandInset = 3
-
 attackCueLift :: Float
 attackCueLift = 18
 
 attackBodyLeanDegrees :: Float
 attackBodyLeanDegrees = 7
-
-attackBodyLunge :: Float
-attackBodyLunge = 4
-
--- Con la espada invertida en Y, -90 grados apunta hacia afuera; mas negativo sube la punta.
-attackStartDegrees :: Float
-attackStartDegrees = -135
-
-attackImpactDegrees :: Float
-attackImpactDegrees = -92
-
-attackFollowThroughDegrees :: Float
-attackFollowThroughDegrees = -65
-
-attackImpactPhase :: Float
-attackImpactPhase = 0.55
 
 attackSparkRadius :: Float
 attackSparkRadius = 3
@@ -263,22 +232,19 @@ attackSparkRadius = 3
 attackSparkPhaseWidth :: Float
 attackSparkPhaseWidth = 0.16
 
--- | Color del cuerpo durante el destello de daño (solo fallback si falta el sprite).
+-- | Tint del destello de daño. Solo un fallback para cuando falta un sprite.
 damageBodyColor :: Color
 damageBodyColor = makeColor 1.0 0.2 0.2 1.0
 
--- | Cada cuántos frames de render alterna el destello de daño (parpadeo).
 damageFlashStride :: Int
 damageFlashStride = 8
 
--- | Fase \"encendida\" del parpadeo de daño según el contador de render.
 damageFlashOn :: Int -> Bool
 damageFlashOn tick = even (tick `div` damageFlashStride)
 
 hitboxFootRadius :: Float
 hitboxFootRadius = 3.0
 
--- | Dibuja el mundo con cámara horizontal y HUD fijo en pantalla.
 renderFrame :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
 renderFrame catalog renderTick showHitboxes gv =
   pictures
@@ -295,7 +261,7 @@ renderFrame catalog renderTick showHitboxes gv =
     , renderVictoryOverlay gv
     ]
 
--- | Índice del nivel final/jefe; usa el fondo del castillo a partir de aquí.
+-- | Desde este índice de nivel en adelante, dibuja el fondo del castillo (el nivel final/del jefe).
 bossLevelIndex :: Int
 bossLevelIndex = 3
 
@@ -315,14 +281,13 @@ backgroundWidth = fromIntegral windowWidth
 backgroundHeight :: Float
 backgroundHeight = fromIntegral windowHeight
 
--- | Capa del mundo con transformación de cámara.
 renderWorldLayer :: SpriteCatalog -> Int -> Bool -> GameView -> Picture
 renderWorldLayer catalog renderTick showHitboxes gv =
   let w = gvWorld gv
       combatParams = gvCombatParams gv
       cameraX = cameraXForWorld w
-      -- Borde derecho del mapa: la única pared que se dibuja es la del final
-      -- (la que toca este borde); las demás quedan invisibles.
+      -- Borde derecho del mapa: solo se dibuja la pared que queda junto a él (la pared final).
+      -- Las demás son solo barreras de colisión invisibles.
       rightEdge = snd <$> worldHorizontalSpan w
    in Translate (-cameraX) (-cameraY) $
         pictures
@@ -334,7 +299,6 @@ renderWorldLayer catalog renderTick showHitboxes gv =
           , pictures (map (renderProjectile catalog) (worldProjectiles w))
           , pictures (map (renderFallingHazard catalog) (worldFallingHazards w))
           , renderExitZone catalog (worldExit w)
-          , renderBossArenaWalls (gvBossArenaWalls gv)
           , renderPlayer catalog renderTick combatParams (worldPlayer w)
           , if showHitboxes then renderHitboxOverlay (gvMeleeHitbox gv) w else Blank
           ]
@@ -352,22 +316,27 @@ renderPlayer catalog renderTick combatParams p =
       Nothing -> aabbToPicture bodyColor box
       Just sprite ->
         drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
-  -- Mientras dura la invencibilidad por daño parpadea la silueta teñida de rojo,
-  -- alternando con el sprite normal para el clásico destello de "recibió daño".
-  hurtFlash =
-    hasFramesLeft (playerInvincibilityFrames p) && damageFlashOn renderTick
+  hurtFlash = showsHurtFlash (playerInvincibilityFrames p) renderTick
   bodyPicture sprite =
     if hurtFlash then spriteHurtPicture sprite else spritePicture sprite
-  -- Fallback sin sprite: el rectángulo del cuerpo también se tiñe al recibir daño.
   bodyColor = if hurtFlash then damageBodyColor else playerColor
 
 renderEnemy :: SpriteCatalog -> Int -> Enemy -> Picture
 renderEnemy catalog renderTick e =
   case enemySprite catalog renderTick e of
     Nothing -> aabbToPicture (enemyColorForKind (enemyKind e)) box
-    Just sprite -> drawEntitySprite (enemyFacing e) box sprite
+    Just sprite ->
+      drawEntitySpriteWith (enemyFacing e) box sprite (bodyPicture sprite)
  where
   box = enemyAabb e
+  hurtFlash = showsHurtFlash (enemyHurtFrames e) renderTick
+  bodyPicture sprite
+    | hurtFlash = spriteHurtPicture sprite
+    | otherwise = enemyBasePicture e sprite
+
+showsHurtFlash :: Frames -> Int -> Bool
+showsHurtFlash frames renderTick =
+  hasFramesLeft frames && damageFlashOn renderTick
 
 renderPickup :: SpriteCatalog -> Pickup -> Picture
 renderPickup catalog pickup =
@@ -406,12 +375,10 @@ renderPlatform catalog rightEdge platform =
   case platformKind box of
     FloorPlatform -> renderGroundPlatform catalog box
     WallPlatform
-      -- La pared del final (la que toca el borde derecho del mapa) sí se dibuja,
-      -- como una columna de tierra enganchada al piso (ver 'renderFinalWall').
+      -- La pared final (junto al borde derecho del mapa) se dibuja como una columna de tierra.
       | isFinalWall -> renderFinalWall catalog box
-      -- El resto de las paredes son barreras de colisión invisibles: solo frenan
-      -- al jugador en los bordes. La cámara ya queda clampeada a esos bordes
-      -- (ver 'Adapters.Gloss.Camera'), así que no hace falta dibujarlas.
+      -- Las demás paredes son barreras de colisión invisibles. La cámara ya está clampeada
+      -- a los bordes del mapa (ver Adapters.Gloss.Camera), así que no hay nada que dibujar.
       | otherwise -> Blank
     LedgePlatform ->
       case platformSprites catalog box of
@@ -420,7 +387,7 @@ renderPlatform catalog rightEdge platform =
         _ -> aabbToPicture platformColor box
  where
   box = platformAabb platform
-  -- Es la pared del final si su lado derecho coincide con el borde del mapa.
+  -- Es la pared final si y solo si su lado derecho llega al borde derecho del mapa.
   isFinalWall = maybe False (\edge -> aabbMaxX box >= edge - wallEdgeEpsilon) rightEdge
 
 data PlatformKind
@@ -461,9 +428,8 @@ renderGroundFill catalog box =
         (aabbMaxY box - floorVisualDepth)
         (aabbMaxY box - platformVisualHeight)
 
-{- | Pared del final del mapa: columna de tierra hasta el tope (sin franja de
-pasto) que además baja por debajo de su base para engancharse con la capa de
-tierra del piso adyacente y no dejar una costura en la esquina.
+{- | La pared final del mapa: una columna de tierra de altura completa (sin franja de pasto) que además
+se extiende por debajo de su base para unirse con la capa de tierra del piso adyacente sin costura.
 -}
 renderFinalWall :: SpriteCatalog -> Aabb -> Picture
 renderFinalWall catalog box =
@@ -496,16 +462,6 @@ renderCrumblingPlatform :: CrumblingPlatform -> Picture
 renderCrumblingPlatform cp =
   aabbToPicture crumblingPlatformColor (crumblingPlatformAabb cp)
 
-{- | Barreras visibles de la arena de jefe (mismas cajas que la colisión invisible).
-  Recibe las plataformas ya pre-calculadas por 'UseCases.Engine.GameView.gameViewFromState'.
--}
-renderBossArenaWalls :: [Platform] -> Picture
-renderBossArenaWalls =
-  pictures . map (aabbToPicture bossArenaWallColor . platformAabb)
-
-bossArenaWallColor :: Color
-bossArenaWallColor = makeColor 0.95 0.45 0.2 0.55
-
 renderExitZone :: SpriteCatalog -> ExitZone -> Picture
 renderExitZone catalog exitZone =
   pictures
@@ -537,9 +493,6 @@ renderExitDoor catalog box =
       drawSpriteBottomCenter box midSprite
     _ -> Blank
 
-{- | Contornos de todas las cajas de colisión del mundo (debug de alineación).
-  'mMeleeHitbox' es la hitbox de melee pre-calculada por 'UseCases.Engine.GameView'.
--}
 renderHitboxOverlay :: Maybe Aabb -> World -> Picture
 renderHitboxOverlay mMeleeHitbox w =
   let p = worldPlayer w
@@ -584,7 +537,6 @@ renderHitboxOverlay mMeleeHitbox w =
                ]
         )
 
--- | Panel superior izquierdo: vidas, salud, ataque y hint de controles.
 renderHud :: SpriteCatalog -> GameView -> Bool -> Picture
 renderHud catalog gv showHitboxes =
   let halfW = fromIntegral windowWidth / 2
@@ -622,7 +574,6 @@ renderHud catalog gv showHitboxes =
             else Blank
         ]
 
--- | Barra superior centrada con la salud del jefe.
 renderBossBar :: GameView -> Picture
 renderBossBar gv =
   case gvBossHealth gv of
@@ -836,33 +787,7 @@ renderAttackSpark phase angle
                   , Rotate 90 (rectangleSolid arm 1.5)
                   ]
  where
-  impact = clamp01 (1 - abs (phase - attackImpactPhase) / attackSparkPhaseWidth)
-
-attackPhase :: CombatParams -> Player -> Maybe Float
-attackPhase combatParams p
-  | not (hasFramesLeft frames) = Nothing
-  | otherwise = Just (clamp01 (fromIntegral elapsed / fromIntegral phaseSpan))
- where
-  frames = playerAttackFrames p
-  total = max 1 (frameCount (cpAttackDuration combatParams))
-  elapsed = total - frameCount frames
-  phaseSpan = max 1 (total - 1)
-
-attackSwingAngle :: Float -> Float
-attackSwingAngle phase
-  | phase <= attackImpactPhase =
-      lerp attackStartDegrees attackImpactDegrees (smoothStep windupT)
-  | otherwise =
-      lerp attackImpactDegrees attackFollowThroughDegrees (easeInCubic recoveryT)
- where
-  windupT = clamp01 (phase / attackImpactPhase)
-  recoveryT = clamp01 ((phase - attackImpactPhase) / (1 - attackImpactPhase))
-
-facingScale :: Facing -> Float
-facingScale facing =
-  case facing of
-    FacingLeft -> -1
-    FacingRight -> 1
+  impact = clamp01 (1 - abs (phase - meleeImpactPhase) / attackSparkPhaseWidth)
 
 rotateAround :: Float -> Float -> Float -> Picture -> Picture
 rotateAround x y degrees picture =
@@ -872,18 +797,6 @@ rotateAround x y degrees picture =
 
 aabbCenterX :: Aabb -> Float
 aabbCenterX box = (aabbMinX box + aabbMaxX box) / 2
-
-clamp01 :: Float -> Float
-clamp01 = max 0 . min 1
-
-lerp :: Float -> Float -> Float -> Float
-lerp from to t = from + (to - from) * t
-
-smoothStep :: Float -> Float
-smoothStep t = t * t * (3 - 2 * t)
-
-easeInCubic :: Float -> Float
-easeInCubic t = t ^ (3 :: Int)
 
 hudLabel :: Float -> Float -> String -> Picture
 hudLabel x y label =
@@ -897,7 +810,6 @@ hudHint x y label =
     Scale hudHintScale hudHintScale $
       Color hudMutedColor (text label)
 
--- | Convierte un 'Aabb' en un rectángulo sólido centrado en su caja.
 aabbToPicture :: Color -> Aabb -> Picture
 aabbToPicture color box =
   let w = aabbMaxX box - aabbMinX box
@@ -912,7 +824,6 @@ aabbCenteredPicture color visualHeight box =
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleSolid visualHeight visualHeight))
 
--- | Contorno de una caja de colisión (solo borde, sin rellenar el interior).
 aabbOutline :: Color -> Aabb -> Picture
 aabbOutline color box =
   let w = aabbMaxX box - aabbMinX box
@@ -921,18 +832,10 @@ aabbOutline color box =
       cy = (aabbMinY box + aabbMaxY box) / 2
    in Translate cx cy (Color color (rectangleWire w h))
 
--- | Punto en el ancla de pies (centro inferior) de una entidad.
 renderFootAnchor :: Position -> Color -> Picture
 renderFootAnchor pos color =
   Translate (posX pos) (posY pos) (Color color (circleSolid hitboxFootRadius))
 
-drawEntitySprite :: Facing -> Aabb -> Sprite -> Picture
-drawEntitySprite facing box sprite =
-  drawEntitySpriteWith facing box sprite (spritePicture sprite)
-
-{- | Como 'drawEntitySprite' pero con el 'Picture' a dibujar dado explícitamente,
-para poder elegir entre el bitmap normal y la variante de daño teñida.
--}
 drawEntitySpriteWith :: Facing -> Aabb -> Sprite -> Picture -> Picture
 drawEntitySpriteWith facing box sprite picture =
   let availableW = max 1 (aabbMaxX box - aabbMinX box - entitySpritePadding)
@@ -941,27 +844,44 @@ drawEntitySpriteWith facing box sprite picture =
       renderedH = spriteHeight sprite * spriteScale
       cx = (aabbMinX box + aabbMaxX box) / 2
       cy = aabbMinY box + renderedH / 2
-      faceScale = case facing of
-        FacingLeft -> -spriteScale
-        FacingRight -> spriteScale
+      faceScale = facingScale facing * spriteScale
    in Translate cx cy $
         Scale faceScale spriteScale picture
 
+data SpriteAlign
+  = AlignCentered
+  | AlignBottomCenter
+
+drawSpriteScaled :: Float -> Float -> Float -> Sprite -> Picture
+drawSpriteScaled cx cy spriteScale sprite =
+  Translate cx cy $
+    Scale spriteScale spriteScale (spritePicture sprite)
+
+heightScale :: Float -> Sprite -> Float
+heightScale targetHeight sprite = targetHeight / spriteHeight sprite
+
+drawSpriteAt :: SpriteAlign -> Float -> Float -> Float -> Sprite -> Picture
+drawSpriteAt align cx anchorY spriteScale sprite =
+  let renderedH = spriteHeight sprite * spriteScale
+      cy = case align of
+        AlignCentered -> anchorY
+        AlignBottomCenter -> anchorY + renderedH / 2
+   in drawSpriteScaled cx cy spriteScale sprite
+
 drawSpriteCenteredAtHeight :: Aabb -> Float -> Sprite -> Picture
 drawSpriteCenteredAtHeight box targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
-      cx = (aabbMinX box + aabbMaxX box) / 2
-      cy = (aabbMinY box + aabbMaxY box) / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+  drawSpriteAt
+    AlignCentered
+    ((aabbMinX box + aabbMaxX box) / 2)
+    ((aabbMinY box + aabbMaxY box) / 2)
+    (heightScale targetHeight sprite)
+    sprite
 
 drawStackedDoorBottomCenter :: Aabb -> Sprite -> Sprite -> Picture
 drawStackedDoorBottomCenter box topSprite midSprite =
   pictures
-    [ Translate cx (bottomY + midH / 2) $
-        Scale spriteScale spriteScale (spritePicture midSprite)
-    , Translate cx (bottomY + midH + topH / 2) $
-        Scale spriteScale spriteScale (spritePicture topSprite)
+    [ drawSpriteScaled cx (bottomY + midH / 2) spriteScale midSprite
+    , drawSpriteScaled cx (bottomY + midH + topH / 2) spriteScale topSprite
     ]
  where
   boxW = max 1 (aabbMaxX box - aabbMinX box)
@@ -979,23 +899,20 @@ drawSpriteBottomCenter box sprite =
   let boxW = max 1 (aabbMaxX box - aabbMinX box)
       boxH = max 1 (aabbMaxY box - aabbMinY box)
       spriteScale = min (boxW / spriteWidth sprite) (boxH / spriteHeight sprite)
-      renderedH = spriteHeight sprite * spriteScale
-      cx = (aabbMinX box + aabbMaxX box) / 2
-      cy = aabbMinY box + renderedH / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+   in drawSpriteAt
+        AlignBottomCenter
+        ((aabbMinX box + aabbMaxX box) / 2)
+        (aabbMinY box)
+        spriteScale
+        sprite
 
 drawSpriteBottomCenterAtHeight :: Float -> Float -> Float -> Sprite -> Picture
 drawSpriteBottomCenterAtHeight cx bottomY targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
-      renderedH = spriteHeight sprite * spriteScale
-      cy = bottomY + renderedH / 2
-   in Translate cx cy $
-        Scale spriteScale spriteScale (spritePicture sprite)
+  drawSpriteAt AlignBottomCenter cx bottomY (heightScale targetHeight sprite) sprite
 
 drawSpriteAtHeight :: Float -> Sprite -> Picture
 drawSpriteAtHeight targetHeight sprite =
-  let spriteScale = targetHeight / spriteHeight sprite
+  let spriteScale = heightScale targetHeight sprite
    in Scale spriteScale spriteScale (spritePicture sprite)
 
 drawSpriteCover :: Float -> Float -> Sprite -> Picture

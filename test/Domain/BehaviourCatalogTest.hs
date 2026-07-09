@@ -1,4 +1,3 @@
--- | Smoke tests for 'programForEnemyDef' synthesis.
 module Domain.BehaviourCatalogTest where
 
 import Test.Tasty.HUnit (Assertion, (@?=))

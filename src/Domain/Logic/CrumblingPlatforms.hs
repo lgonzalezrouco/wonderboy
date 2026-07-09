@@ -1,4 +1,3 @@
--- | Cuenta regresiva, caída y colisión de plataformas que se desmoronan (puro).
 module Domain.Logic.CrumblingPlatforms (
   advanceCrumblingPlatforms,
   appendEnemySolidCrumbling,
@@ -24,9 +23,8 @@ import Domain.Model.World (World (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
 import Domain.ValueObjects.LifeParams (LifeParams)
-import Domain.ValueObjects.Position (posY, translate)
+import Domain.ValueObjects.Position (positionBelowY, translate)
 
--- | Dispara cuenta regresiva, avanza fases y elimina plataformas bajo la línea de muerte.
 advanceCrumblingPlatforms ::
   LifeParams ->
   DeltaTime ->
@@ -43,11 +41,16 @@ advanceCrumblingPlatforms lp dt player w =
 
 tryTrigger :: Player -> CrumblingPlatform -> CrumblingPlatform
 tryTrigger player cp
-  | CrumbleIntact <- crumblingPlatformPhase cp
-  , playerOnGround player
-  , playerRidingPlatformTop player (crumblingPlatformAsPlatform cp) =
+  | crumblingTriggeredByPlayer player cp =
       cp{crumblingPlatformPhase = CrumbleCountingDown crumbleCountdownFrames}
   | otherwise = cp
+
+-- Jugador apoyado sobre una ledge intacta: arranca el countdown.
+crumblingTriggeredByPlayer :: Player -> CrumblingPlatform -> Bool
+crumblingTriggeredByPlayer player cp =
+  CrumbleIntact == crumblingPlatformPhase cp
+    && playerOnGround player
+    && playerRidingPlatformTop player (crumblingPlatformAsPlatform cp)
 
 advanceOne :: DeltaTime -> Float -> CrumblingPlatform -> Maybe CrumblingPlatform
 advanceOne dt despawnLine cp =
@@ -64,7 +67,7 @@ advanceOne dt despawnLine cp =
               }
     CrumbleFalling ->
       let moved = moveDown dt cp
-       in if posY (crumblingPlatformPos moved) < despawnLine
+       in if positionBelowY despawnLine (crumblingPlatformPos moved)
             then Nothing
             else Just moved
 
@@ -73,12 +76,12 @@ moveDown dt cp =
   let dy = crumbleFallSpeed * seconds dt
    in cp{crumblingPlatformPos = translate 0 (-dy) (crumblingPlatformPos cp)}
 
--- | Añade plataformas que se desmoronan sólidas para el jugador a la lista base.
+-- El jugador atraviesa las plataformas una vez que empiezan a caer. Los enemigos siguen
+-- colisionando con todas (ver appendEnemySolidCrumbling).
 appendPlayerSolidCrumbling :: [Platform] -> [CrumblingPlatform] -> [Platform]
 appendPlayerSolidCrumbling plats crumbling =
   plats ++ map crumblingPlatformAsPlatform (filter crumblingPlatformSolidForPlayer crumbling)
 
--- | Añade plataformas que se desmoronan sólidas para enemigos a la lista base.
 appendEnemySolidCrumbling :: [Platform] -> [CrumblingPlatform] -> [Platform]
 appendEnemySolidCrumbling plats crumbling =
   plats ++ map crumblingPlatformAsPlatform crumbling

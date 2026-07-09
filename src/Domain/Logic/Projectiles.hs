@@ -1,22 +1,21 @@
--- | Lanzamiento, física y colisiones de proyectiles (puro).
 module Domain.Logic.Projectiles (
   resolveProjectiles,
 )
 where
 
-import Data.List (find)
+import Data.List (find, foldl')
 
 import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.CrumblingPlatforms (appendPlayerSolidCrumbling)
+import Domain.Logic.EnemyDamage (applyPlayerDamageToEnemy, enemyIsAlive)
 import Domain.Logic.MovingPlatforms (allCollisionPlatforms)
-import Domain.Logic.PlayerLife (applyDamage)
-import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyHealth, enemyId, enemyShootCooldownFrames)
+import Domain.Logic.PlayerLife (applyContactDamage)
+import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyId, enemyShootCooldownFrames)
 import Domain.Model.Platform (Platform, platformAabb)
 import Domain.Model.Player (
   Player (..),
   playerAabb,
   playerFacing,
-  playerInvincibilityFrames,
   playerThrowCooldownFrames,
  )
 import Domain.Model.Projectile (
@@ -38,14 +37,12 @@ import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.DeltaTime (DeltaTime, seconds)
 import Domain.ValueObjects.Facing (Facing (..))
 import Domain.ValueObjects.Frames (hasFramesLeft, tickFrames)
-import Domain.ValueObjects.Health (isDepleted, reduceHealth)
 import Domain.ValueObjects.Input (Input (..))
 import Domain.ValueObjects.PhysicsParams (PhysicsParams (..))
 import Domain.ValueObjects.Position (Position, position, translate)
 import Domain.ValueObjects.ThrowParams (ThrowParams (..))
 import Domain.ValueObjects.Velocity (velX, velY, velocity)
 
--- | Spawn, avance, impactos y cooldown de proyectiles en un frame.
 resolveProjectiles ::
   ThrowParams ->
   CombatParams ->
@@ -82,9 +79,7 @@ tickEnemyShootCooldown e
 
 trySpawn :: ThrowParams -> Input -> World -> World
 trySpawn tp input w
-  | not (inputThrow input) = w
-  | hasFramesLeft (playerThrowCooldownFrames (worldPlayer w)) = w
-  | any isPlayerOwned (worldProjectiles w) = w
+  | not (canSpawnPlayerThrow input w) = w
   | otherwise =
       let p = worldPlayer w
           body = playerAabb p
@@ -95,6 +90,13 @@ trySpawn tp input w
             { worldProjectiles = worldProjectiles w ++ [proj]
             , worldNextProjectileId = pid + 1
             }
+
+-- Input de throw, sin cooldown, y a lo sumo una roca del jugador en vuelo.
+canSpawnPlayerThrow :: Input -> World -> Bool
+canSpawnPlayerThrow input w =
+  inputThrow input
+    && not (hasFramesLeft (playerThrowCooldownFrames (worldPlayer w)))
+    && not (any isPlayerOwned (worldProjectiles w))
 
 spawnFromPlayer :: ThrowParams -> Int -> Position -> Facing -> Projectile
 spawnFromPlayer tp pid pos facing =
@@ -147,13 +149,16 @@ integrateProjectile dt proj =
 
 despawnPassive :: [Platform] -> Projectile -> ([Projectile], Bool) -> ([Projectile], Bool)
 despawnPassive plats proj (survivors, removedPlayer) =
-  let landed =
-        projectileMotion proj == Ballistic
-          && any (aabbOverlaps (projectileAabb proj) . platformAabb) plats
-      expired = not (hasFramesLeft (projectileLifetime proj))
-   in if landed || expired
+  let expired = not (hasFramesLeft (projectileLifetime proj))
+   in if projectileLandedOnPlatform plats proj || expired
         then (survivors, removedPlayer || isPlayerOwned proj)
         else (proj : survivors, removedPlayer)
+
+-- Solo las rocas balísticas despawnean al tocar una plataforma.
+projectileLandedOnPlatform :: [Platform] -> Projectile -> Bool
+projectileLandedOnPlatform plats proj =
+  projectileMotion proj == Ballistic
+    && any (aabbOverlaps (projectileAabb proj) . platformAabb) plats
 
 resolveHits ::
   ThrowParams ->
@@ -162,25 +167,24 @@ resolveHits ::
   (World, [Projectile], Bool)
 resolveHits tp cp w =
   let (player', enemies', flying, removed) =
-        foldl step (worldPlayer w, worldEnemies w, [], False) (worldProjectiles w)
-      enemies'' = filter (not . isDepleted . enemyHealth) enemies'
+        foldl' step (worldPlayer w, worldEnemies w, [], False) (worldProjectiles w)
+      enemies'' = filter enemyIsAlive enemies'
    in (w{worldPlayer = player', worldEnemies = enemies''}, flying, removed)
  where
+  -- La propiedad decide a quién puede pegarle un disparo: los disparos de enemigos solo
+  -- dañan al jugador, los del jugador solo a los enemigos, sin fuego amigo entre enemigos.
   step (player, enemies, flying, removed) proj =
     let box = projectileAabb proj
      in case projectileOwner proj of
-          -- Los proyectiles enemigos (p. ej. del arquero) solo dañan al jugador;
-          -- nunca a otros enemigos. Sin esto habría fuego amigo entre enemigos.
           EnemyProjectile ->
             if hitsPlayer box player
-              then (damagePlayer cp player, enemies, flying, removed)
+              then (applyContactDamage cp player, enemies, flying, removed)
               else (player, enemies, proj : flying, removed)
-          -- Los proyectiles del jugador solo dañan enemigos.
           PlayerProjectile ->
-            case find (aabbOverlaps box . enemyAabb) enemies of
+            case findEnemyHitByProjectile box enemies of
               Just e
                 | playerMayDamageEnemy w e ->
-                    let e' = e{enemyHealth = reduceHealth (tpDamage tp) (enemyHealth e)}
+                    let e' = applyPlayerDamageToEnemy cp (tpDamage tp) e
                         enemies' = map (\x -> if enemyId x == enemyId e then e' else x) enemies
                      in (player, enemies', flying, True)
                 | otherwise ->
@@ -191,15 +195,8 @@ resolveHits tp cp w =
 hitsPlayer :: Aabb -> Player -> Bool
 hitsPlayer box player = aabbOverlaps box (playerAabb player)
 
-damagePlayer :: CombatParams -> Player -> Player
-damagePlayer cp player
-  | hasFramesLeft (playerInvincibilityFrames player) = player
-  | otherwise =
-      applyDamage
-        (cpContactDamage cp)
-        player
-          { playerInvincibilityFrames = cpInvincibilityDuration cp
-          }
+findEnemyHitByProjectile :: Aabb -> [Enemy] -> Maybe Enemy
+findEnemyHitByProjectile box = find (aabbOverlaps box . enemyAabb)
 
 applyCooldown :: ThrowParams -> Bool -> Player -> Player
 applyCooldown tp playerRemoved p =

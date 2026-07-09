@@ -1,10 +1,7 @@
--- | 'motionForArchetype' y 'applyTuning' sobre stats (no sobre 'BehaviourProgram').
 module Domain.ArchetypeMotionTest where
 
--- Grupo 2 — third-party
 import Test.Tasty.HUnit (Assertion, assertBool, (@?=))
 
--- Grupo 3 — proyecto
 import Domain.Logic.BehaviourCatalog (applyTuning, motionForArchetype)
 import Domain.Model.EnemyKind (
   EnemyKind (ArcherKind, BatKind, GolemKind, SnailKind),

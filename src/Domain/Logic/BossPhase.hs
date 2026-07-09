@@ -1,8 +1,3 @@
-{- | Resolución pura de transiciones de fase de jefe.
-
-Se invoca tras @Domain.Logic.Combat.resolveCombat@ con un snapshot pre-combate
-para detectar @TookDamageThisFrame@.
--}
 module Domain.Logic.BossPhase (
   resolveBossPhases,
 )
@@ -12,7 +7,7 @@ import Data.List (find)
 import Data.Maybe (fromMaybe)
 
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
-import Domain.Logic.RunBehaviour (playerHorizontalDistance)
+import Domain.Logic.RunBehaviour (playerWithinHorizontalRange)
 import Domain.Model.BossPhase (
   BossDefinition (..),
   BossEventKind (..),
@@ -29,7 +24,6 @@ import Domain.ValueObjects.CombatParams (CombatParams (..))
 import Domain.ValueObjects.Health (Health, healthPoints)
 import Domain.ValueObjects.HealthRatio (healthAtOrBelowRatio)
 
--- | Avanza fases de jefe en @wAfter@ comparando salud con @wBefore@.
 resolveBossPhases :: CombatParams -> World -> World -> World
 resolveBossPhases cp wBefore wAfter =
   wAfter{worldEnemies = map (resolveBossEnemy cp wBefore wAfter) (worldEnemies wAfter)}
@@ -45,12 +39,12 @@ resolveBossEnemy cp wBefore wAfter e
                 enemyHealth <$> find ((== enemyId e) . enemyId) (worldEnemies wBefore)
               currentPhase = fromMaybe (bossPhaseIndex 0) (enemyBossPhase e)
               targetPhase = highestSatisfiedPhase cp def wAfter e healthBefore
+              -- Las fases solo avanzan (max): un boss nunca vuelve a una fase anterior.
               newPhase = max currentPhase targetPhase
            in if newPhase /= currentPhase
                 then applyBossPhase def newPhase e
                 else e
 
--- | Fase más alta cuyas condiciones de entrada se cumplen todas.
 highestSatisfiedPhase ::
   CombatParams ->
   BossDefinition ->
@@ -94,8 +88,12 @@ conditionMet ::
 conditionMet _ _ _ e _ (HealthAtOrBelowRatio ratio) =
   healthAtOrBelowRatio (enemyHealth e) (enemyMaxHealth e) ratio
 conditionMet cp _ w e _ (OnBossEvent PlayerInMeleeRange) =
-  playerHorizontalDistance w e <= cpMeleeReach cp
+  playerWithinHorizontalRange w e (cpMeleeReach cp)
 conditionMet _ _ _ e healthBefore (OnBossEvent TookDamageThisFrame) =
+  tookDamageThisFrame healthBefore e
+
+tookDamageThisFrame :: Maybe Health -> Enemy -> Bool
+tookDamageThisFrame healthBefore e =
   maybe False (\before -> healthPoints before > healthPoints (enemyHealth e)) healthBefore
 
 applyBossPhase :: BossDefinition -> BossPhaseIndex -> Enemy -> Enemy

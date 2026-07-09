@@ -1,21 +1,12 @@
-{- | Orquesta la resolución de @behaviourHint@ sobre una 'LevelDefinition' vía el
-puerto 'LevelContentPort', rellenando preset y tuning antes del build puro.
-
-Precedencia: preset explícito > hint resuelto > default del kind. Los pares
-@(kind, hint)@ distintos se resuelven una sola vez ('nub') para evitar consultas
-redundantes.
--}
 module UseCases.ResolveBehaviours (
   resolveLevelBehaviours,
 )
 where
 
--- Grupo 1 — stdlib / base
 import Control.Monad (join)
 import Data.List (nub)
 import Data.Text qualified as T
 
--- Grupo 2 — proyecto
 import Domain.Model.LevelDefinition (
   EnemyDef (..),
   LevelDefinition (..),

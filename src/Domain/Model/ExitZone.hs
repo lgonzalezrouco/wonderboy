@@ -1,8 +1,3 @@
-{- | Zona de salida del nivel (rectángulo no sólido, ancla bottom-left).
-
-Cargada desde la definición del nivel; 'Domain.Logic.LevelFlow' comprueba
-superposición con el jugador para la victoria híbrida.
--}
 module Domain.Model.ExitZone (
   ExitZone (..),
   defaultExitZone,
@@ -15,7 +10,7 @@ import GHC.Generics (Generic)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomLeft)
 import Domain.ValueObjects.Position (Position, position)
 
--- | Región de salida: esquina inferior izquierda y tamaño.
+-- | Región no sólida. Cuando el jugador la alcanza (habiendo cumplido las condiciones de puntaje/boss) completa el nivel.
 data ExitZone = ExitZone
   { exitPos :: Position
   , exitWidth :: Float
@@ -23,11 +18,10 @@ data ExitZone = ExitZone
   }
   deriving (Eq, Show, Generic)
 
--- | Zona degenerada para tests que no modelan salida.
+-- | Salida de tamaño cero para mundos y tests que no modelan una salida real.
 defaultExitZone :: ExitZone
 defaultExitZone = ExitZone (position 0 0) 0 0
 
--- | Caja de colisión de la zona de salida (ancla bottom-left).
 exitZoneAabb :: ExitZone -> Aabb
 exitZoneAabb exitZone =
   aabbFromBottomLeft (exitPos exitZone) (exitWidth exitZone) (exitHeight exitZone)

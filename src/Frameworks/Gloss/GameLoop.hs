@@ -1,8 +1,5 @@
--- | Bucle de juego Gloss: orquesta adaptadores y 'updateGame' (M8).
 module Frameworks.Gloss.GameLoop (
   runGame,
-
-  -- * Catálogo demo (tres niveles; el motor acepta listas de cualquier longitud)
   demoLevelPaths,
 )
 where
@@ -44,17 +41,16 @@ import UseCases.LoadLevel (worldFromCatalog)
 import UseCases.RunLayout (layoutPaths)
 import UseCases.UpdateGame (updateGame)
 
-{- | Catálogo del run, derivado de 'UseCases.RunLayout.runLayout' (la única fuente
-de verdad). Para cambiar los niveles, editá @runLayout@, no esta lista.
+{- | Las rutas de los niveles de la partida, tomadas de 'UseCases.RunLayout.layoutPaths' (la única
+fuente de verdad). Para cambiar qué niveles se cargan, edita el layout ahí, no esta lista.
 -}
 demoLevelPaths :: [FilePath]
 demoLevelPaths = layoutPaths
 
--- | Estado de la aplicación Gloss (no es estado de dominio).
 data AppState = AppState
   { appConfig :: GameConfig
   , appLevelDefs :: [LevelDefinition]
-  -- ^ Catálogo pre-cargado al arrancar (evita 'IO' de generación entre niveles).
+  -- ^ Catálogo precargado al inicio, así no corre IO de generación de niveles entre niveles.
   , appGameState :: GameState
   , appSprites :: SpriteCatalog
   , appRenderFrame :: Int
@@ -65,14 +61,12 @@ data AppState = AppState
   , appShowHitboxes :: Bool
   }
 
--- | Arranca la ventana Gloss con el catálogo demo de tres niveles.
 runGame :: IO ()
 runGame = runGameWith demoLevelPaths
 
--- | Arranca Gloss; pre-carga el catálogo (generación IA o archivos fijos).
 runGameWith :: [FilePath] -> IO ()
 runGameWith paths = do
-  let cfg = configForLevelCatalog paths
+  let cfg = configForLevelCatalog (length paths)
   defs <- bootstrapCatalogIO paths
   world <- loadWorldFromCatalog defs 0
   sprites <- loadSpriteCatalog
@@ -94,7 +88,6 @@ loadWorldFromCatalog defs idx =
 exitWithError :: String -> IO a
 exitWithError err = hPutStrLn stderr ("Error: " ++ err) >> exitFailure
 
--- | Estado inicial a partir de un mundo cargado.
 initialAppState :: GameConfig -> [LevelDefinition] -> SpriteCatalog -> World -> AppState
 initialAppState cfg defs sprites world =
   AppState
@@ -131,7 +124,7 @@ handleEvent event state
   | otherwise =
       pure state{appKeysHeld = handleKeyEvent event (appKeysHeld state)}
 
--- | Enter confirma en menús; Space también fuera de 'Playing' (ataque usa Space en juego).
+-- | Enter siempre confirma en los menús. Space confirma solo fuera de 'Playing' (dentro del juego Space es atacar).
 isMenuConfirmDown :: Event -> Bool
 isMenuConfirmDown (EventKey key Gloss.Down _ _) =
   case key of

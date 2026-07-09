@@ -1,9 +1,3 @@
-{- | Catálogo de comportamiento: arquetipos, tuning y síntesis de programas DSL.
-
-Punto de entrada profundo: 'programForEnemyDef' materializa el programa de un
-'enemyDef' (preset, tuning o default del kind). Construido con primitivos de
-@Domain.Model.EntityBehaviour@.
--}
 module Domain.Logic.BehaviourCatalog (
   programForEnemyDef,
   patrolHorizontal,
@@ -47,11 +41,6 @@ import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft)
 import Domain.ValueObjects.Multiplier (unMultiplier)
 import Domain.ValueObjects.Velocity (velocity)
 
-{- | Programa DSL para un enemigo según preset, tuning o default del kind.
-
-Precedencia: @behaviourPreset@ explícito > default de clase. El @behaviourHint@
-debe haberse resuelto antes (vía puerto) en preset/tuning.
--}
 programForEnemyDef :: EnemyDef -> BehaviourProgram
 programForEnemyDef d =
   case enemyDefBehaviourPreset d of
@@ -60,11 +49,6 @@ programForEnemyDef d =
        in programForArchetypeTuned (enemyDefKind d) archetype tuning
     Nothing -> defaultProgramForKind (enemyDefKind d)
 
-{- | Patrulla horizontal indefinidamente: velocidad @±speed@ durante @frames + 1@
-  frames por tramo. Son @frames + 1@ y no @frames@ porque 'setVelocity' consume un
-  behaviour step propio (fija la velocidad) y luego 'waitFrames' la mantiene @frames@
-  frames más. Sobre suelo plano, cinemática M6. Requiere @speed > 0@ y @frames > 0@.
--}
 patrolHorizontal :: Float -> Frames -> BehaviourProgram
 patrolHorizontal speed legFrames
   | speed > 0 && hasFramesLeft legFrames =
@@ -76,10 +60,6 @@ patrolHorizontal speed legFrames
           >>> p
   | otherwise = idleProgram
 
-{- | FSM reactivo: chase en rango, idle en spawn, retorno fuera de rango.
-
-Re-evalúa sensores cada behaviour step vía @fix@.
--}
 reactiveFsm ::
   Float ->
   Float ->
@@ -155,13 +135,9 @@ programForMotion (FlyingReactiveMotion chaseSpeed returnSpeed chaseRange spawnRa
 programForMotion (ArcherMotion shootRange cooldown _ _ _ _) =
   archerProgram shootRange cooldown
 
--- | Programa por defecto según clase de enemigo (su arquetipo natural de movimiento).
 defaultProgramForKind :: EnemyKind -> BehaviourProgram
 defaultProgramForKind = programForMotion . eksMotion . enemyKindStats
 
-{- | Materializa un arquetipo sobre una clase: velocidad de su motion natural, rangos
-por arquetipo (chase amplio, guard corto). El arquero conserva 'ArcherMotion'.
--}
 motionForArchetype :: EnemyKind -> BehaviourArchetype -> EnemyMotionStats
 motionForArchetype kind archetype =
   case eksMotion (enemyKindStats kind) of
@@ -182,10 +158,6 @@ motionForArchetype kind archetype =
           then FlyingReactiveMotion speed returnSpeed range hold speed homePatrolLeg
           else ReactiveMotion speed returnSpeed range hold
 
-{- | speed× y reach× sobre velocidades y rangos; frames y proyectil intactos.
-
-toughness× se aplica en 'BuildWorld'.
--}
 applyTuning :: BehaviourTuning -> EnemyMotionStats -> EnemyMotionStats
 applyTuning tuning motion = case motion of
   PatrolMotion s leg -> PatrolMotion (s * spd) leg
@@ -199,7 +171,6 @@ applyTuning tuning motion = case motion of
   spd = unMultiplier (tuningSpeed tuning)
   rch = unAmplifier (tuningReach tuning)
 
--- | Arquetipo materializado sobre una clase, con tuning de velocidad y alcance.
 programForArchetypeTuned ::
   EnemyKind -> BehaviourArchetype -> BehaviourTuning -> BehaviourProgram
 programForArchetypeTuned kind archetype tuning =
