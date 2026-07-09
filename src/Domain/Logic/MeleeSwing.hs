@@ -5,7 +5,9 @@ module Domain.Logic.MeleeSwing (
   meleeImpactFrameCount,
   isMeleeImpactFrame,
   meleeHitboxWhenImpact,
+  meleeHitboxDuringSwing,
   meleeHitboxAtImpact,
+  meleeHitboxAtPhase,
   attackBodyLunge,
   attackCueHandInset,
   attackCueHeight,
@@ -85,10 +87,16 @@ meleeHitboxWhenImpact cp p
   | otherwise =
       Nothing
 
+meleeHitboxDuringSwing :: CombatParams -> Player -> Maybe Aabb
+meleeHitboxDuringSwing cp p =
+  fmap (\phase -> meleeHitboxAtPhase phase (playerAabb p) (playerFacing p)) (attackPhase cp p)
+
 meleeHitboxAtImpact :: Aabb -> Facing -> Aabb
-meleeHitboxAtImpact body facing =
-  let phase = meleeImpactPhase
-      envelope = sin (pi * phase)
+meleeHitboxAtImpact = meleeHitboxAtPhase meleeImpactPhase
+
+meleeHitboxAtPhase :: Float -> Aabb -> Facing -> Aabb
+meleeHitboxAtPhase phase body facing =
+  let envelope = sin (pi * phase)
       faceScale = facingScale facing
       dx = faceScale * attackBodyLunge * envelope
       lunged = shiftAabbX dx body

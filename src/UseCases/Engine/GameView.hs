@@ -9,7 +9,7 @@ import Control.Monad (guard)
 
 import Domain.Logic.BossArena (bossArenaSealed, bossArenaWallPlatforms, bossArenaWallsActive, playerWithinBossArena)
 import Domain.Logic.LevelFlow (findLivingBoss, showBossExitHint, showExitScoreHint)
-import Domain.Logic.MeleeSwing (meleeHitboxWhenImpact)
+import Domain.Logic.MeleeSwing (meleeHitboxDuringSwing)
 import Domain.Model.Enemy (enemyHealth, enemyMaxHealth)
 import Domain.Model.GamePhase (GamePhase)
 import Domain.Model.Platform (Platform)
@@ -40,7 +40,7 @@ data GameView = GameView
   , gvBossExitHint :: Bool
   , gvBossArenaSealed :: Bool
   , gvMeleeHitbox :: Maybe Aabb
-  -- ^ Presente solo durante la ventana activa de swing/impacto de un ataque.
+  -- ^ Presente durante toda la ventana de swing del ataque (para visualización).
   , gvBossArenaWalls :: [Platform]
   -- ^ Vacío salvo que el jugador esté encerrado en la arena del boss con el boss aún vivo.
   }
@@ -68,7 +68,7 @@ gameViewFromState cfg gs =
               else Nothing
         , gvBossExitHint = showBossExitHint s w
         , gvBossArenaSealed = bossArenaSealed w
-        , gvMeleeHitbox = meleeHitboxWhenImpact combatParams p
+        , gvMeleeHitbox = meleeHitboxDuringSwing combatParams p
         , gvBossArenaWalls =
             maybe
               []
