@@ -87,7 +87,6 @@ instance LevelContentPort AnthropicContent where
     env <- ask
     liftIO (mapConcurrently (generateOne env) profiles)
 
--- Reintentar con el mismo body funciona solo porque generatorBody usa temperature > 0: cada intento es una muestra nueva. No elimines el reintento ni pongas temperature en 0.
 maxGenerationAttempts :: Int
 maxGenerationAttempts = 2
 
@@ -331,7 +330,6 @@ resolverPromptText kind hint =
     <> "Descripción: "
     <> hint
 
--- Toma el PRIMER {...} con llaves balanceadas (la profundidad vuelve a cero), no hasta la última }, así prosa final con } de más no extiende el corte hasta el fin del texto. No lo simplifiques a una búsqueda ingenua de la última llave.
 extractJsonObject :: Text -> Maybe Text
 extractJsonObject t =
   let afterOpen = T.dropWhile (/= '{') t

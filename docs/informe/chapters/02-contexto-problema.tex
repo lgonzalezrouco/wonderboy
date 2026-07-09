@@ -1,12 +1,6 @@
 \section{Contexto y Problema}
 \label{sec:contexto-problema}
 
-\paragraph{Convención terminológica.}
-En la prosa usamos términos en castellano del dominio del juego. Conservamos
-\textit{frame} y \textit{lazy} como en el código y la bibliografía Haskell. Los
-identificadores Haskell (\texttt{World}, \texttt{advanceSimulationFrame}, etc.)
-aparecen en \texttt{\ldots} o en listados.
-
 \subsection{Contexto del dominio}
 \label{subsec:contexto-dominio}
 
@@ -84,7 +78,7 @@ esa base, un arquetipo nombra un patrón de comportamiento (detalle en
 sección~\ref{subsec:dsl}) y se materializa en un programa del catálogo. Una
 plantilla (\texttt{behaviourPreset} en JSON) elige ese arquetipo de forma
 explícita. Una pista (\texttt{behaviourHint}) es texto en lenguaje natural que un
-adaptador resuelve con la API del LLM a arquetipo y ajuste antes de construir el mundo. El
+adaptador resuelve con la API del LLM a un arquetipo y un ajuste antes de construir el mundo. El
 ajuste (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
 (velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
 plantilla ni pista, cada enemigo conserva el programa por defecto de su
@@ -194,7 +188,7 @@ el paso puro sobre el mundo y delegar el resto a orquestación tipada.
 
 El hardware entrega \texttt{DeltaTime} variable. La simulación debe ser determinista dado
 ese valor y \texttt{Input}. La abstracción natural es una función de paso que devuelve el
-mundo siguiente, sin leer teclado ni reloj dentro de esa función: ambos llegan como
+mundo siguiente, sin leer el teclado ni mediciones del reloj dentro de esa función: ambos llegan como
 parámetros desde fuera.
 
 \subsubsection{Entrada y medio externo}

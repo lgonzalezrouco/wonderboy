@@ -137,10 +137,10 @@ alto en \texttt{chase}). Una pista como ``deambula lento y pesado'' suele resolv
 catálogo interpretado paso a paso.
 
 Cada enemigo activo lleva un \texttt{BehaviourProgram}: una mónada libre
-sobre el funtor \texttt{Entity\-Action} (cada nodo del árbol de sintaxis es una acción
+sobre el functor \texttt{Entity\-Action} (cada nodo del árbol de sintaxis es una acción
 posible). El intérprete \texttt{runBehaviour\-Step} consume una instrucción por
 enemigo y por frame (un paso de comportamiento). Puede leer el mundo para
-sensado: medir distancias al jugador o al ancla de aparición sin mutar
+medir distancias al jugador o al lugar de aparición sin mutar
 el estado, solo para decidir ramas o orientación. Luego \texttt{step} integra física
 para todos los enemigos en el mismo frame. Los bucles infinitos
 (patrullas, máquinas de estados reactivas) se escriben con \texttt{fix} y recursión en el
@@ -259,7 +259,7 @@ resolveMelee :: CombatParams -> World -> World
 \texttt{resolveProjectiles} integra proyectiles del jugador (lanzamiento con
 tiempo de recarga y arco balístico) y disparos enemigos generados por \texttt{Shoot} en el
 lenguaje de comportamiento. Colisionan con sólidos y con cuerpos. Al impactar aplican daño y desaparecen.
-Los peligros que caen caen a velocidad autorizada, dañan por solapamiento y,
+Los objetos que caen, lo hacen a una velocidad fija, dañan por solapamiento y,
 con \texttt{loopDelay} opcional en el JSON, reactivan en el punto de aparición tras una espera.
 
 La victoria híbrida exige las tres condiciones ya descritas

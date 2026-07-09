@@ -108,7 +108,7 @@ patrolHorizontal speed leg =
 \paragraph{Mónada libre frente a ADT recursivo.}
 Un ADT \texttt{data Behaviour = ... | Seq Behaviour Behaviour} con intérprete
 también separa descripción de ejecución. Elegimos \texttt{Free EntityAction} para
-reutilizar \texttt{Monad} (\lstinline|>>>|, \lstinline|fix|) y extender primitivas en el funtor
+reutilizar \texttt{Monad} (\lstinline|>>>|, \lstinline|fix|) y extender primitivas en el functor
 sin reescribir la forma recursiva.
 
 \begin{lstlisting}

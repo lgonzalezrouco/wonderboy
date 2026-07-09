@@ -197,7 +197,7 @@ platformVisualHeight = 35
 floorVisualDepth :: Float
 floorVisualDepth = 190
 
--- | Holgura (en px lógicos) para considerar que una pared está al ras del borde derecho del mapa.
+-- | Holgura (en px lógicos) para considerar que una pared está junto al borde derecho del mapa.
 wallEdgeEpsilon :: Float
 wallEdgeEpsilon = 1
 
@@ -285,7 +285,7 @@ renderWorldLayer catalog renderTick showHitboxes gv =
   let w = gvWorld gv
       combatParams = gvCombatParams gv
       cameraX = cameraXForWorld w
-      -- Borde derecho del mapa: solo se dibuja la pared que queda al ras de él (la pared final).
+      -- Borde derecho del mapa: solo se dibuja la pared que queda junto a él (la pared final).
       -- Las demás son solo barreras de colisión invisibles.
       rightEdge = snd <$> worldHorizontalSpan w
    in Translate (-cameraX) (-cameraY) $
@@ -316,7 +316,6 @@ renderPlayer catalog renderTick combatParams p =
       Nothing -> aabbToPicture bodyColor box
       Just sprite ->
         drawEntitySpriteWith (playerFacing p) box sprite (bodyPicture sprite)
-  -- Parpadea el cuerpo con tint rojo durante la invencibilidad post-golpe (el clásico destello de daño).
   hurtFlash = showsHurtFlash (playerInvincibilityFrames p) renderTick
   bodyPicture sprite =
     if hurtFlash then spriteHurtPicture sprite else spritePicture sprite
@@ -375,7 +374,7 @@ renderPlatform catalog rightEdge platform =
   case platformKind box of
     FloorPlatform -> renderGroundPlatform catalog box
     WallPlatform
-      -- La pared final (al ras del borde derecho del mapa) se dibuja como una columna de tierra.
+      -- La pared final (junto al borde derecho del mapa) se dibuja como una columna de tierra.
       | isFinalWall -> renderFinalWall catalog box
       -- Las demás paredes son barreras de colisión invisibles. La cámara ya está clampeada
       -- a los bordes del mapa (ver Adapters.Gloss.Camera), así que no hay nada que dibujar.

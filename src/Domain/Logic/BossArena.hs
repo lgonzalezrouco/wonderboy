@@ -20,15 +20,12 @@ import Domain.Model.Player (Player (..), playerWidth)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.Position (posX, position, translate)
 
--- Grosor en px de las paredes invisibles que sellan la arena del boss.
 wallThickness :: Float
 wallThickness = 8.0
 
--- Deliberadamente enorme para que las paredes abarquen toda la columna jugable, de arriba a abajo.
 arenaWallHeight :: Float
 arenaWallHeight = 4000.0
 
--- Ancla inferior en Y para las paredes. Se extienden hacia arriba desde acá.
 arenaFloorY :: Float
 arenaFloorY = -2000.0
 

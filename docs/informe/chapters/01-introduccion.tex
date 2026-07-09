@@ -74,7 +74,7 @@ mónadas e integración con el entorno externo.
   \item Modelar los conceptos del dominio del juego en tipos algebraicos y objetos de valor
     en el núcleo de dominio: distinguir definición de nivel y mundo, nombrar
     fases de partida, magnitudes físicas y ajuste de comportamiento (\texttt{BehaviourTuning}) como
-    valores con invariantes, en lugar de repartir reglas en booleanos o cadenas sueltas.
+    valores con invariantes, en lugar de repartir reglas en booleanos o strings sueltos.
 
   \item Modelar comportamientos de entidades (en particular enemigos) mediante un
     lenguaje de comportamiento basado en mónada libre: el árbol de sintaxis describe
@@ -87,7 +87,7 @@ mónadas e integración con el entorno externo.
 
   \item Orquestar el estado global del juego, la configuración de física y parámetros de
     partida, y los errores recuperables al cargar datos, con una pila monádica en
-    casos de uso (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
+    \texttt{UseCases/} (\texttt{StateT}, \texttt{ReaderT}, \texttt{ExceptT}). El bucle en
     tiempo real interpreta el paso de simulación, aplica la entrada del jugador y
     mantiene la partida entre niveles.
 
