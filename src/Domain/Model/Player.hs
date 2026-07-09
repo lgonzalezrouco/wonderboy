@@ -24,8 +24,11 @@ data Player = Player
   , playerHealth :: Health
   , playerFacing :: Facing
   , playerAttackFrames :: Frames
+  -- ^ Frames restantes de ventana de melee; 0 = sin ataque activo.
   , playerInvincibilityFrames :: Frames
+  -- ^ Frames de invencibilidad restantes; 0 = vulnerable a contacto enemigo.
   , playerThrowCooldownFrames :: Frames
+  -- ^ Frames restantes antes de poder lanzar de nuevo; 0 = listo.
   }
   deriving (Eq, Show, Generic)
 
