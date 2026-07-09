@@ -120,4 +120,4 @@ main = do
         _ -> runStrict n
   putStrLn (modeStr ++ " frames=" ++ show n ++ " checksum=" ++ show total)
  where
-  defaultFrames = 200000
+  defaultFrames = 500000

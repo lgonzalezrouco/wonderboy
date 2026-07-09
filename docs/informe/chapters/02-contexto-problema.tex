@@ -141,7 +141,9 @@ medición dedicada al motor, que pliega 500\,000 invocaciones de
 \texttt{advanceSimulationFrame} en dos modos: \texttt{strict} (fuerza el mundo en cada
 paso, como el bucle real) y \texttt{lazy} (acumula checksums sin forzar mundos
 intermedios). Con \texttt{+RTS -s}, el modo \texttt{strict} alcanzó unos 152\,MB de
-residencia máxima y el \texttt{lazy} unos 248\,MB (mismo checksum final). La conclusión
+residencia máxima y el \texttt{lazy} unos 248\,MB (mismo checksum final): una relación
+cercana a $1{,}6\times$ que se sostiene entre corridas, aunque los valores absolutos
+dependen de la plataforma. La conclusión
 empírica es que acumular estados sin forzar retiene thunks y aumenta memoria. El diseño
 frame a frame del motor, que reemplaza el mundo sin historial y lo consume al renderizar,
 evita ese patrón. Donde iteramos dentro de un frame (sub-pasos de colisión), preferimos
