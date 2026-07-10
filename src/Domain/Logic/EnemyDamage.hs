@@ -2,6 +2,7 @@ module Domain.Logic.EnemyDamage (
   applyPlayerDamageToEnemy,
   enemyIsAlive,
   tickEnemyHurtFrames,
+  tickEnemyPhaseTransition,
 )
 where
 
@@ -30,5 +31,12 @@ tickEnemyHurtFrames :: Enemy -> Enemy
 tickEnemyHurtFrames e
   | hasFramesLeft (enemyHurtFrames e) =
       e{enemyHurtFrames = tickFrames (enemyHurtFrames e)}
+  | otherwise =
+      e
+
+tickEnemyPhaseTransition :: Enemy -> Enemy
+tickEnemyPhaseTransition e
+  | hasFramesLeft (enemyPhaseTransition e) =
+      e{enemyPhaseTransition = tickFrames (enemyPhaseTransition e)}
   | otherwise =
       e

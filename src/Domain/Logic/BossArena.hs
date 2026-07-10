@@ -13,7 +13,7 @@ where
 
 import Domain.Logic.LevelFlow (hasLivingBoss)
 import Domain.Model.BossArena (BossArena (..))
-import Domain.Model.Enemy (Enemy, enemyKind)
+import Domain.Model.Enemy (Enemy, enemyInPhaseTransition, enemyKind)
 import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.Platform (Platform, platform)
 import Domain.Model.Player (Player (..), playerWidth)
@@ -67,10 +67,11 @@ bossArenaSealed :: World -> Bool
 bossArenaSealed w =
   worldBossArenaEngaged w && hasLivingBoss w
 
--- Un boss solo recibe daño mientras el jugador está dentro de su arena. Los demás enemigos siempre pueden.
+-- Un boss recibe daño solo con el jugador dentro de su arena y fuera de su pausa de cambio de fase.
+-- Los demás enemigos siempre pueden.
 playerMayDamageEnemy :: World -> Enemy -> Bool
 playerMayDamageEnemy w e
-  | isBossKind (enemyKind e) = playerWithinBossArena w
+  | isBossKind (enemyKind e) = playerWithinBossArena w && not (enemyInPhaseTransition e)
   | otherwise = True
 
 -- El jugador se compromete a la pelea una vez adentro con un boss vivo. Se libera cuando el boss muere.

@@ -5,8 +5,10 @@ import Data.Maybe (fromMaybe)
 
 import Domain.Fixtures (floorWorld, testCombatParams)
 import Domain.Logic.BehaviourCatalog (patrolHorizontal)
+import Domain.Logic.BossArena (playerMayDamageEnemy)
 import Domain.Logic.BossCatalog (bossDefinitionForKind)
 import Domain.Logic.BossPhase (resolveBossPhases)
+import Domain.Logic.EnemyDamage (tickEnemyPhaseTransition)
 import Domain.Model.BossPhase (
   bossMaxHealth,
   bossPhaseIndex,
@@ -18,6 +20,7 @@ import Domain.Model.Enemy (
   Enemy (..),
   enemyBossPhase,
   enemyHealth,
+  enemyInPhaseTransition,
   enemyKind,
   spawnEnemy,
  )
@@ -105,3 +108,23 @@ unit_nonBossUnchanged =
       w0 = floorWorld{worldEnemies = [snail]}
       w1 = transitionFrom w0 w0
    in worldEnemies w1 @?= worldEnemies w0
+
+unit_phaseChangeStartsTransition :: Assertion
+unit_phaseChangeStartsTransition =
+  let w1 = damageBossTo (health 13) worldWithGolemKing
+   in enemyInPhaseTransition (bossIn w1) @?= True
+
+unit_bossInvulnerableDuringTransition :: Assertion
+unit_bossInvulnerableDuringTransition =
+  let w1 = damageBossTo (health 13) worldWithGolemKing
+   in playerMayDamageEnemy w1 (bossIn w1) @?= False
+
+unit_transitionEndsAfterDuration :: Assertion
+unit_transitionEndsAfterDuration =
+  let boss0 = bossIn (damageBossTo (health 13) worldWithGolemKing)
+      boss90 = iterate tickEnemyPhaseTransition boss0 !! 90
+   in enemyInPhaseTransition boss90 @?= False
+
+unit_spawnHasNoTransition :: Assertion
+unit_spawnHasNoTransition =
+  enemyInPhaseTransition golemKingAt @?= False

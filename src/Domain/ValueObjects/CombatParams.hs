@@ -16,5 +16,7 @@ data CombatParams = CombatParams
   -- ^ Alcance base del melee en px. La hitbox real puede pasarse de acá según el arco del golpe (ver Domain.Logic.MeleeSwing).
   , cpMeleeDamage :: Damage
   , cpEnemyHurtFlashDuration :: Frames
+  , cpBossPhaseTransition :: Frames
+  -- ^ Duración de la pausa invulnerable del jefe al entrar a una fase nueva.
   }
   deriving (Eq, Show, Generic)

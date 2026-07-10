@@ -41,6 +41,8 @@ data GameConfig = GameConfig
   -- ^ px que el hitbox de melee se extiende frente al cuerpo del jugador
   , gcMeleeDamage :: Damage
   , gcEnemyHurtFlashDuration :: Frames
+  , gcBossPhaseTransition :: Frames
+  -- ^ Frames de la pausa invulnerable del jefe al cambiar de fase
   , gcLevelCount :: LevelCount
   , gcThrowCooldown :: Frames
   , gcThrowLifetime :: Frames
@@ -70,6 +72,7 @@ defaultConfig =
     , gcMeleeReach = 15.0
     , gcMeleeDamage = damage 1
     , gcEnemyHurtFlashDuration = frames 24
+    , gcBossPhaseTransition = frames 90
     , gcLevelCount = levelCount 3
     , gcThrowCooldown = frames 30
     , gcThrowLifetime = frames 120
@@ -108,6 +111,7 @@ combatParamsFromConfig cfg =
     , cpMeleeReach = gcMeleeReach cfg
     , cpMeleeDamage = gcMeleeDamage cfg
     , cpEnemyHurtFlashDuration = gcEnemyHurtFlashDuration cfg
+    , cpBossPhaseTransition = gcBossPhaseTransition cfg
     }
 
 throwParamsFromConfig :: GameConfig -> ThrowParams

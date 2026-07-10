@@ -13,6 +13,7 @@ import Domain.Model.Enemy (
   Enemy (..),
   enemyAabb,
   enemyFacing,
+  enemyInPhaseTransition,
   enemyKind,
   enemyPos,
   enemyShootCooldownFrames,
@@ -43,9 +44,12 @@ runBehaviourStep w =
    in w'{worldEnemies = enemies'}
 
 stepEnemyBehaviour :: World -> Enemy -> (World, Enemy)
-stepEnemyBehaviour w e =
-  let (prog', w', e') = stepProgram w (enemyProgram e) e
-   in (w', e'{enemyProgram = prog'})
+stepEnemyBehaviour w e
+  -- El jefe queda inerte durante su pausa de cambio de fase: no corre su programa.
+  | enemyInPhaseTransition e = (w, e)
+  | otherwise =
+      let (prog', w', e') = stepProgram w (enemyProgram e) e
+       in (w', e'{enemyProgram = prog'})
 
 -- Los condicionales se resuelven en el lugar y recursan. Cualquier otro nodo cede vía `next`,
 -- así ocurre exactamente un efecto por enemigo por frame (un loop de puros condicionales giraría en vacío).
