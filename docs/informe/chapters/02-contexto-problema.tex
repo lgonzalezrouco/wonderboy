@@ -34,7 +34,7 @@ mundo anterior por uno nuevo.
 La partida abarca varios niveles: vidas y otras decisiones que
 persisten al pasar de etapa. El puntaje es por nivel y se reinicia al cargar cada etapa.
 Al entrar en un nivel el mundo se
-reinicia a partir de la definición de nivel. Al perder una vida, el reaparición
+reinicia a partir de la definición de nivel. Al perder una vida, la reaparición
 reubica al jugador en un punto de aparición sin recargar todo el diseño del nivel.
 
 \subsubsection{Entidades e interacciones}
@@ -55,9 +55,7 @@ jugador como de ciertos enemigos.
 \subsubsection{Modelado explícito de conceptos}
 \label{subsubsec:dominio-modelado}
 
-Además de describir el juego en prosa, el motor nombra cada idea relevante como
-tipo o constructor. La definición de nivel (diseño autorado) y el mundo
-(instantánea en ejecución) no comparten representación. Las fases de partida
+Las fases de partida
 (\texttt{Playing}, \texttt{GameOver}, victoria de nivel) son variantes de un ADT, no
 strings ni enteros mágicos. Magnitudes como intervalo de tiempo, puntaje, salud o
 velocidad van en objetos de valor con reglas de construcción (\texttt{Multiplier}
@@ -66,8 +64,7 @@ intervalo de tiempo es cero). El combate y la colisión hablan de
 cajas de colisión AABB, no de coordenadas sueltas en funciones largas.
 
 Esa reificación hace que la lógica pura opere sobre tipos con significado de juego y quede
-totalmente sustituible. El glosario del dominio (enemigo, partida, zona de salida, etc.)
-coincide con los nombres del código.
+totalmente sustituible.
 
 La IA de cada enemigo se configura en varios niveles de abstracción. Un
 \texttt{kind} (\texttt{EnemyKind}) nombra la \textbf{clase} del enemigo
