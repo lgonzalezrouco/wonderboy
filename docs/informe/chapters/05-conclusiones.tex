@@ -10,15 +10,15 @@ entrada del jugador y datos cargados desde fuera. La solución sostuvo esa front
 \texttt{advanceSimulationFrame} concentra en el núcleo de dominio la denotación de
 un frame completo sin \texttt{IO}. \texttt{updateGame} aplica política de fases y eleva
 ese resultado al \texttt{GameState}. La orquestación de la partida usa
-\texttt{StateT}, \texttt{ReaderT} y \texttt{ExceptT}. Gloss, el teclado, el disco y la
-API del LLM quedan en adaptadores y en la capa de integración.
+\texttt{StateT}, \texttt{ReaderT} y \texttt{ExceptT}, mientras que Gloss, el teclado, el
+disco y la API del LLM quedan en adaptadores y en la capa de integración.
 
 Los conceptos del dominio (cap.~\ref{subsubsec:dominio-modelado}) quedaron
 materializados en tipos del modelo y objetos de valor: el vocabulario del glosario
 aparece en coincidencia de patrones y la lógica pura opera sobre esos nombres.
 
-El lenguaje de comportamiento sobre \texttt{Free EntityAction} separó descripción e interpretación de
-comportamiento. Patrulla, persecución y disparo a distancia se expresan como programas
+El lenguaje de comportamiento sobre \texttt{Free EntityAction} separó descripción e
+interpretación. Patrulla, persecución y disparo a distancia se expresan como programas
 en el árbol de sintaxis. \texttt{runBehaviourStep} consume una instrucción por frame antes de la
 física (cap.~\ref{subsec:dsl}).
 
@@ -38,7 +38,7 @@ evaluación \textit{lazy} (cap.~\ref{subsubsec:teoria-lazy}).
 
 La parte que más iteración demandó fue la física y las colisiones AABB. Mantener
 un paso puro sobre el mundo no eliminó los casos borde del dominio:
-túnel en plataformas finas, elección del eje de menor penetración, distinguir
+tunelización en plataformas finas, elección del eje de menor penetración, distinguir
 aterrizaje de golpe de techo con \texttt{vyBefore} (velocidad vertical antes de mover
 posición) y el arrastre por desplazamiento del jugador sobre plataformas móviles.
 Cada regla parecía local, pero interactuaba con las demás en el mismo
@@ -46,10 +46,10 @@ frame. Hubo que ajustar sub-pasos, orden de resolución y tests con
 mundos fijos hasta que el comportamiento en pantalla coincidiera con el
 modelo.
 
-En un orden distinto, fijar el orden de la secuencia dentro de
+Fijar el orden de la secuencia dentro de
 \texttt{advanceSimulationFrame} (paso de comportamiento, física, combate, proyectiles,
-victoria y muerte) requirió cuidado para no duplicar estado ni romper el
-determinismo ante un intervalo de tiempo variable. Una vez cerrado ese contrato en
+victoria y muerte) fue otra fuente de dificultad: requirió cuidado para no duplicar
+estado ni romper el determinismo ante un intervalo de tiempo variable. Una vez cerrado ese contrato en
 el dominio, \texttt{updateGame} y los tests de orquestación encajaron sin
 reabrir el diseño de capas.
 
@@ -58,8 +58,8 @@ reabrir el diseño de capas.
 
 El lenguaje de comportamiento y los arquetipos cubren un conjunto acotado de patrones. Convendría
 ampliar primitivas y programas compuestos sin tocar la cadena de física. Los
-jefes siguen dependiendo de un catálogo interno de fases: autorarlos desde la
-definición de nivel o desde pistas dedicados sería el siguiente paso de
+jefes siguen dependiendo de un catálogo interno de fases: definirlas desde la
+definición de nivel o desde pistas dedicadas sería el siguiente paso de
 contenido. La generación y la resolución de pistas dependen de un modelo externo:
 \texttt{buildWorld} rechaza JSON inválido, pero no garantiza jugabilidad ni un mapeo
 correcto de texto ambiguo. Ante fallo, el motor usa el respaldo o el
@@ -75,8 +75,9 @@ del proyecto. Al principio costó escribir en Haskell: la sintaxis y la
 evaluación \textit{lazy} no son transparentes de entrada. Con el tiempo aprendimos a 
 ``hablar en francés'' y las ventajas del lenguaje
 se hicieron evidentes en el propio diseño del motor (en particular la posibilidad
-de tratar el paso de simulación como función pura sustituible y testeable). Antes
-de esta materia conceptos como funciones puras, efectos secundarios, transparencia
+de tratar el paso de simulación como función pura sustituible y testeable).
+
+Antes de esta materia, conceptos como funciones puras, efectos secundarios, transparencia
 referencial o funciones de orden superior casi no figuraban en nuestro vocabulario
 de programación. Llevarnos esa forma de leer programas como descripciones de valores
 es, en la práctica, lo que más nos queda del curso.
