@@ -13,7 +13,7 @@ reloj, archivos, dibujado) quedan en adaptadores y en el ensamblado del bucle Gl
 \subsection{Arquitectura por capas}
 \label{subsec:solucion-capas}
 
-Cuatro capas con dependencia unidireccional hacia \texttt{Domain}
+El motor se organiza en cuatro capas con dependencia unidireccional hacia \texttt{Domain}
 (figura~\ref{fig:capas-dependencias})~\cite{cockburn2005hexagonal}.
 
 \begin{figure}[htbp]
@@ -30,7 +30,8 @@ Cuatro capas con dependencia unidireccional hacia \texttt{Domain}
 \label{subsec:solucion-nucleo}
 
 El agregado central es el mundo. Cada frame lo reemplaza por completo
-(sección~\ref{subsubsec:problema-estado}). La denotación del paso en juego:
+(sección~\ref{subsubsec:problema-estado}). La denotación del paso se expresa en el
+siguiente tipo:
 
 \begin{lstlisting}
 advanceSimulationFrame
@@ -71,7 +72,7 @@ wAfterBoss        = resolveBossPhases combat wBefore wAfterHazards
 \label{subsec:solucion-monadas}
 
 La partida agrega a \texttt{GameState} lo que el mundo no cubre (vidas, fase,
-puntaje del nivel, índice de etapa). \texttt{GameConfig} se sirve de solo lectura.
+puntaje del nivel, índice de etapa). \texttt{GameConfig} solo se lee, nunca se modifica.
 La pila:
 
 \begin{lstlisting}
@@ -84,8 +85,9 @@ updateGame :: (MonadReader GameConfig m, MonadState GameState m)
              => DeltaTime -> Input -> m ()
 \end{lstlisting}
 
-\texttt{ReaderT} provee configuración y \texttt{StateT} el estado de partida.
-\texttt{ExceptT} errores de carga (\texttt{runGameM :: ... -> Either GameError (a, GameState)}).
+\texttt{ReaderT} provee configuración, \texttt{StateT} el estado de partida y
+\texttt{ExceptT} los errores de carga
+(\texttt{runGameM :: ... -> Either GameError (a, GameState)}).
 \texttt{updateGame} es polimórfica en \texttt{MonadReader} y \texttt{MonadState} para
 facilitar tests sin \texttt{GameM} concreto.
 

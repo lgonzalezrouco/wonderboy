@@ -5,10 +5,10 @@
 \label{subsec:pipeline-frame}
 
 Un frame en \texttt{Playing} con intervalo de tiempo activo es una sola
-invocación de \texttt{advanceSimulation\-Frame}
-(sección~\ref{subsec:solucion-nucleo}). Un frame abarca todo el ciclo de
-simulación. Un paso de comportamiento (primer bloque de \texttt{advanceFrame}) avanza
-solo una instrucción del lenguaje de comportamiento por enemigo. El orden interno es fijo:
+invocación de \texttt{advanceSimulation\-Frame} que abarca todo el ciclo de simulación
+(sección~\ref{subsec:solucion-nucleo}). Un paso de comportamiento (primer bloque de
+\texttt{advanceFrame}) avanza solo una instrucción del lenguaje de comportamiento por
+enemigo. El orden interno es fijo:
 
 \begin{enumerate}
   \item \texttt{advanceFrame}: \texttt{runBehaviourStep} y \texttt{step}
@@ -48,15 +48,14 @@ pasos más chicos.
 
 En cada frame el jugador recorre en vertical una distancia $|v_y| \cdot \Delta t$
 (velocidad vertical por tiempo del frame). Si el motor integrara ese salto de
-una sola vez, podría tunelizar: terminar un frame al otro lado de una
-plataforma fina sin que, en ningún instante intermedio, la caja de colisión
-solape el sólido. Es el mismo fenómeno que en física de juegos se llama
-tunelización: el cuerpo ``salta'' el obstáculo porque el paso de integración es
-más grande que el grosor del volumen de colisión.
+una sola vez, el jugador podría atravesar una plataforma fina sin que, en ningún
+instante intermedio, la caja de colisión solape el sólido. En física de juegos, este
+fenómeno se llama tunelización: el cuerpo ``salta'' el obstáculo porque el paso de
+integración es más grande que el grosor del volumen de colisión.
 
 Para evitarlo, el motor toma la plataforma más fina del nivel y, si
-$|v_y| \cdot \Delta t$ supera la mitad de su altura, divide el desplazamiento en
-entre $1$ y $16$ sub-pasos de igual duración ($\Delta t / n$). En cada sub-paso
+$|v_y| \cdot \Delta t$ supera la mitad de su altura, divide el desplazamiento en un
+número de sub-pasos entre $1$ y $16$, de igual duración ($\Delta t / n$). En cada sub-paso
 integra posición y comprueba colisiones. Así el choque se detecta en algún instante
 intermedio. El intervalo de tiempo y la gravedad no se repiten: solo se subdivide el
 tramo ya calculado. La implementación usa recursión estricta con \texttt{seq}, no
@@ -80,11 +79,11 @@ cajas. En horizontal hay dos candidatos (empujar a izquierda o derecha). En
 vertical, hacia arriba o hacia abajo. El motor toma el menor de cada par y compara
 ambos mínimos.
 
-Ante un solapamiento entre el jugador y un sólido, elige el eje de menor penetración:
-empujar en $X$ si la separación horizontal es más chica (choque lateral) y en $Y$
-si la vertical lo es (suelo o techo). Resolver siempre el eje vertical primero
+Ante un solapamiento entre el jugador y un sólido, el motor elige el eje de menor
+penetración: empujar en $X$ si la separación horizontal es más chica (choque lateral) y
+en $Y$ si la vertical lo es (suelo o techo). Resolver siempre el eje vertical primero
 confundiría una pared con un aterrizaje (o un techo con un apoyo): corriendo
-contra el costado de una plataforma el jugador terminaría encima, saltando contra
+contra el costado de una plataforma el jugador terminaría encima, y saltando contra
 una pared quedaría clavado hacia abajo. Cuando las penetraciones son casi iguales,
 un sesgo favorece $Y$ para tratar el contacto como apoyo.
 
@@ -95,16 +94,16 @@ movimiento (caer, quedar quieto o subir), aunque la caja aún no se haya
 desplazado. Solo se aterriza o se corrige techo si \texttt{vyBefore} $\leq 0$ (caía o
 estaba en reposo). Si el jugador subía ($\texttt{vyBefore} > 0$), un choque superior se
 trata como golpe de techo, no como piso. Las plataformas se procesan ordenadas por
-borde superior descendente. Se repite hasta ocho pasadas o hasta que no quede
-solapamiento. Los enemigos terrestres comparten la regla. Los voladores la
-ignoran.
+borde superior descendente, y el proceso se repite hasta ocho pasadas o hasta que no
+quede solapamiento. Los enemigos terrestres comparten la regla, mientras que los
+voladores la ignoran.
 
 \subsection{Plataformas especiales}
 \label{subsec:plataformas-especiales}
 
-\textbf{Plataformas móviles.} Cada una recorre en ida y vuelta entre dos extremos con ancla
-esquina inferior izquierda y velocidad constante. Se avanzan antes de la física del
-jugador. Si el jugador está en el suelo y apoyado sobre el tramo superior
+\textbf{Plataformas móviles.} Cada una recorre en ida y vuelta entre dos extremos,
+anclada en la esquina inferior izquierda, con velocidad constante. Avanzan antes de la
+física del jugador. Si el jugador está en el suelo y apoyado sobre el tramo superior
 de una móvil, su posición se desplaza con la plataforma ese frame
 (arrastre por desplazamiento): la plataforma ``arrastra'' al jugador sumando su
 desplazamiento del frame a la posición, sin modificar \texttt{playerVel}. Así
@@ -228,7 +227,7 @@ precedencia (sección~\ref{subsubsec:dominio-modelado}): \texttt{behaviour\-Pres
 explícito en JSON $>$ plantilla y ajuste resueltos desde
 \texttt{behaviour\-Hint} $>$ \texttt{defaultProgram\-ForKind}. Una plantilla
 incompatible con la clase de movimiento cae a \texttt{idleProgram} (quedarse quieto).
-Los jefes ignoran plantillas y pistas. Cargan fases desde el catálogo interno
+Los jefes ignoran plantillas y pistas: cargan fases desde el catálogo interno
 (sección~\ref{subsec:combate}).
 
 \subsection{Combate y proyectiles}
@@ -244,7 +243,7 @@ Durante \texttt{cpAttackDuration} el jugador ataca, pero el daño cae solo cuand
 \texttt{meleeHitboxWhenImpact} devuelve \texttt{Nothing}. Solo allí se construye
 la caja de golpe a partir del arco del ataque (\texttt{meleeImpactPhase},
 \texttt{attackSwingAngle}) y de un desplazamiento adelante del cuerpo
-(\texttt{attackBodyLunge}). Cuenta golpe si el enemigo solapa esa caja o el
+(\texttt{attackBodyLunge}). Se registra un golpe si el enemigo solapa esa caja o el
 cuerpo tras la embestida. El daño y la duración del destello al sobrevivir vienen de
 \texttt{CombatParams}. \texttt{applyPlayerDamageToEnemy} omite destello en golpes
 fatales.
@@ -259,7 +258,7 @@ resolveMelee :: CombatParams -> World -> World
 \texttt{resolveProjectiles} integra proyectiles del jugador (lanzamiento con
 tiempo de recarga y arco balístico) y disparos enemigos generados por \texttt{Shoot} en el
 lenguaje de comportamiento. Colisionan con sólidos y con cuerpos. Al impactar aplican daño y desaparecen.
-Los objetos que caen, lo hacen a una velocidad fija, dañan por solapamiento y,
+Los peligros que caen se desplazan a velocidad fija, dañan por solapamiento y,
 con \texttt{loopDelay} opcional en el JSON, vuelven a aparecer en el mismo lugar tras una espera.
 
 La victoria híbrida exige las tres condiciones ya descritas
@@ -285,8 +284,8 @@ rectángulos usan \texttt{pos} (esquina inferior izquierda), \texttt{width} y \t
 
 \textbf{Catálogo de la partida.} Ver tabla~\ref{tab:catalogo-modos} y
 \texttt{BootstrapRun} (sección~\ref{subsec:solucion-catalogo}). Ante fallo de generación o
-de resolución de pista, el motor conserva el respaldo del ranura o el
-valor por defecto del \texttt{kind} y la partida no se aborta.
+de resolución de pista, el motor conserva el respaldo de la ranura o el
+valor por defecto del \texttt{kind}, y la partida no se aborta.
 
 \textbf{Niveles generados por LLM.} Con \envvar{WONDERBOY_GENERATE_LEVELS} activo, el
 adaptador consulta la API del LLM una vez por perfil (intro, desafío, jefe) y devuelve

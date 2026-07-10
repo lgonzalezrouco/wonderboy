@@ -4,33 +4,35 @@
 \subsection{Presentación general}
 \label{subsec:intro-presentacion}
 
-Este trabajo implementa un videojuego de plataformas en 2D. El núcleo del sistema es una
-simulación discreta por frames: en cada paso se recibe un intervalo de tiempo
-(\texttt{DeltaTime}) y la intención del jugador (\texttt{Input}), y se produce un nuevo
-mundo (\texttt{World}), instantánea del plano de juego con el jugador, los enemigos, las
-plataformas y los ítems aún presentes en el nivel. El contenido estático de cada etapa
-proviene de una definición de nivel (\texttt{LevelDefinition}) cargada antes de jugar.
-Durante la partida el motor actualiza ese mundo frame a frame.
+Este trabajo implementa un videojuego de plataformas en 2D cuyo núcleo es una simulación
+discreta por frames. En cada paso, el motor recibe un intervalo de tiempo
+(\texttt{DeltaTime}) y la intención del jugador (\texttt{Input}), y produce un nuevo
+mundo (\texttt{World}): la instantánea del plano de juego con el jugador, los enemigos, las
+plataformas y los ítems aún presentes en el nivel.
 
-La interacción con el entorno externo queda en la frontera del sistema: entrada del
-usuario, lectura de archivos y dibujado en tiempo real. Esas responsabilidades no forman
-parte del núcleo de simulación. La lógica de juego se expresa como transformaciones puras
-sobre el mundo, mientras que la orquestación del estado global, la configuración y los
-errores recuperables se delegan a capas superiores del motor.
+El contenido estático de cada etapa proviene de una definición de nivel
+(\texttt{LevelDefinition}) cargada antes de jugar. Durante la partida, el motor actualiza
+ese mundo frame a frame.
+
+La interacción con el entorno externo (entrada del usuario, lectura de archivos, dibujado
+en tiempo real) queda en la frontera del sistema, fuera del núcleo de simulación. La
+lógica de juego se expresa como transformaciones puras sobre el mundo. La orquestación
+del estado global, la configuración y los errores recuperables quedan delegados a capas
+superiores del motor.
 
 \subsection{Motivación}
 \label{subsec:intro-motivacion}
 
 El objetivo central del trabajo es demostrar, en un dominio no trivial, los conceptos
 vistos en la materia: funciones puras, composición con tipos algebraicos, abstracción y
-manejo de efectos con mónadas. Un juego de plataformas resulta un caso de estudio exigente
+manejo de efectos con mónadas. Un juego de plataformas es un caso de estudio exigente
 porque combina estado global, actualización continua y entrada en tiempo real.
 
 Elegimos un videojuego también por una razón práctica: el feedback visual hace
-tangible el comportamiento del programa. Cada frame se puede observar de inmediato,
-y un error en física, colisiones o comportamiento de un enemigo se manifiesta en pantalla
-sin depender de trazas ni volcados de estado. Eso acorta el ciclo de validación y mantiene el
-foco en la corrección del modelo.
+tangible el comportamiento del programa. Cada frame se observa de inmediato, y un
+error en física, colisiones o comportamiento de un enemigo se manifiesta en pantalla
+sin depender de trazas ni volcados de estado. Eso acorta el ciclo de validación y mantiene
+el foco en la corrección del modelo.
 
 \subsection{Enlaces y ejecución}
 \label{subsec:intro-enlaces}
@@ -71,10 +73,10 @@ mónadas e integración con el entorno externo.
     entrada, el reloj y el dibujado se concentren en adaptadores concretos. La transición
     central del motor se expresa como una función pura de paso sobre el mundo.
 
-  \item Modelar los conceptos del dominio del juego en tipos algebraicos y objetos de valor
-    en el núcleo de dominio: distinguir definición de nivel y mundo, nombrar
-    fases de partida, magnitudes físicas y ajuste de comportamiento (\texttt{BehaviourTuning}) como
-    valores con invariantes, en lugar de repartir reglas en booleanos o strings sueltos.
+  \item Modelar los conceptos del dominio del juego en tipos algebraicos y objetos de valor:
+    distinguir definición de nivel y mundo, nombrar fases de partida, magnitudes físicas y
+    ajuste de comportamiento (\texttt{BehaviourTuning}) como valores con invariantes, en
+    lugar de repartir reglas en booleanos o strings sueltos.
 
   \item Modelar comportamientos de entidades (en particular enemigos) mediante un
     lenguaje de comportamiento basado en mónada libre: el árbol de sintaxis describe
@@ -116,12 +118,12 @@ tests habilitados, la suite \texttt{tasty}, la validación del paquete Cabal, la
 documentación Haddock, HLint y Fourmolu. Esos chequeos automáticos detectan regresiones de
 compilación, roturas en tests y desvíos de estilo antes del merge.
 
-Durante el desarrollo también recurrimos a Cursor y Claude. La arquitectura del motor, el
-modelado del dominio y las decisiones que este informe desarrolla en los capítulos
+Durante el desarrollo también recurrimos a Cursor y Claude, pero la arquitectura del motor,
+el modelado del dominio y las decisiones que este informe desarrolla en los capítulos
 siguientes las tomamos entre ambos integrantes. Esas herramientas nos ayudaron a barajar
-alternativas, a contrastar técnicas de Programación Funcional y a señalar debilidades en
-borradores intermedios. En ningún caso delegamos la decisión final: cada elección de diseño
-quedó argumentada y acordada por el equipo.
+alternativas, contrastar técnicas de Programación Funcional y señalar debilidades en
+borradores intermedios, pero en ningún caso delegamos la decisión final: cada elección de
+diseño quedó argumentada y acordada por el equipo.
 
 En la escritura del código recurrimos a la asistencia sobre todo para sintaxis de Haskell
 y piezas repetitivas de estructura. Todo lo que incorporamos pasó por las revisiones entre

@@ -4,12 +4,11 @@
 \subsection{Contexto del dominio}
 \label{subsec:contexto-dominio}
 
-El juego que modelamos es una simulación de plataformas en 2D sobre un
-plano de juego: posiciones y
-tamaños se miden en píxeles lógicos, con el eje horizontal hacia la derecha y el
-vertical hacia arriba. El tiempo de simulación no es continuo en el modelo: avanza en
-frames discretos. Cada frame recibe un intervalo de tiempo (segundos asignados
-a ese paso) y produce una nueva instantánea del estado jugable.
+El juego que modelamos es una simulación de plataformas en 2D. En el plano de juego,
+posiciones y tamaños se miden en píxeles lógicos, con el eje horizontal hacia la derecha
+y el vertical hacia arriba. El tiempo de simulación no es continuo: avanza en frames
+discretos. Cada frame recibe un intervalo de tiempo (segundos asignados a ese paso) y
+produce una nueva instantánea del estado jugable.
 
 \subsubsection{Tiempo y espacio}
 \label{subsubsec:dominio-tiempo-espacio}
@@ -25,24 +24,24 @@ sistema. Esa correspondencia queda fuera del modelo de simulación.
 
 Antes de jugar un nivel se carga una definición de nivel: geometría de plataformas,
 punto de aparición, ubicación de enemigos e ítems, zona de salida, peligros y
-parámetros como el puntaje mínimo para ganar. Ese contenido es estático durante la partida
-en el nivel. En cambio, el mundo es la instantánea en ejecución: el jugador,
+parámetros como el puntaje mínimo para ganar. Ese contenido permanece estático mientras
+dura el nivel. En cambio, el mundo es la instantánea en ejecución: el jugador,
 cada enemigo vivo, las plataformas con su posición actual (incluidas las móviles), los
 ítems aún no recolectados y las regiones activas del nivel. Cada frame reemplaza el
 mundo anterior por uno nuevo.
 
-La partida abarca varios niveles: vidas y otras decisiones que
-persisten al pasar de etapa. El puntaje es por nivel y se reinicia al cargar cada etapa.
-Al entrar en un nivel el mundo se
-reinicia a partir de la definición de nivel. Al perder una vida, la reaparición
-reubica al jugador en un punto de aparición sin recargar todo el diseño del nivel.
+La partida abarca varios niveles. Las vidas y otras decisiones de partida persisten al
+pasar de etapa. El puntaje, en cambio, es por nivel y se reinicia al cargar cada etapa.
+Al entrar en un nivel, el mundo se reinicia a partir de la definición de nivel. Al perder
+una vida, la reaparición reubica al jugador en un punto de aparición sin recargar todo el
+diseño del nivel.
 
 \subsubsection{Entidades e interacciones}
 \label{subsubsec:dominio-entidades}
 
 Una entidad es todo aquello con identidad que se mueve e interactúa en el tiempo: el
 jugador (único controlable por nivel) y los enemigos hostiles. Las plataformas y
-los peligros son geometría del nivel, los ítems recolectables permanecen en el mundo
+los peligros son geometría del nivel. Los ítems recolectables permanecen en el mundo
 hasta ser tomados. Las
 interacciones físicas se expresan mediante cajas de colisión alineadas a los ejes
 (AABB, caja alineada a ejes): cajas rectangulares que no rotan. Con ellas
@@ -72,15 +71,15 @@ La IA de cada enemigo se configura en varios niveles de abstracción. Un
 atributos compartidos (salud, tamaño de la caja de colisión, movimiento terrestre o
 volador) y el programa por defecto del catálogo cuando no hay otra indicación. Sobre
 esa base, un arquetipo nombra un patrón de comportamiento (detalle en
-sección~\ref{subsec:dsl}) y se materializa en un programa del catálogo. Una
-plantilla (\texttt{behaviourPreset} en JSON) elige ese arquetipo de forma
+sección~\ref{subsec:dsl}) y se materializa en un programa del catálogo.
+
+Una plantilla (\texttt{behaviourPreset} en JSON) elige ese arquetipo de forma
 explícita. Una pista (\texttt{behaviourHint}) es texto en lenguaje natural que un
 adaptador resuelve con la API del LLM a un arquetipo y un ajuste antes de construir el mundo. El
 ajuste (\texttt{BehaviourTuning}) escala parámetros numéricos del programa
 (velocidad, alcance de detección, dureza) sin cambiar su estructura. Si no hay
 plantilla ni pista, cada enemigo conserva el programa por defecto de su
-\texttt{kind}.
-El detalle de precedencia y resolución se desarrolla en los
+\texttt{kind}. El detalle de precedencia y resolución se desarrolla en los
 capítulos~\ref{sec:solucion-propuesta} y~\ref{sec:detalles-diseno}.
 
 El catálogo de la partida admite dos formas de obtener las tres
@@ -127,21 +126,21 @@ es necesario. Hughes~\cite{hughes1989whyfp} muestra cómo eso aporta modularidad
 generación y consumo de datos. En un motor de juego el camino crítico es finito en cada
 frame: la simulación produce un mundo nuevo y Gloss lo consume al dibujar.
 
-Para no afirmar una virtud sin evidencia, medimos residencia de memoria con una
-medición dedicada al motor, que pliega 500\,000 invocaciones de
-\texttt{advanceSimulationFrame} en dos modos: \texttt{strict} (fuerza el mundo en cada
-paso, como el bucle real) y \texttt{lazy} (acumula checksums sin forzar mundos
-intermedios). Con \texttt{+RTS -s}, el modo \texttt{strict} alcanzó unos 152\,MB de
-residencia máxima y el \texttt{lazy} unos 248\,MB (mismo checksum final): una relación
-cercana a $1{,}6\times$ que se sostiene entre corridas, aunque los valores absolutos
-dependen de la plataforma. La conclusión
-empírica es que acumular estados sin forzar retiene thunks y aumenta memoria. El diseño
-frame a frame del motor, que reemplaza el mundo sin historial y lo consume al renderizar,
-evita ese patrón. Donde iteramos dentro de un frame (sub-pasos de colisión), preferimos
-recursión estricta con \texttt{seq} en lugar de \texttt{foldl} lazy
+Para no afirmar una virtud sin evidencia, medimos la residencia de memoria del motor con
+una prueba dedicada que pliega 500\,000 invocaciones de \texttt{advanceSimulationFrame}
+en dos modos: \texttt{strict} (fuerza el mundo en cada paso, como el bucle real) y
+\texttt{lazy} (acumula checksums sin forzar mundos intermedios). Con \texttt{+RTS -s}, el
+modo \texttt{strict} alcanzó unos 152\,MB de residencia máxima y el \texttt{lazy} unos
+248\,MB (mismo checksum final): una relación cercana a $1{,}6\times$ que se sostiene entre
+corridas, aunque los valores absolutos dependen de la plataforma.
+
+La conclusión empírica es que acumular estados sin forzar retiene thunks y aumenta
+memoria. El diseño frame a frame del motor, que reemplaza el mundo sin historial y lo
+consume al renderizar, evita ese patrón. Donde iteramos dentro de un frame (sub-pasos de
+colisión), preferimos recursión estricta con \texttt{seq} en lugar de \texttt{foldl} lazy
 (sección~\ref{subsec:fisica}). En colisiones, proyectiles, peligros que caen y plataformas
-móviles usamos \texttt{foldl\textquotesingle} sobre el acumulador de entidades para el mismo
-motivo.
+móviles usamos \texttt{foldl\textquotesingle} sobre el acumulador de entidades por el
+mismo motivo.
 
 \subsubsection{Functor, Applicative y mónadas}
 \label{subsubsec:teoria-monadas}
