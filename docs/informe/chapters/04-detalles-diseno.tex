@@ -54,8 +54,8 @@ fenómeno se llama tunelización: el cuerpo ``salta'' el obstáculo porque el pa
 integración es más grande que el grosor del volumen de colisión.
 
 Para evitarlo, el motor toma la plataforma más fina del nivel y, si
-$|v_y| \cdot \Delta t$ supera la mitad de su altura, divide el desplazamiento en un
-número de sub-pasos entre $1$ y $16$, de igual duración ($\Delta t / n$). En cada sub-paso
+$|v_y| \cdot \Delta t$ supera la mitad de su altura, divide el desplazamiento en $n$
+sub-pasos (con $1 \le n \le 16$), de igual duración ($\Delta t / n$). En cada sub-paso
 integra posición y comprueba colisiones. Así el choque se detecta en algún instante
 intermedio. El intervalo de tiempo y la gravedad no se repiten: solo se subdivide el
 tramo ya calculado. La implementación usa recursión estricta con \texttt{seq}, no
