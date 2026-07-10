@@ -186,7 +186,7 @@ Los programas compuestos del catálogo incluyen:
 
 \begin{itemize}
   \item \textbf{Patrulla horizontal} (\texttt{patrolHorizontal}): alterna
-    velocidad $\pm speed$ con esperas de $n$ frames por tramo. Típica del caracol.
+    velocidad $\pm speed$ con esperas de $n$ frames por tramo.
   \item \textbf{Máquina de estados reactiva terrestre} (\texttt{reactiveFsm}): si el
     jugador entra en rango, persigue. Si está cerca del punto de aparición, mira al
     jugador. Si no, vuelve al punto de aparición. Las plantillas \texttt{chase} y
@@ -260,12 +260,12 @@ resolveMelee :: CombatParams -> World -> World
 tiempo de recarga y arco balístico) y disparos enemigos generados por \texttt{Shoot} en el
 lenguaje de comportamiento. Colisionan con sólidos y con cuerpos. Al impactar aplican daño y desaparecen.
 Los objetos que caen, lo hacen a una velocidad fija, dañan por solapamiento y,
-con \texttt{loopDelay} opcional en el JSON, reactivan en el punto de aparición tras una espera.
+con \texttt{loopDelay} opcional en el JSON, vuelven a aparecer en el mismo lugar tras una espera.
 
 La victoria híbrida exige las tres condiciones ya descritas
 (sección~\ref{subsubsec:dominio-entidades}).
 \texttt{resolveHazardsAndDeath} comprueba caída bajo la línea de muerte (derivada de la
-plataforma más baja) y reduce vidas o marca \texttt{GameOver}. El reaparición ubica al
+plataforma más baja) y reduce vidas o marca \texttt{GameOver}. La reaparición ubica al
 jugador en el punto de aparición, elimina sus proyectiles y desactiva el modo de arena del jefe.
 
 Cada nivel admite como máximo un jefe. A diferencia del resto de enemigos, no
@@ -388,24 +388,22 @@ invariantes del núcleo puro sobre entradas generadas (generadores chicos, sin
   \captionof{table}{Propiedades del núcleo puro.}
   \label{tab:propiedades}
   \smallskip
-  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.2cm} >{\raggedright\arraybackslash}X@{}}
+  \begin{tabularx}{\textwidth}{@{}
+    >{\raggedright\arraybackslash}p{0.42\textwidth}
+    >{\raggedright\arraybackslash}X@{}}
     \textbf{Propiedad} & \textbf{Afirmación} \\
     \hline
-    \texttt{prop\_stepZeroIsIdentity} &
+    \path{prop_stepZeroIsIdentity} &
     Con \texttt{DeltaTime 0}, \texttt{step} es la identidad para todo \texttt{Input}. \\
-    \texttt{prop\_aabbOverlapsSymmetric} &
+    \path{prop_aabbOverlapsSymmetric} &
     El solape AABB es simétrico. \\
-    \texttt{prop\_substepPreventsTunneling} &
+    \path{prop_substepPreventsTunneling} &
     Los sub-pasos impiden tunelizar una plataforma fina en caída rápida. \\
-    \texttt{prop\_deltaTimeNeverNegative}, etc. &
+    \path{prop_deltaTimeNeverNegative}, etc. &
     Constructores inteligentes de \texttt{DeltaTime}, \texttt{Score} y \texttt{Health}
     nunca producen valores negativos. \\
   \end{tabularx}
 \end{center}
-
-Así las afirmaciones de determinismo y sustituibilidad del frame no quedan solo
-en prosa: un frame congelado es identidad y la física anti-tunelización se
-verifica sobre cientos de casos aleatorios acotados.
 
 Durante pruebas manuales, \texttt{F1} superpone cajas de colisión de entidades y
 plataformas para verificar alineación con sprites.
