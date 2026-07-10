@@ -3,6 +3,7 @@ module Domain.Model.Enemy (
   enemyWidth,
   enemyHeight,
   enemyAabb,
+  enemyInPhaseTransition,
   spawnEnemy,
   mkEnemy,
 )
@@ -20,7 +21,7 @@ import Domain.Model.EnemyKind (
 import Domain.Model.EntityBehaviour (BehaviourProgram)
 import Domain.ValueObjects.Aabb (Aabb, aabbFromBottomCenter)
 import Domain.ValueObjects.Facing (Facing (..))
-import Domain.ValueObjects.Frames (Frames, frames)
+import Domain.ValueObjects.Frames (Frames, frames, hasFramesLeft, noFrames)
 import Domain.ValueObjects.Health (Health)
 import Domain.ValueObjects.Position (Position)
 import Domain.ValueObjects.Velocity (Velocity, velocity)
@@ -40,6 +41,8 @@ data Enemy = Enemy
   , enemyShootCooldownFrames :: Frames
   , enemyHurtFrames :: Frames
   -- ^ Temporizador del destello de golpe cuando el jugador daña al enemigo pero no lo mata.
+  , enemyPhaseTransition :: Frames
+  -- ^ Pausa tras cambiar de fase: mientras corre, el jefe está congelado e invulnerable.
   }
   deriving (Show, Generic)
 
@@ -68,6 +71,9 @@ enemyAabb :: Enemy -> Aabb
 enemyAabb e =
   aabbFromBottomCenter (enemyPos e) (enemyWidth e) (enemyHeight e)
 
+enemyInPhaseTransition :: Enemy -> Bool
+enemyInPhaseTransition = hasFramesLeft . enemyPhaseTransition
+
 spawnEnemy :: Int -> EnemyKind -> Position -> BehaviourProgram -> Enemy
 spawnEnemy eid kind pos prog =
   let stats = enemyKindStats kind
@@ -88,6 +94,7 @@ spawnEnemy eid kind pos prog =
         , enemyBossPhase = bossPhase
         , enemyShootCooldownFrames = frames 0
         , enemyHurtFrames = frames 0
+        , enemyPhaseTransition = noFrames
         }
 
 mkEnemy :: Int -> Position -> BehaviourProgram -> Enemy

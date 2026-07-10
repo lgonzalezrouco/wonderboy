@@ -55,7 +55,7 @@ import Domain.Model.CrumblingPlatform (
   CrumblingPlatform,
   crumblingPlatformAabb,
  )
-import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyHurtFrames, enemyKind, enemyPos)
+import Domain.Model.Enemy (Enemy, enemyAabb, enemyFacing, enemyHurtFrames, enemyInPhaseTransition, enemyKind, enemyPos)
 import Domain.Model.ExitZone (ExitZone, exitZoneAabb)
 import Domain.Model.FallingHazard (
   FallingHazard (..),
@@ -242,6 +242,13 @@ damageFlashStride = 8
 damageFlashOn :: Int -> Bool
 damageFlashOn tick = even (tick `div` damageFlashStride)
 
+phaseTransitionBlinkStride :: Int
+phaseTransitionBlinkStride = 6
+
+-- | Alterna entre el tinte de la fase nueva y el sprite neutro para señalar el cambio de fase.
+phaseTransitionBlinkOn :: Int -> Bool
+phaseTransitionBlinkOn tick = even (tick `div` phaseTransitionBlinkStride)
+
 hitboxFootRadius :: Float
 hitboxFootRadius = 3.0
 
@@ -331,6 +338,10 @@ renderEnemy catalog renderTick e =
   box = enemyAabb e
   hurtFlash = showsHurtFlash (enemyHurtFrames e) renderTick
   bodyPicture sprite
+    | enemyInPhaseTransition e =
+        if phaseTransitionBlinkOn renderTick
+          then enemyBasePicture e sprite
+          else spritePicture sprite
     | hurtFlash = spriteHurtPicture sprite
     | otherwise = enemyBasePicture e sprite
 

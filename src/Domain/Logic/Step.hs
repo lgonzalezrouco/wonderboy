@@ -26,7 +26,7 @@ import Domain.Logic.Physics (
   integratePlayer,
  )
 import Domain.Logic.RunBehaviour (runBehaviourStep)
-import Domain.Model.Enemy (Enemy (..))
+import Domain.Model.Enemy (Enemy (..), enemyInPhaseTransition)
 import Domain.Model.EnemyKind (isFlyingKind)
 import Domain.Model.Platform (Platform, platformHeight)
 import Domain.Model.Player (Player, playerOnGround, playerVel)
@@ -76,6 +76,8 @@ integrateAndCollide dt p plats vyBefore =
 integrateAndCollideEnemy ::
   PhysicsParams -> DeltaTime -> [Platform] -> Enemy -> Enemy
 integrateAndCollideEnemy params dt plats e
+  -- Congelado durante la pausa de cambio de fase: ni gravedad ni integración.
+  | enemyInPhaseTransition e = e
   | isFlyingKind (enemyKind e) = integrateEnemy dt e
   | otherwise =
       let e1 = applyEnemyGravity params dt e

@@ -21,8 +21,10 @@ import Domain.Model.Enemy (Enemy (..))
 import Domain.Model.EnemyKind (isBossKind)
 import Domain.Model.World (World (..))
 import Domain.ValueObjects.CombatParams (CombatParams (..))
+import Domain.ValueObjects.Frames (Frames)
 import Domain.ValueObjects.Health (Health, healthPoints)
 import Domain.ValueObjects.HealthRatio (healthAtOrBelowRatio)
+import Domain.ValueObjects.Velocity (velocity)
 
 resolveBossPhases :: CombatParams -> World -> World -> World
 resolveBossPhases cp wBefore wAfter =
@@ -42,7 +44,7 @@ resolveBossEnemy cp wBefore wAfter e
               -- Las fases solo avanzan (max): un boss nunca vuelve a una fase anterior.
               newPhase = max currentPhase targetPhase
            in if newPhase /= currentPhase
-                then applyBossPhase def newPhase e
+                then applyBossPhase (cpBossPhaseTransition cp) def newPhase e
                 else e
 
 highestSatisfiedPhase ::
@@ -96,12 +98,14 @@ tookDamageThisFrame :: Maybe Health -> Enemy -> Bool
 tookDamageThisFrame healthBefore e =
   maybe False (\before -> healthPoints before > healthPoints (enemyHealth e)) healthBefore
 
-applyBossPhase :: BossDefinition -> BossPhaseIndex -> Enemy -> Enemy
-applyBossPhase def idx e =
+applyBossPhase :: Frames -> BossDefinition -> BossPhaseIndex -> Enemy -> Enemy
+applyBossPhase transition def idx e =
   case phaseDefAt idx (bossPhases def) of
     Nothing -> e
     Just phaseDef ->
       e
         { enemyBossPhase = Just idx
         , enemyProgram = phaseProgram phaseDef
+        , enemyPhaseTransition = transition
+        , enemyVel = velocity 0 0
         }

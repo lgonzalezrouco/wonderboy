@@ -4,10 +4,10 @@ module Domain.Logic.Combat (
 where
 
 import Domain.Logic.BossArena (playerMayDamageEnemy)
-import Domain.Logic.EnemyDamage (applyPlayerDamageToEnemy, enemyIsAlive, tickEnemyHurtFrames)
+import Domain.Logic.EnemyDamage (applyPlayerDamageToEnemy, enemyIsAlive, tickEnemyHurtFrames, tickEnemyPhaseTransition)
 import Domain.Logic.MeleeSwing (meleeHitboxWhenImpact)
 import Domain.Logic.PlayerLife (applyContactDamage, playerIsInvincible)
-import Domain.Model.Enemy (Enemy (..), enemyAabb)
+import Domain.Model.Enemy (Enemy (..), enemyAabb, enemyInPhaseTransition)
 import Domain.Model.Player (
   Player (..),
   playerAabb,
@@ -24,7 +24,7 @@ import Domain.ValueObjects.Input (Input (..), inputHorizontalSign)
 
 resolveCombat :: CombatParams -> Input -> World -> World
 resolveCombat cp input w =
-  let w0 = w{worldEnemies = map tickEnemyHurtFrames (worldEnemies w)}
+  let w0 = w{worldEnemies = map (tickEnemyPhaseTransition . tickEnemyHurtFrames) (worldEnemies w)}
       p0 = worldPlayer w0
       p1 = updateFacing input p0
       attackStarted = inputAttack input && playerCanStartAttack p1
@@ -96,7 +96,8 @@ resolveContact cp w
       w{worldPlayer = applyContactDamage cp (worldPlayer w)}
   | otherwise = w
 
--- Cualquier solape jugador–enemigo lastima al jugador. No hay excepción de pisotón por caerle encima.
+-- Cualquier solape jugador–enemigo lastima al jugador (sin excepción de pisotón), salvo un jefe
+-- congelado en su pausa de fase.
 isDamagingContact :: Player -> Enemy -> Bool
 isDamagingContact p e =
-  aabbOverlaps (playerAabb p) (enemyAabb e)
+  not (enemyInPhaseTransition e) && aabbOverlaps (playerAabb p) (enemyAabb e)
